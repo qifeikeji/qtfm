@@ -28,8 +28,10 @@ if [ -z "$RESIZE" ]; then
   echo "Need ImageMagick (magick or convert) or macOS sips to resize app.png" >&2
   exit 1
 fi
-ICONSET="$(mktemp -d /tmp/QtFM.iconset.XXXXXX)"
-trap 'rm -rf "$ICONSET"' EXIT
+ICONSET_WORK="$(mktemp -d /tmp/QtFM-icon.XXXXXX)"
+ICONSET="${ICONSET_WORK}/QtFM.iconset"
+mkdir -p "$ICONSET"
+trap 'rm -rf "$ICONSET_WORK"' EXIT
 for size in 16 32 128 256 512; do
   if [ "$RESIZE" = sips ]; then
     sips -z "$size" "$size" "$PNG" --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
