@@ -8,6 +8,7 @@
         <file>icons/toolbar/cut.svg</file>
         <file>icons/toolbar/delete.svg</file>
         <file>icons/toolbar/details.svg</file>
+        <file>icons/toolbar/external-disks.svg</file>
         <file>icons/toolbar/document-open.svg</file>
         <file>icons/toolbar/exit.svg</file>
         <file>icons/toolbar/file-new.svg</file>
@@ -22,6 +23,9 @@
         <file>icons/toolbar/properties.svg</file>
         <file>icons/toolbar/refresh.svg</file>
         <file>icons/toolbar/terminal.svg</file>
+        <file>icons/toolbar/sort.svg</file>
+        <file>icons/toolbar/view-icon-mode.svg</file>
+        <file>icons/toolbar/view-list-mode.svg</file>
         <file>icons/toolbar/up.svg</file>
         <file>icons/toolbar/user-trash.svg</file>
         <file>icons/toolbar/window-close.svg</file>

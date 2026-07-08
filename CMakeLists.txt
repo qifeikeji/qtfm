@@ -147,6 +147,8 @@ add_executable(
     fm/src/tabbar.cpp
     fm/src/settingsdialog.cpp
     fm/src/openwithsettingswidget.cpp
+    fm/src/customactionsettingswidget.cpp
+    fm/src/settingsuistyles.cpp
     fm/src/actiondefs.cpp
     fm/src/actiontriggers.cpp
     share/${PROJECT_NAME}.qrc

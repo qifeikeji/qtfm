@@ -23,9 +23,11 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QToolBar>
-#include <QStatusBar>
+#include <QToolButton>
 #include <QApplication>
 #include <QLineEdit>
+#include <QWidget>
+#include <QSizePolicy>
 
 void MainWindow::createActionIcons() {
 
@@ -166,19 +168,23 @@ void MainWindow::createActions() {
   connect(newTabAct, SIGNAL(triggered()), this, SLOT(openTab()));
   newTabAct->setIcon(actionIcons->at(26));
 
-  detailAct = new QAction(tr("Detail view"),this);
-  detailAct->setStatusTip(tr("Toggle detailed list"));
-  detailAct->setCheckable(true);
-  connect(detailAct, SIGNAL(triggered()),this,SLOT(toggleDetails()));
-  detailAct->setIcon(actionIcons->at(8));
-  actionList->append(detailAct);
+  listViewAct = new QAction(tr("List view"), this);
+  listViewAct->setStatusTip(tr("List view with columns (no icons)"));
+  listViewAct->setCheckable(true);
+  listViewAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/view-list-mode.svg")));
+  actionList->append(listViewAct);
 
-  iconAct = new QAction(tr("Icon view"),this);
-  iconAct->setStatusTip(tr("Toggle icon view"));
+  iconAct = new QAction(tr("Icon view"), this);
+  iconAct->setStatusTip(tr("Icon view"));
   iconAct->setCheckable(true);
-  connect(iconAct, SIGNAL(triggered()),this,SLOT(toggleIcons()));
-  iconAct->setIcon(actionIcons->at(9));
+  connect(iconAct, SIGNAL(triggered()), this, SLOT(applyIconView()));
+  iconAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/view-icon-mode.svg")));
   actionList->append(iconAct);
+
+  viewModeActGrp = new QActionGroup(this);
+  viewModeActGrp->addAction(iconAct);
+  viewModeActGrp->addAction(listViewAct);
+  connect(listViewAct, SIGNAL(triggered()), this, SLOT(applyListView()));
 
   sortNameAct = new QAction(tr("Name"), this);
   sortNameAct->setStatusTip(tr("Sort icons by name"));
@@ -203,6 +209,13 @@ void MainWindow::createActions() {
   sortAscAct->setCheckable(true);
   connect(sortAscAct, SIGNAL(triggered()), this, SLOT(toggleSortOrder()));
   actionList->append(sortAscAct);
+
+  sortMenu = new QMenu(tr("Sort By"));
+  sortMenu->addAction(sortNameAct);
+  sortMenu->addAction(sortDateAct);
+  sortMenu->addAction(sortSizeAct);
+  sortMenu->addSeparator();
+  sortMenu->addAction(sortAscAct);
 
   hiddenAct = new QAction(tr("Hidden files"), this);
   hiddenAct->setStatusTip(tr("Toggle hidden files"));
@@ -376,6 +389,12 @@ void MainWindow::createActions() {
 #endif
 
 #ifndef NO_UDISKS
+  toggleDisksPanelAct = new QAction(tr("External disks"), this);
+  toggleDisksPanelAct->setCheckable(true);
+  toggleDisksPanelAct->setStatusTip(tr("Show or hide externally attached block devices (sda, nvme0n1, …)"));
+  toggleDisksPanelAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/external-disks.svg")));
+  connect(toggleDisksPanelAct, SIGNAL(triggered()), this, SLOT(toggleDisksPanel()));
+
   mediaUnmountAct = new QAction(tr("Safely Remove"), this);
   mediaUnmountAct->setIcon(QIcon::fromTheme("media-eject"));
   connect(mediaUnmountAct, SIGNAL(triggered(bool)), this, SLOT(handleMediaUnmount()));
@@ -437,7 +456,7 @@ void MainWindow::readShortcuts() {
     shortcuts.insert(zoomInAct->text(),"ctrl++");
     shortcuts.insert(focusAddressAct->text(), "ctrl+l");
     shortcuts.insert(iconAct->text(), "f3");
-    shortcuts.insert(detailAct->text(), "f4");
+    shortcuts.insert(listViewAct->text(), "f4");
 
     settings->beginGroup("customShortcuts");
     QHashIterator<QString, QString> i(shortcuts);
@@ -544,17 +563,11 @@ void MainWindow::createMenus() {
   autoMenu->setTitle(tr("Layout"));
   viewMenu->addMenu(autoMenu);
 
-  QMenu *sortMenu = new QMenu(tr("Sort By"));
-  sortMenu->addAction(sortNameAct);
-  sortMenu->addAction(sortDateAct);
-  sortMenu->addAction(sortSizeAct);
-  sortMenu->addSeparator();
-  sortMenu->addAction(sortAscAct);
   viewMenu->addMenu(sortMenu);
 
   viewMenu->addSeparator();
   viewMenu->addAction(iconAct);
-  viewMenu->addAction(detailAct);
+  viewMenu->addAction(listViewAct);
   viewMenu->addAction(hiddenAct);
   viewMenu->addSeparator();
   viewMenu->addAction(tabsOnTopAct);
@@ -596,9 +609,26 @@ void MainWindow::createToolBars() {
 
   navToolBar = addToolBar(tr("Navigate"));
   navToolBar->setObjectName("Navigate");
+#ifndef NO_UDISKS
+  navToolBar->addAction(toggleDisksPanelAct);
+#endif
+  sortToolButton = new QToolButton(this);
+  sortToolButton->setText(tr("Sort"));
+  sortToolButton->setIcon(QIcon(QStringLiteral(":/icons/toolbar/sort.svg")));
+  sortToolButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+  sortToolButton->setPopupMode(QToolButton::InstantPopup);
+  sortToolButton->setMenu(sortMenu);
+  navToolBar->addWidget(sortToolButton);
+
+  auto *navSpacer = new QWidget(this);
+  navSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+  navToolBar->addWidget(navSpacer);
+
   navToolBar->addAction(backAct);
   navToolBar->addAction(upAct);
   navToolBar->addAction(homeAct);
+  navToolBar->addAction(iconAct);
+  navToolBar->addAction(listViewAct);
 
   addressToolBar = addToolBar(tr("Address"));
   addressToolBar->setObjectName("Address");
@@ -621,20 +651,22 @@ void MainWindow::zoomInAction()
         bookmarksList->setIconSize(QSize(zoomBook,zoomBook));
         zoomLevel = zoomBook;
     } else {
-        if(stackWidget->currentIndex() == 0) {
-            if(iconAct->isChecked()) {
-                (zoom == IconViewDelegate::iconZoomMax) ? zoom = IconViewDelegate::iconZoomMax : zoom += 8;
-                zoomLevel = zoom;
+        if (currentView == 1) {
+            if (zoom == IconViewDelegate::iconZoomMax) {
+                zoom = IconViewDelegate::iconZoomMax;
             } else {
-                (zoomList == 128) ? zoomList=128 : zoomList+= 8;
-                zoomLevel = zoomList;
+                zoom += 8;
             }
-            toggleIcons();
-        }
-        else {
-            (zoomDetail == 64) ? zoomDetail=64 : zoomDetail+= 8;
-            detailTree->setIconSize(QSize(zoomDetail,zoomDetail));
+            zoomLevel = zoom;
+            applyIconView();
+        } else {
+            if (zoomDetail == 128) {
+                zoomDetail = 128;
+            } else {
+                zoomDetail += 8;
+            }
             zoomLevel = zoomDetail;
+            applyListRowHeight();
         }
     }
 
@@ -656,19 +688,22 @@ void MainWindow::zoomOutAction()
         bookmarksList->setIconSize(QSize(zoomBook,zoomBook));
         zoomLevel = zoomBook;
     } else {
-        if(stackWidget->currentIndex() == 0) {
-            if(iconAct->isChecked()) {
-                (zoom == IconViewDelegate::iconZoomMin) ? zoom = IconViewDelegate::iconZoomMin : zoom -= 8;
-                zoomLevel = zoom;
+        if (currentView == 1) {
+            if (zoom == IconViewDelegate::iconZoomMin) {
+                zoom = IconViewDelegate::iconZoomMin;
             } else {
-                (zoomList == 16) ? zoomList=16 : zoomList-= 8;
-                zoomLevel = zoomList;
+                zoom -= 8;
             }
-            toggleIcons();
+            zoomLevel = zoom;
+            applyIconView();
         } else {
-            (zoomDetail == 16) ? zoomDetail=16 : zoomDetail-= 8;
-            detailTree->setIconSize(QSize(zoomDetail,zoomDetail));
+            if (zoomDetail == 18) {
+                zoomDetail = 18;
+            } else {
+                zoomDetail -= 8;
+            }
             zoomLevel = zoomDetail;
+            applyListRowHeight();
         }
     }
 

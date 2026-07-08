@@ -41,6 +41,8 @@ public:
   QString getRootPath();
   void setRealMimeTypes(bool realMimeTypes);
   bool isRealMimeTypes() const;
+  void setShowListDecorations(bool show);
+  bool showListDecorations() const;
   QModelIndex index(int row, int column, const QModelIndex &parent) const;
   QModelIndex index(const QString& path) const;
   QModelIndex parent(const QModelIndex &index) const;
@@ -93,6 +95,7 @@ private:
 
   bool realMimeTypes;
   bool showThumbs;
+  bool showListDecorations = true;
 
   QPalette colors;
   QStringList cutItems;

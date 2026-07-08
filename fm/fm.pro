@@ -19,6 +19,8 @@ HEADERS += \
     src/tabbar.h \
     src/settingsdialog.h \
     src/openwithsettingswidget.h \
+    src/customactionsettingswidget.h \
+    src/settingsuistyles.h \
     src/sidebaritemdelegate.h
 
 SOURCES += \
@@ -28,6 +30,8 @@ SOURCES += \
     src/tabbar.cpp \
     src/settingsdialog.cpp \
     src/openwithsettingswidget.cpp \
+    src/customactionsettingswidget.cpp \
+    src/settingsuistyles.cpp \
     src/actiondefs.cpp \
     src/actiontriggers.cpp \
     src/sidebaritemdelegate.cpp

@@ -19,6 +19,8 @@ public:
     static QIcon iconForFileSuffix(const QString &suffix);
     static QIcon iconForMimeType(const QString &mime);
     static QIcon iconForFolder(const QFileInfo &info);
+    /** Default sidebar bookmark icon from path (uses share/icons/mimes). */
+    static QIcon iconForBookmarkPath(const QString &path);
     static QIcon iconForExecutable();
     /** Guaranteed non-null when empty.svg is available; scales to requested size. */
     static QIcon emptyIcon();

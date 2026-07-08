@@ -42,6 +42,15 @@ public:
     static const QString unmountOptical(QString path);
     static const QString ejectDevice(QString path);
     static const QStringList getDevices();
+
+    /** Block node name only (e.g. sda, nvme0n1), not sda1 / nvme0n1p1. */
+    static QString blockDeviceName(const QString &blockObjectPath);
+    /** loop*, snap*, zram*, etc. — hide from the external disks panel. */
+    static bool isIgnoredBlockDevice(const QString &blockDeviceName);
+    /** True when this UDisks block object is a partition (sda1, nvme0n1p1, …). */
+    static bool isPartitionBlock(const QString &blockObjectPath);
+    /** User/data mounts (e.g. /media, /run/media), not system root. */
+    static bool isExternalUserMountPoint(const QString &mountpoint);
 };
 
 #endif // UDISKS2_H

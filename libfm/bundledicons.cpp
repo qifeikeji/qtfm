@@ -133,6 +133,13 @@ QString resolveBundledBaseName(const QString &name)
         {QStringLiteral("video-x-generic"), QStringLiteral("video")},
         {QStringLiteral("text-html"), QStringLiteral("html")},
         {QStringLiteral("text-x-script"), QStringLiteral("sh")},
+        {QStringLiteral("user-home"), QStringLiteral("folder-home")},
+        {QStringLiteral("user-desktop"), QStringLiteral("folder-desktop")},
+        {QStringLiteral("computer"), QStringLiteral("folder-root")},
+        {QStringLiteral("user-trash"), QStringLiteral("folder-grey")},
+        {QStringLiteral("applications-other"), QStringLiteral("x-content-software")},
+        {QStringLiteral("applications-internet"), QStringLiteral("folder-download")},
+        {QStringLiteral("audio-x-generic"), QStringLiteral("folder-music")},
     };
     return aliases.value(key, key);
 }
@@ -420,7 +427,49 @@ QIcon BundledIcons::iconForFolder(const QFileInfo &info)
     if (name == QLatin1String("Desktop") || name == QLatin1String("desktop")) {
         return iconWithFallbacks({QStringLiteral("folder-desktop"), QStringLiteral("folder")});
     }
+    if (name == QLatin1String("Documents")) {
+        return iconWithFallbacks({QStringLiteral("folder-documents"), QStringLiteral("folder")});
+    }
+    if (name == QLatin1String("Downloads")) {
+        return iconWithFallbacks({QStringLiteral("folder-download"), QStringLiteral("folder")});
+    }
+    if (name == QLatin1String("Pictures")) {
+        return iconWithFallbacks({QStringLiteral("folder-pictures"), QStringLiteral("folder")});
+    }
+    if (name == QLatin1String("Videos")) {
+        return iconWithFallbacks({QStringLiteral("folder-videos"), QStringLiteral("folder")});
+    }
+    if (name == QLatin1String("Music")) {
+        return iconWithFallbacks({QStringLiteral("folder-music"), QStringLiteral("folder")});
+    }
     return iconWithFallbacks({QStringLiteral("folder")});
+}
+
+QIcon BundledIcons::iconForBookmarkPath(const QString &path)
+{
+    if (path.isEmpty()) {
+        return QIcon();
+    }
+    const QFileInfo info(path);
+    const QString canonical = info.canonicalFilePath();
+    const QString home = QDir::homePath();
+
+    if (path == QLatin1String("/") || canonical == QLatin1String("/")) {
+        return iconWithFallbacks({QStringLiteral("folder-root"), QStringLiteral("folder")});
+    }
+    if (canonical == home || QFileInfo(path).absoluteFilePath() == QFileInfo(home).absoluteFilePath()) {
+        return iconWithFallbacks({QStringLiteral("folder-home"), QStringLiteral("folder")});
+    }
+    if (canonical.endsWith(QLatin1String("/.local/share/Trash"))
+        || path.endsWith(QLatin1String("/.local/share/Trash"))) {
+        return iconWithFallbacks({QStringLiteral("folder-grey"), QStringLiteral("folder")});
+    }
+#ifdef Q_OS_MAC
+    if (canonical == QLatin1String("/Applications") || path == QLatin1String("/Applications")) {
+        return iconWithFallbacks({QStringLiteral("x-content-software"), QStringLiteral("folder")});
+    }
+#endif
+    return iconForFolder(info);
 }
 
 QIcon BundledIcons::iconForExecutable()

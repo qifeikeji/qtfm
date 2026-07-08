@@ -1,11 +1,53 @@
 #include "customactionsmanager.h"
 #include "processdialog.h"
+#include "bundledicons.h"
 #include <QMessageBox>
 #include <QMenu>
 #include <QTimer>
 #include <QDebug>
 #include <QProcess>
+#include <QFileInfo>
 #include "common.h"
+
+namespace {
+
+QIcon iconForCustomAction(const QStringList &temp)
+{
+    QString bundledName;
+    QString iconPath;
+    if (temp.size() >= 5) {
+        bundledName = temp.at(2);
+        iconPath = temp.at(3);
+    } else if (temp.size() >= 3) {
+        bundledName = temp.at(2);
+    }
+    if (!iconPath.isEmpty()) {
+        const QIcon fileIcon(iconPath);
+        if (!fileIcon.isNull()) {
+            return fileIcon;
+        }
+    }
+    if (!bundledName.isEmpty()) {
+        const QIcon bundled = BundledIcons::iconByName(bundledName);
+        if (!bundled.isNull()) {
+            return bundled;
+        }
+    }
+    return BundledIcons::iconByName(QStringLiteral("empty"));
+}
+
+QString commandFromStored(const QStringList &temp)
+{
+    if (temp.size() >= 5) {
+        return temp.at(4);
+    }
+    if (temp.size() >= 4) {
+        return temp.at(3);
+    }
+    return QString();
+}
+
+} // namespace
 
 /**
  * @brief Creates custom action manager
@@ -72,14 +114,16 @@ void CustomActionsManager::readActions() {
 
     // temp.at(0) - FileType
     // temp.at(1) - Text
-    // temp.at(2) - Icon
-    // temp.at(3) - Command
+    // temp.at(2) - Bundled icon name
+    // temp.at(3) - Icon path (optional, v5+)
+    // temp.at(4) - Command (optional | prefix); v4: command at(3)
     QStringList temp(settingsPtr->value(keys.at(i)).toStringList());
     //qDebug() << "loaded custom action" << temp;
 
     // Create new action and read it
-    QAction *act = new QAction(QIcon::fromTheme(temp.at(2)), temp.at(1), this);
-    mapper->setMapping(act, temp.at(3));
+    const QString cmd = commandFromStored(temp);
+    QAction *act = new QAction(iconForCustomAction(temp), temp.at(1), this);
+    mapper->setMapping(act, cmd);
     connect(act, SIGNAL(triggered()), mapper, SLOT(map()));
     actionListPtr->append(act);
 

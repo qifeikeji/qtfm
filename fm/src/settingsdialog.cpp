@@ -1,5 +1,4 @@
 #include "settingsdialog.h"
-#include "icondlg.h"
 #include "fileutils.h"
 #include "applicationdialog.h"
 #include "properties.h"
@@ -193,9 +192,26 @@ QWidget *SettingsDialog::createAppearanceSettings()
     showHomeButton = new QCheckBox(grpAppear);
     showNewTabButton = new QCheckBox(grpAppear);
     showTerminalButton = new QCheckBox(grpAppear);
-    spinIconViewGap = new QSpinBox(grpAppear);
-    spinIconViewGap->setRange(0, 48);
-    spinIconViewGap->setSuffix(tr(" px"));
+  spinIconViewGap = new QSpinBox(grpAppear);
+  spinIconViewGap->setRange(0, 48);
+  spinIconViewGap->setSuffix(tr(" px"));
+  spinIconViewSize = new QSpinBox(grpAppear);
+  spinIconViewSize->setRange(16, 256);
+  spinIconViewSize->setSuffix(tr(" px"));
+  spinListRowHeight = new QSpinBox(grpAppear);
+  spinListRowHeight->setRange(18, 128);
+  spinListRowHeight->setSuffix(tr(" px"));
+  checkFoldersAlwaysFirst = new QCheckBox(grpAppear);
+  spinListColName = new QSpinBox(grpAppear);
+  spinListColSize = new QSpinBox(grpAppear);
+  spinListColDate = new QSpinBox(grpAppear);
+  spinListColFormat = new QSpinBox(grpAppear);
+  spinListColFolder = new QSpinBox(grpAppear);
+  for (QSpinBox *spin : {spinListColName, spinListColSize, spinListColDate,
+                         spinListColFormat, spinListColFolder}) {
+      spin->setRange(40, 800);
+      spin->setSuffix(tr(" px"));
+  }
 
 #if QT_VERSION >= 0x050000
     layoutAppear->addRow(tr("Use \"Dark Mode\""), checkDarkTheme);
@@ -206,6 +222,14 @@ QWidget *SettingsDialog::createAppearanceSettings()
     layoutAppear->addRow(tr("Show \"new tab\" button"), showNewTabButton);
     layoutAppear->addRow(tr("Show Terminal button"), showTerminalButton);
     layoutAppear->addRow(tr("Icon view spacing"), spinIconViewGap);
+    layoutAppear->addRow(tr("Icon view size"), spinIconViewSize);
+    layoutAppear->addRow(tr("List row height"), spinListRowHeight);
+    layoutAppear->addRow(tr("Folders always first (list)"), checkFoldersAlwaysFirst);
+    layoutAppear->addRow(tr("List column: Name"), spinListColName);
+    layoutAppear->addRow(tr("List column: Size"), spinListColSize);
+    layoutAppear->addRow(tr("List column: Date"), spinListColDate);
+    layoutAppear->addRow(tr("List column: Format"), spinListColFormat);
+    layoutAppear->addRow(tr("List column: Folder"), spinListColFolder);
 
     // Layout widget
     layoutWidget->addWidget(grpAppear);
@@ -222,81 +246,21 @@ QWidget *SettingsDialog::createAppearanceSettings()
  */
 QWidget* SettingsDialog::createActionsSettings() {
 
-  // Widget
   QWidget* widget = new QWidget(this);
 
-  // Options group box
   QGroupBox* grpOptions = new QGroupBox(tr("Options"), widget);
   checkOutput = new QCheckBox(grpOptions);
   QFormLayout* layoutOptions = new QFormLayout(grpOptions);
   layoutOptions->addRow(tr("Show dialog with action's output:"), checkOutput);
 
-  // Actions group box
   QGroupBox* grpMain = new QGroupBox(tr("Custom actions"), widget);
   QVBoxLayout* mainLayout = new QVBoxLayout(grpMain);
 
-  // Create actions widget
-  actionsWidget = new QTreeWidget(grpMain);
-  actionsWidget->setAlternatingRowColors(true);
-  actionsWidget->setRootIsDecorated(false);
-  actionsWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
-  actionsWidget->setColumnWidth(1, 160);
-  actionsWidget->setColumnWidth(2, 160);
-  actionsWidget->setDragDropMode(QAbstractItemView::InternalMove);
-  mainLayout->addWidget(actionsWidget);
+  customActionsSettingsWidget = new CustomActionSettingsWidget(grpMain);
+  mainLayout->addWidget(customActionsSettingsWidget);
+  connect(customActionsSettingsWidget, SIGNAL(entriesChanged()),
+          this, SLOT(readShortcuts()));
 
-  // Create header of actions widget
-  QTreeWidgetItem *header = actionsWidget->headerItem();
-  header->setText(0, tr("Filetype"));
-  header->setText(1, tr("Text"));
-  header->setText(2, tr("Icon"));
-  header->setText(3, tr("Command"));
-
-  // Connect action widget
-  connect(actionsWidget,
-          SIGNAL(itemDoubleClicked(QTreeWidgetItem *,int)),
-          this,
-          SLOT(getIcon(QTreeWidgetItem *,int)));
-  connect(actionsWidget,
-          SIGNAL(itemChanged(QTreeWidgetItem*,int)),
-          this,
-          SLOT(onActionChanged(QTreeWidgetItem*,int)));
-
-  // Create control buttons
-  QHBoxLayout* horizontalLayout = new QHBoxLayout();
-  addButton = new QToolButton();
-  delButton = new QToolButton();
-  infoButton = new QToolButton();
-  clearButton = new QToolButton();
-
-  addButton->setToolTip(tr("Add new custom action"));
-  delButton->setToolTip(tr("Remove custom action"));
-  infoButton->setToolTip(tr("Usage information"));
-  clearButton->setToolTip(tr("Restore actions to default"));
-
-  addButton->setIcon(QIcon::fromTheme("list-add"));
-  delButton->setIcon(QIcon::fromTheme("list-remove"));
-  infoButton->setIcon(QIcon::fromTheme("dialog-question",
-                                       QIcon::fromTheme("help-browser")));
-  clearButton->setIcon(QIcon::fromTheme("edit-clear"));
-
-  // Connect buttons
-  connect(addButton, SIGNAL(clicked()), this, SLOT(addCustomAction()));
-  connect(delButton, SIGNAL(clicked()), this, SLOT(delCustomAction()));
-  connect(infoButton, SIGNAL(clicked()), this, SLOT(infoCustomAction()));
-  connect(clearButton, SIGNAL(clicked()), this, SLOT(clearCustomAction()));
-
-  // Layouts
-  horizontalLayout->addWidget(clearButton);
-  horizontalLayout->addWidget(infoButton);
-  horizontalLayout->addWidget(addButton);
-  horizontalLayout->addWidget(delButton);
-  horizontalLayout->addItem(new QSpacerItem(0,
-                                            0,
-                                            QSizePolicy::MinimumExpanding));
-  mainLayout->addLayout(horizontalLayout);
-
-  // Outer layout
   QVBoxLayout *outerLayout = new QVBoxLayout(widget);
   outerLayout->addWidget(grpMain);
   outerLayout->addWidget(grpOptions);
@@ -704,6 +668,14 @@ void SettingsDialog::readSettings() {
   showNewTabButton->setChecked(settingsPtr->value("newtab_button", false).toBool());
   showTerminalButton->setChecked(settingsPtr->value("terminal_button", true).toBool());
   spinIconViewGap->setValue(settingsPtr->value("iconViewGap", 4).toInt());
+  spinIconViewSize->setValue(settingsPtr->value("zoom", 48).toInt());
+  spinListRowHeight->setValue(settingsPtr->value("zoomDetail", 24).toInt());
+  checkFoldersAlwaysFirst->setChecked(settingsPtr->value("foldersAlwaysFirst", true).toBool());
+  spinListColName->setValue(settingsPtr->value("listColumnWidth0", 220).toInt());
+  spinListColSize->setValue(settingsPtr->value("listColumnWidth1", 90).toInt());
+  spinListColDate->setValue(settingsPtr->value("listColumnWidth2", 130).toInt());
+  spinListColFormat->setValue(settingsPtr->value("listColumnWidth3", 120).toInt());
+  spinListColFolder->setValue(settingsPtr->value("listColumnWidth4", 80).toInt());
   OpenWithConfig::load(settingsPtr);
   if (openWithSettingsWidget) {
       openWithSettingsWidget->loadFromConfig();
@@ -738,31 +710,8 @@ void SettingsDialog::readSettings() {
 
   // Read custom actions
   checkOutput->setChecked(settingsPtr->value("showActionOutput", true).toBool());
-  settingsPtr->beginGroup("customActions");
-  QStringList keys = settingsPtr->childKeys();
-  for (int i = 0; i < keys.count(); ++i) {
-    QApplication::processEvents();
-    QStringList temp = settingsPtr->value(keys.at(i)).toStringList();
-    bool setChecked = 0;
-    QString cmd = temp.at(3);
-    if (cmd.at(0) == '|') {
-      cmd.remove(0, 1);
-      setChecked = 1;
-    }
-    QStringList itemData;
-    itemData << temp.at(0) << temp.at(1) << temp.at(2) << cmd;
-    QTreeWidgetItem *item = new QTreeWidgetItem(actionsWidget, itemData,0);
-    item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled
-                   | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable);
-    item->setCheckState(3, setChecked ? Qt::Checked : Qt::Unchecked);
-  }
-  settingsPtr->endGroup();
-
-  // Loads icons for actions
-  for (int x = 0; x < actionsWidget->topLevelItemCount(); x++) {
-    QApplication::processEvents();
-    QString name = actionsWidget->topLevelItem(x)->text(2);
-    actionsWidget->topLevelItem(x)->setIcon(2, BundledIcons::iconByName(name));
+  if (customActionsSettingsWidget) {
+      customActionsSettingsWidget->loadFromSettings(settingsPtr);
   }
 
   connect(comboSingleClick, SIGNAL(currentIndexChanged(int)), this, SLOT(restartToApply(int)));
@@ -813,18 +762,28 @@ void SettingsDialog::readShortcuts() {
   }
 
   // Assign shortcuts to custom actions
-  for (int i = 0; i < actionsWidget->topLevelItemCount(); i++) {
-    QApplication::processEvents();
-    QTreeWidgetItem *srcItem = actionsWidget->topLevelItem(i);
-    QString text = shortcuts.value(srcItem->text(1));
-    text = text.isEmpty() ? text : QKeySequence::fromString(text).toString();
-    QStringList list;
-    list << srcItem->text(1) << text;
-    QTreeWidgetItem *item = new QTreeWidgetItem(shortsWidget, list);
-    item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled);
-    item->setIcon(0, BundledIcons::iconByName(srcItem->text(2)));
-    if (item->icon(0).isNull()) {
-      item->setIcon(0, blank);
+  if (customActionsSettingsWidget) {
+    const QVector<CustomActionEntry> &customEntries = customActionsSettingsWidget->entries();
+    for (int i = 0; i < customEntries.size(); i++) {
+      QApplication::processEvents();
+      const CustomActionEntry &entry = customEntries.at(i);
+      QString text = shortcuts.value(entry.name);
+      text = text.isEmpty() ? text : QKeySequence::fromString(text).toString();
+      QStringList list;
+      list << entry.name << text;
+      QTreeWidgetItem *item = new QTreeWidgetItem(shortsWidget, list);
+      item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled);
+      QIcon actionIcon;
+      if (!entry.iconPath.isEmpty()) {
+          actionIcon = QIcon(entry.iconPath);
+      }
+      if (actionIcon.isNull()) {
+          actionIcon = BundledIcons::iconByName(entry.bundledIconName);
+      }
+      item->setIcon(0, actionIcon);
+      if (item->icon(0).isNull()) {
+        item->setIcon(0, blank);
+      }
     }
   }
 }
@@ -935,6 +894,14 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("newtab_button", showNewTabButton->isChecked());
   settingsPtr->setValue("terminal_button", showTerminalButton->isChecked());
   settingsPtr->setValue("iconViewGap", spinIconViewGap->value());
+  settingsPtr->setValue("zoom", spinIconViewSize->value());
+  settingsPtr->setValue("zoomDetail", spinListRowHeight->value());
+  settingsPtr->setValue("foldersAlwaysFirst", checkFoldersAlwaysFirst->isChecked());
+  settingsPtr->setValue("listColumnWidth0", spinListColName->value());
+  settingsPtr->setValue("listColumnWidth1", spinListColSize->value());
+  settingsPtr->setValue("listColumnWidth2", spinListColDate->value());
+  settingsPtr->setValue("listColumnWidth3", spinListColFormat->value());
+  settingsPtr->setValue("listColumnWidth4", spinListColFolder->value());
   settingsPtr->setValue("windowTitlePath", checkWindowTitlePath->isChecked());
 
 #ifndef Q_OS_MAC
@@ -957,21 +924,9 @@ bool SettingsDialog::saveSettings() {
 
   // Custom actions
   settingsPtr->setValue("showActionOutput", checkOutput->isChecked());
-  settingsPtr->remove("customActions");
-  settingsPtr->beginGroup("customActions");
-  for (int i = 0; i < actionsWidget->topLevelItemCount(); i++) {
-    QTreeWidgetItem *item = actionsWidget->topLevelItem(i);
-    QStringList temp;
-    QString cmd = item->text(3);
-    if (item->checkState(3) == Qt::Checked) {
-      cmd.prepend("|");
-    }
-    temp << item->text(0) << item->text(1) << item->text(2) << cmd;
-    QString number = QString("%1").arg(i, 4, 10, QChar('0'));
-    settingsPtr->setValue(number, temp);
+  if (customActionsSettingsWidget) {
+      customActionsSettingsWidget->saveToSettings(settingsPtr);
   }
-  settingsPtr->endGroup();
-  settingsPtr->setValue("customHeader", actionsWidget->header()->saveState());
 
   // Shortcuts
   QStringList shortcuts, duplicates;
@@ -1031,98 +986,5 @@ bool SettingsDialog::saveSettings() {
  */
 void SettingsDialog::accept() {
   if (saveSettings()) this->done(1);
-}
-//---------------------------------------------------------------------------
-
-/**
- * @brief Selects icon of custom action
- * @param item
- * @param column
- */
-void SettingsDialog::getIcon(QTreeWidgetItem* item, int column) {
-  if (column == 2) {
-    icondlg *icons = new icondlg;
-    if (icons->exec() == QDialog::Accepted) {
-      item->setText(column, icons->result);
-      item->setIcon(column, BundledIcons::iconByName(icons->result));
-    }
-    delete icons;
-  }
-  return;
-}
-//---------------------------------------------------------------------------
-
-/**
- * @brief Updates shortcuts
- * @param item
- * @param column
- */
-void SettingsDialog::onActionChanged(QTreeWidgetItem *item, int column) {
-    Q_UNUSED(item)
-  if (column == 1 || column == 2) {
-    readShortcuts();
-  }
-}
-//---------------------------------------------------------------------------
-
-/**
- * @brief Adds new custom action
- */
-void SettingsDialog::addCustomAction() {
-  actionsWidget->clearSelection();
-  QTreeWidgetItem *tmp = new QTreeWidgetItem(actionsWidget,
-                                             QStringList() << "*", 0);
-  tmp->setFlags(Qt::ItemIsSelectable
-                | Qt::ItemIsEditable
-                | Qt::ItemIsEnabled
-                | Qt::ItemIsDragEnabled
-                | Qt::ItemIsUserCheckable);
-  tmp->setCheckState(3, Qt::Unchecked);
-  tmp->setSelected(true);
-  actionsWidget->setCurrentItem(tmp);
-  actionsWidget->scrollToItem(tmp);
-  readShortcuts();
-}
-//---------------------------------------------------------------------------
-
-/**
- * @brief Deletes custom action
- */
-void SettingsDialog::delCustomAction() {
-  delete actionsWidget->currentItem();
-  readShortcuts();
-}
-//---------------------------------------------------------------------------
-
-/**
- * @brief Displays info about custom action
- */
-void SettingsDialog::infoCustomAction() {
-
-  // Info
-  QString info = tr("Use 'folder' to match all folders.<br>" \
-                    "Use a folder name to match a specific folder.<br>" \
-                    "Set text to 'Open' to override xdg default." \
-                    "<p>%f - selected files<br>" \
-                    "%F - selected files with full path<br>" \
-                    "%n - current filename</p>" \
-                    "<p>[] - tick checkbox to monitor output and errors.</p>");
-
-  // Displays info
-  QMessageBox::information(this, tr("Usage"), info);
-}
-
-void SettingsDialog::clearCustomAction()
-{
-    actionsWidget->clear();
-    QVector<QStringList> defActions = Common::getDefaultActions();
-    for (int i=0;i<defActions.size();++i) {
-        QTreeWidgetItem *item = new QTreeWidgetItem(actionsWidget, defActions.at(i),0);
-        item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled
-                       | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable);
-        item->setCheckState(3, Qt::Unchecked);
-        item->setIcon(2, BundledIcons::iconByName(defActions.at(i).at(2)));
-    }
-    readShortcuts();
 }
 //---------------------------------------------------------------------------

@@ -44,6 +44,7 @@ public:
     void removeDisk(const QString &devicePath);
     void setMountpoint(const QString &devicePath, const QString &mountpoint);
     bool contains(const QString &devicePath) const;
+    QStringList allDevicePaths() const;
     /** Recomputes used/total bytes for every mounted disk (statfs). */
     void refreshUsage();
 

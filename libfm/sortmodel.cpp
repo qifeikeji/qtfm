@@ -1,6 +1,8 @@
 #include "sortmodel.h"
 #include "mymodel.h"
 
+#include <QCollator>
+#include <QDateTime>
 #include <QFileInfo>
 
 static QString canonicalFilePathIfExists(const QString &path)
@@ -25,6 +27,43 @@ void viewsSortProxyModel::clearSingleFileFilter()
     }
     m_singleFileCanonical.clear();
     invalidateFilter();
+}
+
+void viewsSortProxyModel::setFoldersAlwaysFirstSetting(bool foldersFirst)
+{
+    m_foldersAlwaysFirstSetting = foldersFirst;
+    invalidate();
+}
+
+void viewsSortProxyModel::resetDirectorySortOverride()
+{
+    m_directorySortOverride = -1;
+    invalidate();
+}
+
+void viewsSortProxyModel::toggleDirectorySortOverride()
+{
+    if (m_directorySortOverride < 0) {
+        m_directorySortOverride = m_foldersAlwaysFirstSetting ? 0 : 1;
+    } else if (m_directorySortOverride == 1) {
+        m_directorySortOverride = 0;
+    } else {
+        m_directorySortOverride = 1;
+    }
+    invalidate();
+}
+
+int viewsSortProxyModel::directorySortOverride() const
+{
+    return m_directorySortOverride;
+}
+
+bool viewsSortProxyModel::directoriesFirst() const
+{
+    if (m_directorySortOverride >= 0) {
+        return m_directorySortOverride == 1;
+    }
+    return m_foldersAlwaysFirstSetting;
 }
 
 //---------------------------------------------------------------------------------
@@ -61,24 +100,65 @@ bool viewsSortProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sou
     return true;
 }
 
+static int compareDirEntries(bool leftIsDir, bool rightIsDir, bool dirsFirst)
+{
+    if (leftIsDir == rightIsDir) {
+        return 0;
+    }
+    if (dirsFirst) {
+        return leftIsDir ? -1 : 1;
+    }
+    return leftIsDir ? 1 : -1;
+}
+
 //---------------------------------------------------------------------------------
 bool viewsSortProxyModel::lessThan(const QModelIndex &left, const QModelIndex &right) const
 {
-    myModel* fsModel = dynamic_cast<myModel*>(sourceModel());
-
-    if ((fsModel->isDir(left) && !fsModel->isDir(right))) {
-        return sortOrder() == Qt::AscendingOrder;
-    } else if(!fsModel->isDir(left) && fsModel->isDir(right)) {
-        return sortOrder() == Qt::DescendingOrder;
+    myModel *fsModel = dynamic_cast<myModel *>(sourceModel());
+    if (fsModel == nullptr) {
+        return QSortFilterProxyModel::lessThan(left, right);
     }
 
-    if(left.column() == 1) { // size
-        if (fsModel->size(left) > fsModel->size(right)) { return true; }
-        else { return false; }
-    } else if (left.column() == 3) { // date
-        if (fsModel->fileInfo(left).lastModified() > fsModel->fileInfo(right).lastModified()) { return true; }
-        else { return false; }
+    const bool leftDir = fsModel->isDir(left);
+    const bool rightDir = fsModel->isDir(right);
+    const int dirCmp = compareDirEntries(leftDir, rightDir, directoriesFirst());
+    if (dirCmp != 0) {
+        return dirCmp < 0;
     }
 
-    return QSortFilterProxyModel::lessThan(left,right);
+    const int column = sortColumn();
+    if (column == 1) {
+        const qint64 ls = fsModel->size(left);
+        const qint64 rs = fsModel->size(right);
+        if (ls != rs) {
+            return ls < rs;
+        }
+    } else if (column == 2) {
+        const QDateTime ld = fsModel->fileInfo(left).lastModified();
+        const QDateTime rd = fsModel->fileInfo(right).lastModified();
+        if (ld != rd) {
+            return ld < rd;
+        }
+    } else if (column == 3) {
+        const QModelIndex l3 = fsModel->index(left.row(), 3, left.parent());
+        const QModelIndex r3 = fsModel->index(right.row(), 3, right.parent());
+        const QString lf = fsModel->data(l3, Qt::DisplayRole).toString();
+        const QString rf = fsModel->data(r3, Qt::DisplayRole).toString();
+        static QCollator collator;
+        collator.setNumericMode(true);
+        const int cmp = collator.compare(lf, rf);
+        if (cmp != 0) {
+            return cmp < 0;
+        }
+    } else if (column == 4) {
+        const int l = leftDir ? 1 : 0;
+        const int r = rightDir ? 1 : 0;
+        if (l != r) {
+            return l < r;
+        }
+    }
+
+    static QCollator nameCollator;
+    nameCollator.setNumericMode(true);
+    return nameCollator.compare(fsModel->fileName(left), fsModel->fileName(right)) < 0;
 }

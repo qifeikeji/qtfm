@@ -290,3 +290,35 @@ const QStringList uDisks2::getDevices()
     }
     return result;
 }
+
+QString uDisks2::blockDeviceName(const QString &blockObjectPath)
+{
+    return blockObjectPath.split(QLatin1Char('/')).last();
+}
+
+bool uDisks2::isIgnoredBlockDevice(const QString &blockDeviceName)
+{
+    if (blockDeviceName.startsWith(QLatin1String("loop"))) { return true; }
+    if (blockDeviceName.startsWith(QLatin1String("snap"))) { return true; }
+    if (blockDeviceName.startsWith(QLatin1String("zram"))) { return true; }
+    if (blockDeviceName.startsWith(QLatin1String("ram"))) { return true; }
+    if (blockDeviceName.startsWith(QLatin1String("fd"))) { return true; }
+    if (blockDeviceName.startsWith(QLatin1String("sr"))) { return false; } // optical handled separately
+    return false;
+}
+
+bool uDisks2::isPartitionBlock(const QString &blockObjectPath)
+{
+    return hasPartition(blockObjectPath);
+}
+
+bool uDisks2::isExternalUserMountPoint(const QString &mountpoint)
+{
+    if (mountpoint.isEmpty()) { return false; }
+    if (mountpoint == QLatin1String("/")) { return false; }
+    if (mountpoint.startsWith(QLatin1String("/boot"))) { return false; }
+    if (mountpoint.startsWith(QLatin1String("/media/"))) { return true; }
+    if (mountpoint.startsWith(QLatin1String("/run/media/"))) { return true; }
+    if (mountpoint.startsWith(QLatin1String("/mnt/"))) { return true; }
+    return false;
+}

@@ -599,56 +599,124 @@ void MainWindow::toggleLockLayout() {
 //---------------------------------------------------------------------------
 
 /**
- * @brief Toggles icon view (thumbs and sizes)
+ * @brief Switches to icon view
  */
-void MainWindow::toggleIcons() {
+void MainWindow::applyIconView() {
 
-  // Set root index
   if (list->rootIndex() != modelList->index(pathEdit->currentText())) {
     QModelIndex i = modelList->index(pathEdit->currentText());
     list->setRootIndex(modelView->mapFromSource(i));
   }
 
-  if (iconAct->isChecked()) {
-    currentView = 1;
-    list->setViewMode(QListView::IconMode);
-    list->setItemDelegate(ivdelegate);
-    /*int padding = 10;
-    if (zoom<48) { padding = 20; }
-    if (zoom<32) { padding = 40; }
-    if (zoom<24) { padding = 50; }
-    list->setGridSize(QSize(zoom*2+padding, zoom*2+padding));*/
-    list->setGridSize(QSize(zoom, zoom));
-    list->setIconSize(QSize(zoom, zoom));
-    list->setFlow(QListView::LeftToRight);
+  iconAct->setChecked(true);
+  listViewAct->setChecked(false);
+  currentView = 1;
+  list->setViewMode(QListView::IconMode);
+  list->setItemDelegate(ivdelegate);
+  list->setGridSize(QSize(zoom, zoom));
+  list->setIconSize(QSize(zoom, zoom));
+  list->setFlow(QListView::LeftToRight);
 
-    modelList->setMode(thumbsAct->isChecked());
-    stackWidget->setCurrentIndex(0);
+  modelList->setMode(thumbsAct->isChecked());
+  stackWidget->setCurrentIndex(0);
+  detailTree->setMouseTracking(false);
+  list->setMouseTracking(true);
 
-    detailAct->setChecked(0);
-    detailTree->setMouseTracking(false);
-    list->setMouseTracking(true);
-
-    if (tabs->count()) tabs->setType(1);
-    updateGrid();
-  } else {
-    currentView = 0;
-    list->setViewMode(QListView::ListMode);
-    list->setItemDelegate(ildelegate);
-    list->setGridSize(QSize());
-    list->setIconSize(QSize(zoomList, zoomList));
-    list->setFlow(QListView::TopToBottom);
-
-    modelList->setMode(thumbsAct->isChecked());
-    list->setMouseTracking(false);
-
-    if (tabs->count()) tabs->setType(0);
-  }
+  if (tabs->count()) { tabs->setType(1); }
+  updateGrid();
 
   list->setDragDropMode(QAbstractItemView::DragDrop);
   list->setDefaultDropAction(Qt::MoveAction);
+  settings->setValue(QStringLiteral("fileViewMode"), QStringLiteral("icon"));
 }
 //---------------------------------------------------------------------------
+
+/**
+ * @brief Switches to column list view
+ */
+void MainWindow::applyListView() {
+
+  iconAct->setChecked(false);
+  listViewAct->setChecked(true);
+  currentView = 2;
+  modelList->setShowListDecorations(false);
+
+  QModelIndex i = modelList->index(pathEdit->currentText());
+  const QModelIndex proxyRoot = modelView->mapFromSource(i);
+  if (detailTree->rootIndex() != proxyRoot) {
+    detailTree->setRootIndex(proxyRoot);
+  }
+
+  modelList->setMode(thumbsAct->isChecked());
+  detailTree->setMouseTracking(true);
+  list->setMouseTracking(false);
+  stackWidget->setCurrentIndex(1);
+
+  if (tabs->count()) { tabs->setType(2); }
+
+  applyListRowHeight();
+  modelView->sort(currentSortColumn, currentSortOrder);
+  settings->setValue(QStringLiteral("fileViewMode"), QStringLiteral("list"));
+}
+//---------------------------------------------------------------------------
+
+void MainWindow::setupFileListHeader()
+{
+    QHeaderView *header = detailTree->header();
+    header->setStretchLastSection(true);
+    header->setSectionsClickable(true);
+    header->setSectionsMovable(false);
+    header->setHighlightSections(true);
+    for (int col = 0; col < 4; ++col) {
+        header->setSectionResizeMode(col, QHeaderView::Interactive);
+    }
+    header->setSectionResizeMode(4, QHeaderView::Stretch);
+    connect(header, SIGNAL(sectionClicked(int)), this, SLOT(listHeaderClicked(int)));
+}
+
+void MainWindow::listHeaderClicked(int logicalIndex)
+{
+    if (logicalIndex == 4) {
+        modelView->toggleDirectorySortOverride();
+        modelView->sort(currentSortColumn, currentSortOrder);
+        return;
+    }
+
+    if (logicalIndex == currentSortColumn) {
+        toggleSortOrder();
+    } else {
+        currentSortColumn = logicalIndex;
+        switch (logicalIndex) {
+        case 0: sortNameAct->setChecked(true); break;
+        case 1: sortSizeAct->setChecked(true); break;
+        case 2: sortDateAct->setChecked(true); break;
+        default: break;
+        }
+        settings->setValue(QStringLiteral("sortBy"), currentSortColumn);
+    }
+    modelView->sort(currentSortColumn, currentSortOrder);
+}
+
+void MainWindow::applyListRowHeight()
+{
+    const int h = qMax(18, zoomDetail);
+    detailTree->setIconSize(QSize(0, 0));
+    detailTree->setIndentation(0);
+    detailTree->setStyleSheet(QStringLiteral("QTreeView::item { height: %1px; }").arg(h));
+}
+
+void MainWindow::applyListColumnWidths()
+{
+    QHeaderView *header = detailTree->header();
+    const int defaults[] = {220, 90, 130, 120, 80};
+    for (int col = 0; col < 5; ++col) {
+        const QString key = QStringLiteral("listColumnWidth%1").arg(col);
+        const int w = settings->value(key, defaults[col]).toInt();
+        if (col < 4) {
+            header->resizeSection(col, w);
+        }
+    }
+}
 
 /**
  * @brief Sets sort column
@@ -667,7 +735,7 @@ void MainWindow::setSortColumn(QAction *columnAct) {
   if (columnAct == sortNameAct) {
     currentSortColumn =  0;
   } else if (columnAct == sortDateAct) {
-    currentSortColumn =  3;
+    currentSortColumn =  2;
   } else if (columnAct == sortSizeAct) {
     currentSortColumn = 1;
   }
@@ -718,33 +786,7 @@ void MainWindow::toggleSortOrder() {
  * @brief Switches from thumbs to details and vice versa
  */
 void MainWindow::toggleThumbs() {
-  if (currentView != 2) toggleIcons();
-  else toggleDetails();
-}
-//---------------------------------------------------------------------------
-
-/**
- * @brief Toggles details
- */
-void MainWindow::toggleDetails() {
-  if (detailAct->isChecked() == false) {
-    toggleIcons();
-    stackWidget->setCurrentIndex(0);
-    detailTree->setMouseTracking(false);
-  } else {
-    currentView = 2;
-    QModelIndex i = modelList->index(pathEdit->currentText());
-    if (detailTree->rootIndex() != i) {
-      detailTree->setRootIndex(modelView->mapFromSource(i));
-    }
-    detailTree->setMouseTracking(true);
-    stackWidget->setCurrentIndex(1);
-    modelList->setMode(thumbsAct->isChecked());
-    iconAct->setChecked(0);
-    if (tabs->count()) {
-      tabs->setType(2);
-    }
-  }
+  modelList->setMode(thumbsAct->isChecked());
 }
 //---------------------------------------------------------------------------
 

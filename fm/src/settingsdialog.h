@@ -3,6 +3,7 @@
 
 #include "mimeutils.h"
 #include "openwithsettingswidget.h"
+#include "customactionsettingswidget.h"
 
 #include <QDialog>
 #include <QListWidget>
@@ -37,14 +38,6 @@ public slots:
   bool saveSettings();
 
 protected slots:
-  void addCustomAction();
-  void delCustomAction();
-  void infoCustomAction();
-  void clearCustomAction();
-  void getIcon(QTreeWidgetItem *item,
-               int column);
-  void onActionChanged(QTreeWidgetItem *item,
-                       int column);
   void onMimeSelected(QTreeWidgetItem* current,
                       QTreeWidgetItem* previous);
   void updateMimeAssoc(QTreeWidgetItem* item);
@@ -82,15 +75,19 @@ protected:
   QCheckBox* showHomeButton;
   QCheckBox* showNewTabButton;
   QSpinBox* spinIconViewGap;
+  QSpinBox* spinIconViewSize;
+  QSpinBox* spinListRowHeight;
+  QCheckBox* checkFoldersAlwaysFirst;
+  QSpinBox* spinListColName;
+  QSpinBox* spinListColSize;
+  QSpinBox* spinListColDate;
+  QSpinBox* spinListColFormat;
+  QSpinBox* spinListColFolder;
   OpenWithSettingsWidget *openWithSettingsWidget = nullptr;
+  CustomActionSettingsWidget *customActionsSettingsWidget = nullptr;
   QCheckBox* checkDarkTheme;
   QCheckBox* checkFileColor;
   QCheckBox* checkPathHistory;
-  QTreeWidget *actionsWidget;
-  QToolButton *addButton;
-  QToolButton *delButton;
-  QToolButton *infoButton;
-  QToolButton *clearButton;
   QCheckBox* checkOutput;
   QTreeWidget* shortsWidget;
   QGroupBox* grpAssoc;

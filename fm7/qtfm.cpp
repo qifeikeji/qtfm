@@ -330,31 +330,31 @@ void QtFM::setupBookmarks()
     //loadBookmarks();
 
     // first-run (if no config)
-    modelBookmarks->addBookmark(tr("Computer"), "/", "", "computer", "", false, false);
+    modelBookmarks->addBookmark(tr("Computer"), "/", "", "folder-root", "", false, false);
 #ifdef Q_OS_MAC
-    modelBookmarks->addBookmark(tr("Applications"), "/Applications", "", "applications-other", "", false, false);
+    modelBookmarks->addBookmark(tr("Applications"), "/Applications", "", "x-content-software", "", false, false);
 #endif
-    modelBookmarks->addBookmark(tr("Home"), QDir::homePath(), "", "user-home", "", false, false);
+    modelBookmarks->addBookmark(tr("Home"), QDir::homePath(), "", "folder-home", "", false, false);
     if (QFile::exists(QString("%1/Desktop").arg(QDir::homePath()))) {
-        modelBookmarks->addBookmark(tr("Desktop"), QString("%1/Desktop").arg(QDir::homePath()), "", "user-desktop", "", false, false);
+        modelBookmarks->addBookmark(tr("Desktop"), QString("%1/Desktop").arg(QDir::homePath()), "", "folder-desktop", "", false, false);
     }
     if (QFile::exists(QString("%1/Documents").arg(QDir::homePath()))) {
-        modelBookmarks->addBookmark(tr("Documents"), QString("%1/Documents").arg(QDir::homePath()), "", "text-x-generic", "", false, false);
+        modelBookmarks->addBookmark(tr("Documents"), QString("%1/Documents").arg(QDir::homePath()), "", "folder-documents", "", false, false);
     }
     if (QFile::exists(QString("%1/Downloads").arg(QDir::homePath()))) {
-        modelBookmarks->addBookmark(tr("Downloads"), QString("%1/Downloads").arg(QDir::homePath()), "", "applications-internet", "", false, false);
+        modelBookmarks->addBookmark(tr("Downloads"), QString("%1/Downloads").arg(QDir::homePath()), "", "folder-download", "", false, false);
     }
     if (QFile::exists(QString("%1/Pictures").arg(QDir::homePath()))) {
-        modelBookmarks->addBookmark(tr("Pictures"), QString("%1/Pictures").arg(QDir::homePath()), "", "image-x-generic", "", false, false);
+        modelBookmarks->addBookmark(tr("Pictures"), QString("%1/Pictures").arg(QDir::homePath()), "", "folder-pictures", "", false, false);
     }
     if (QFile::exists(QString("%1/Videos").arg(QDir::homePath()))) {
-        modelBookmarks->addBookmark(tr("Videos"), QString("%1/Videos").arg(QDir::homePath()), "", "video-x-generic", "", false, false);
+        modelBookmarks->addBookmark(tr("Videos"), QString("%1/Videos").arg(QDir::homePath()), "", "folder-videos", "", false, false);
     }
     if (QFile::exists(QString("%1/Music").arg(QDir::homePath()))) {
-        modelBookmarks->addBookmark(tr("Music"), QString("%1/Music").arg(QDir::homePath()), "", "audio-x-generic", "", false, false);
+        modelBookmarks->addBookmark(tr("Music"), QString("%1/Music").arg(QDir::homePath()), "", "folder-music", "", false, false);
     }
     if (QFile::exists(QString("%1/.local/share/Trash").arg(QDir::homePath()))) {
-        modelBookmarks->addBookmark(tr("Trash"), QString("%1/.local/share/Trash").arg(QDir::homePath()), "", "user-trash", "", false, false);
+        modelBookmarks->addBookmark(tr("Trash"), QString("%1/.local/share/Trash").arg(QDir::homePath()), "", "folder-grey", "", false, false);
     }
     //writeBookmarks();
 }

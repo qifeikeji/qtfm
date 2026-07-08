@@ -1,5 +1,6 @@
 #include "openwithsettingswidget.h"
 #include "openwithconfig.h"
+#include "settingsuistyles.h"
 
 #include <QClipboard>
 #include <QFormLayout>
@@ -19,16 +20,10 @@
 
 namespace {
 
-const char *kModuleStyle =
-    "QFrame#openWithModule { background: palette(base); border: 1px solid palette(mid);"
-    " border-radius: 10px; padding: 6px; }"
-    "QFrame#openWithCategoryBox { background: palette(alternate-base);"
-    " border: 1px solid palette(dark); border-radius: 12px; padding: 8px; }";
-
 QFrame *makeModuleFrame(QWidget *parent)
 {
     auto *frame = new QFrame(parent);
-    frame->setObjectName(QStringLiteral("openWithModule"));
+    frame->setObjectName(QStringLiteral("settingsModule"));
     frame->setFrameShape(QFrame::StyledPanel);
     return frame;
 }
@@ -109,7 +104,7 @@ OpenWithSettingsWidget::OpenWithSettingsWidget(QWidget *parent) : QWidget(parent
 #endif
     hint->setWordWrap(true);
     outer->addWidget(hint);
-    setStyleSheet(QString::fromLatin1(kModuleStyle));
+    setStyleSheet(SettingsUiStyles::moduleStyleSheet());
     outer->addWidget(scrollArea, 1);
 }
 
@@ -127,6 +122,7 @@ QWidget *OpenWithSettingsWidget::buildSuffixSection()
     layout->addLayout(suffixModulesLayout);
 
     auto *addBtn = new QPushButton(tr("Add extension module"));
+    SettingsUiStyles::styleAddButton(addBtn);
     connect(addBtn, &QPushButton::clicked, this, &OpenWithSettingsWidget::addSuffixModule);
     layout->addWidget(addBtn);
     return box;
@@ -135,7 +131,7 @@ QWidget *OpenWithSettingsWidget::buildSuffixSection()
 QWidget *OpenWithSettingsWidget::buildCategorySection(const QString &categoryId)
 {
     auto *outer = new QFrame(this);
-    outer->setObjectName(QStringLiteral("openWithCategoryBox"));
+    outer->setObjectName(QStringLiteral("settingsCategoryBox"));
     auto *layout = new QVBoxLayout(outer);
 
     auto *title = new QLabel(
@@ -154,6 +150,7 @@ QWidget *OpenWithSettingsWidget::buildCategorySection(const QString &categoryId)
     layout->addLayout(modulesLayout);
 
     auto *addBtn = new QPushButton(tr("Add application module"));
+    SettingsUiStyles::styleAddButton(addBtn);
     connect(addBtn, &QPushButton::clicked, this, [this, categoryId]() {
         OpenWithConfig::categoryModules(categoryId).append(OpenWithEntry());
         loadFromConfig();
@@ -194,6 +191,7 @@ void OpenWithSettingsWidget::loadFromConfig()
         vlay->addLayout(form);
         const int moduleIndex = i;
         auto *del = new QPushButton(tr("Delete module"));
+        SettingsUiStyles::styleDeleteButton(del);
         connect(del, &QPushButton::clicked, this, [this, moduleIndex]() {
             OpenWithConfig::suffixModules().removeAt(moduleIndex);
             loadFromConfig();
@@ -219,6 +217,7 @@ void OpenWithSettingsWidget::loadFromConfig()
             vlay->addLayout(form);
             const int moduleIndex = i;
             auto *del = new QPushButton(tr("Delete module"));
+            SettingsUiStyles::styleDeleteButton(del);
             connect(del, &QPushButton::clicked, this, [this, cat, moduleIndex]() {
                 OpenWithConfig::categoryModules(cat).removeAt(moduleIndex);
                 loadFromConfig();

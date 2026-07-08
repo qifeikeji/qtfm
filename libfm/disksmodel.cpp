@@ -62,6 +62,15 @@ bool disksModel::contains(const QString &devicePath) const
     return indexOfDevice(devicePath) >= 0;
 }
 
+QStringList disksModel::allDevicePaths() const
+{
+    QStringList paths;
+    for (const DiskEntry &d : disksData) {
+        paths << d.devicePath;
+    }
+    return paths;
+}
+
 void disksModel::upsertDisk(const QString &devicePath, const QString &name,
                             const QString &mountpoint, const QString &iconName,
                             bool isOptical)

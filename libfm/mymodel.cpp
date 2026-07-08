@@ -188,6 +188,23 @@ void myModel::setRealMimeTypes(bool realMimeTypes) {
 bool myModel::isRealMimeTypes() const {
   return realMimeTypes;
 }
+
+void myModel::setShowListDecorations(bool show)
+{
+    if (showListDecorations == show) {
+        return;
+    }
+    showListDecorations = show;
+    if (rowCount() <= 0) {
+        return;
+    }
+    emit dataChanged(index(0, 0), index(rowCount() - 1, 0));
+}
+
+bool myModel::showListDecorations() const
+{
+    return showListDecorations;
+}
 //---------------------------------------------------------------------------
 
 /**
@@ -928,6 +945,10 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
                item->fileInfo().size());
         break;
       case 2 :
+        data = QLocale::system().toString(item->fileInfo().lastModified(),
+                                          QLocale::FormatType::ShortFormat);
+        break;
+      case 3 :
         if (item->mMimeType.isNull()) {
           if (realMimeTypes) {
             item->mMimeType = mimeUtilsPtr->getMimeType(item->absoluteFilePath());
@@ -939,29 +960,9 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
         }
         data = item->mMimeType;
         break;
-      case 3 :
-        data = QLocale::system().toString(item->fileInfo().lastModified(),
-                                          QLocale::FormatType::ShortFormat);
+      case 4 :
+        data = item->fileInfo().isDir() ? QObject::tr("Folder") : QObject::tr("File");
         break;
-      case 4 : {
-        if (item->mPermissions.isNull()) {
-          QString str;
-          QFile::Permissions perms = item->fileInfo().permissions();
-          str.append(perms.testFlag(QFileDevice::ReadOwner) ? "r" : "-" );
-          str.append(perms.testFlag(QFileDevice::WriteOwner) ? "w" : "-" );
-          str.append(perms.testFlag(QFileDevice::ExeOwner) ? "x" : "-" );
-          str.append(perms.testFlag(QFileDevice::ReadGroup) ? "r" : "-" );
-          str.append(perms.testFlag(QFileDevice::WriteGroup) ? "w" : "-" );
-          str.append(perms.testFlag(QFileDevice::ExeGroup) ? "x" : "-" );
-          str.append(perms.testFlag(QFileDevice::ReadOther) ? "r" : "-" );
-          str.append(perms.testFlag(QFileDevice::WriteOther) ? "w" : "-" );
-          str.append(perms.testFlag(QFileDevice::ExeOther) ? "x" : "-" );
-          str.append(" " + item->fileInfo().owner() + " " +
-                     item->fileInfo().group());
-          item->mPermissions = str;
-        }
-        return item->mPermissions;
-      }
       default :
         data = "";
         break;
@@ -970,7 +971,7 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
   }
   // Display file icon
   else if (role == Qt::DecorationRole) {
-    if (index.column() != 0) {
+    if (!showListDecorations || index.column() != 0) {
       return QVariant();
     }
     return findIcon(item);
@@ -1259,9 +1260,9 @@ QVariant myModel::headerData(int section, Qt::Orientation orientation, int role)
         switch(section) {
         case 0: return tr("Name");
         case 1: return tr("Size");
-        case 2: return tr("Type");
-        case 4: return tr("Owner");
-        case 3: return tr("Date Modified");
+        case 2: return tr("Date Modified");
+        case 3: return tr("Format");
+        case 4: return tr("Folder");
         default: return QVariant();
         }
     }

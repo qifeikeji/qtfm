@@ -34,6 +34,9 @@
 #include <QComboBox>
 #include <QSignalMapper>
 #include <QToolBar>
+#include <QToolButton>
+#include <QMenu>
+#include <QActionGroup>
 #include <QItemDelegate>
 #include <QStyledItemDelegate>
 #include <QVector>
@@ -105,9 +108,10 @@ public slots:
     void runFile();
     void openFile();
     void clipboardChanged();
-    void toggleDetails();
+    void applyIconView();
+    void applyListView();
+    void listHeaderClicked(int logicalIndex);
     void toggleHidden();
-    void toggleIcons();
     void toggleSortBy(QAction* action);
     void toggleSortOrder();
     void setSortOrder(Qt::SortOrder order);
@@ -176,6 +180,9 @@ private slots:
     void openInApp();
     void openWithConfiguredApp();
     void updateGrid();
+    void setupFileListHeader();
+    void applyListRowHeight();
+    void applyListColumnWidths();
     // libdisks
 #ifndef NO_UDISKS
     void populateMedia();
@@ -186,6 +193,7 @@ private slots:
     void handleMediaUnmount();
     void handleMediaEject();
     void handleMediaError(QString path, QString error);
+    void toggleDisksPanel();
 #endif
     void clearCache();
     void handlePathRequested(QString path);
@@ -208,7 +216,7 @@ private:
     int zoomBook;
     int iconViewGap = 4;
     int currentView;        // 0=list, 1=icons, 2=details
-    int currentSortColumn;  // 0=name, 1=size, 3=date
+    int currentSortColumn;  // 0=name, 1=size, 2=date, 3=format, 4=folder
     Qt::SortOrder currentSortOrder;
 
     QCompleter *customComplete;
@@ -269,7 +277,6 @@ private:
     QAction *newTabAct;
     QAction *hiddenAct;
     QAction *filterAct;
-    QAction *detailAct;
     QAction *addBookmarkAct;
     QAction *addSeparatorAct;
     QAction *delBookmarkAct;
@@ -277,6 +284,10 @@ private:
     QAction *wrapBookmarksAct;
     QAction *deleteAct;
     QAction *iconAct;
+    QAction *listViewAct;
+    QActionGroup *viewModeActGrp;
+    QToolButton *sortToolButton;
+    QMenu *sortMenu = nullptr;
     QActionGroup *sortByActGrp;
     QAction *sortNameAct;
     QAction *sortDateAct;
@@ -316,6 +327,7 @@ private:
     QAction *macOpenWithHelpAct;
 #endif
 #ifndef NO_UDISKS
+    QAction *toggleDisksPanelAct;
     QAction *mediaUnmountAct;
     QAction *mediaEjectAct;
 #endif

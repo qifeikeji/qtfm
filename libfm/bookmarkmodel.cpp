@@ -24,7 +24,6 @@
 #include "bundledicons.h"
 
 #include <QApplication>
-#include <QStyle>
 #include <QUrl>
 #include <QDir>
 #include <QPushButton>
@@ -47,7 +46,7 @@ void bookmarkmodel::addBookmark(QString name,
                                 bool changed)
 {
     if (path.isEmpty() && !isMedia) { //add separator
-        QStandardItem *item = new QStandardItem(QIcon::fromTheme(icon), "");
+        QStandardItem *item = new QStandardItem(BundledIcons::emptyIcon(), "");
         item->setData(QBrush(QColor(0, 0, 0, 40)), Qt::BackgroundRole);
         QFlags<Qt::ItemFlag> flags = item->flags();
         flags ^= Qt::ItemIsEditable; //not editable
@@ -57,17 +56,15 @@ void bookmarkmodel::addBookmark(QString name,
         return;
     }
 
-    QIcon theIcon = QIcon::fromTheme(icon,
-                                     QApplication::style()->standardIcon(QStyle::SP_DirIcon));
+    QIcon theIcon;
     if (!icon.isEmpty()) {
-        const QIcon bundled = BundledIcons::iconByName(icon);
-        if (!bundled.isNull()) {
-            theIcon = bundled;
-        }
+        theIcon = BundledIcons::iconByName(icon);
+    } else if (!path.isEmpty()) {
+        theIcon = BundledIcons::iconForBookmarkPath(path);
     }
-    /*if (icon.isEmpty()) {
-        if (folderIcons->contains(name)) { theIcon = folderIcons->value(name); }
-    }*/
+    if (theIcon.isNull()) {
+        theIcon = BundledIcons::iconByName(QStringLiteral("folder"));
+    }
 
     if (name.isEmpty()) name = QString("/");
     QStandardItem *item = new QStandardItem(theIcon, name);

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+     stroke="#1d1d1f" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Stacked drives (lsblk-style block devices) -->
+  <rect x="3" y="4" width="18" height="5" rx="1"/>
+  <line x1="7" y1="6.5" x2="7.01" y2="6.5"/>
+  <rect x="3" y="11" width="18" height="5" rx="1"/>
+  <line x1="7" y1="13.5" x2="7.01" y2="13.5"/>
+  <!-- USB / external hint -->
+  <path d="M12 18v3"/>
+  <path d="M9 21h6"/>
+  <path d="M10 18c0-1.1.9-2 2-2s2 .9 2 2"/>
+</svg>

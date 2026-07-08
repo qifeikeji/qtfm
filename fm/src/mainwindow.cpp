@@ -38,6 +38,9 @@
 #include <QtConcurrent/QtConcurrent>
 
 #include "mainwindow.h"
+#ifndef NO_UDISKS
+#include "udisks2.h"
+#endif
 #include "mymodel.h"
 #include "fileutils.h"
 #include "applicationdialog.h"
@@ -51,6 +54,74 @@
 
 #ifdef Q_OS_MAC
 #include <QStyleFactory>
+#endif
+
+#ifndef NO_UDISKS
+namespace {
+
+QString effectiveMountpointForWholeDisk(Device *whole,
+                                        const QMap<QString, Device *> &devices)
+{
+    if (!whole->mountpoint.isEmpty()) {
+        return whole->mountpoint;
+    }
+    QMapIterator<QString, Device *> it(devices);
+    while (it.hasNext()) {
+        it.next();
+        Device *d = it.value();
+        if (d->drive != whole->drive || d->path == whole->path) { continue; }
+        if (!d->mountpoint.isEmpty()) { return d->mountpoint; }
+    }
+    return QString();
+}
+
+QString mountableBlockPath(Device *whole, const QMap<QString, Device *> &devices)
+{
+    if (!whole->mountpoint.isEmpty() || !uDisks2::getFileSystem(whole->path).isEmpty()) {
+        return whole->path;
+    }
+    QMapIterator<QString, Device *> it(devices);
+    while (it.hasNext()) {
+        it.next();
+        Device *d = it.value();
+        if (d->drive != whole->drive || d->path == whole->path) { continue; }
+        if (!uDisks2::getFileSystem(d->path).isEmpty()) { return d->path; }
+    }
+    return whole->path;
+}
+
+QString diskOperationBlockPath(const QString &wholeDiskPath,
+                               const QMap<QString, Device *> &devices)
+{
+    if (!devices.contains(wholeDiskPath)) { return wholeDiskPath; }
+    Device *whole = devices.value(wholeDiskPath);
+    if (!whole->mountpoint.isEmpty()) { return wholeDiskPath; }
+    QMapIterator<QString, Device *> it(devices);
+    while (it.hasNext()) {
+        it.next();
+        Device *d = it.value();
+        if (d->drive != whole->drive || d->path == whole->path) { continue; }
+        if (!d->mountpoint.isEmpty()) { return d->path; }
+    }
+    return wholeDiskPath;
+}
+
+bool shouldListWholeDisk(Device *whole, const QMap<QString, Device *> &devices)
+{
+    if (uDisks2::isIgnoredBlockDevice(whole->dev)) { return false; }
+    if (uDisks2::isPartitionBlock(whole->path)) { return false; }
+
+    if (whole->isOptical) {
+        return whole->hasMedia;
+    }
+    if (whole->isRemovable) {
+        return whole->hasMedia;
+    }
+    const QString mp = effectiveMountpointForWholeDisk(whole, devices);
+    return uDisks2::isExternalUserMountPoint(mp);
+}
+
+} // namespace
 #endif
 
 MainWindow::MainWindow()
@@ -153,6 +224,7 @@ MainWindow::MainWindow()
     dockDisks->setWidget(disksList);
     addDockWidget(Qt::LeftDockWidgetArea, dockDisks);
     splitDockWidget(dockBookmarks, dockDisks, Qt::Vertical);
+    dockDisks->hide();
 
     QWidget *main = new QWidget(this);
     mainLayout = new QVBoxLayout(main);
@@ -207,12 +279,14 @@ MainWindow::MainWindow()
     list->setTextElideMode(Qt::ElideNone);
     listSelectionModel = list->selectionModel();
 
-    detailTree->setRootIsDecorated(true);
-    detailTree->setItemsExpandable(true);
+    detailTree->setRootIsDecorated(false);
+    detailTree->setItemsExpandable(false);
     detailTree->setUniformRowHeights(true);
     detailTree->setAlternatingRowColors(true);
     detailTree->setModel(modelView);
     detailTree->setSelectionModel(listSelectionModel);
+    detailTree->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+    setupFileListHeader();
 
     pathEdit = new QComboBox(this);
     pathEdit->setEditable(true);
@@ -459,6 +533,13 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   firstRunBookmarks(isFirstRun);
 #ifndef NO_UDISKS
   populateMedia();
+  const bool disksVisible = settings->value("disksPanelVisible", false).toBool();
+  toggleDisksPanelAct->setChecked(disksVisible);
+  if (disksVisible) {
+      dockDisks->show();
+  } else {
+      dockDisks->hide();
+  }
 #endif
   bookmarksList->setModel(modelBookmarks);
   bookmarksList->setResizeMode(QListView::Adjust);
@@ -499,23 +580,48 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   }
 
   // Load view mode
-  detailAct->setChecked(settings->value("viewMode", 0).toBool());
-  iconAct->setChecked(settings->value("iconMode", 1).toBool());
-  toggleDetails();
+  modelView->setFoldersAlwaysFirstSetting(settings->value("foldersAlwaysFirst", true).toBool());
+  modelView->resetDirectorySortOverride();
 
-  // Restore header of detail tree
-  detailTree->header()->restoreState(settings->value("header").toByteArray());
-  detailTree->setSortingEnabled(1);
+  int sortBy = settings->value("sortBy", 2).toInt();
+  if (!settings->value("listColumnLayoutV2", false).toBool()) {
+      if (sortBy == 3) {
+          sortBy = 2;
+      } else if (sortBy == 2) {
+          sortBy = 3;
+      }
+      settings->setValue("listColumnLayoutV2", true);
+  }
+  currentSortColumn = sortBy;
+  currentSortOrder = static_cast<Qt::SortOrder>(
+      settings->value("sortOrder", static_cast<int>(Qt::DescendingOrder)).toInt());
 
-  // Load sorting information and sort
-  currentSortColumn = settings->value("sortBy", 0).toInt();
-  currentSortOrder = (Qt::SortOrder) settings->value("sortOrder", 0).toInt();
   switch (currentSortColumn) {
-    case 0 : setSortColumn(sortNameAct); break;
-    case 1 : setSortColumn(sortSizeAct); break;
-    case 3 : setSortColumn(sortDateAct); break;
+  case 0: setSortColumn(sortNameAct); break;
+  case 1: setSortColumn(sortSizeAct); break;
+  case 2: setSortColumn(sortDateAct); break;
+  default: break;
   }
   setSortOrder(currentSortOrder);
+
+  const QString fileViewMode = settings->value("fileViewMode").toString();
+  if (fileViewMode == QLatin1String("icon")) {
+      applyIconView();
+  } else if (fileViewMode == QLatin1String("list")) {
+      applyListView();
+  } else if (settings->value("viewMode", 0).toInt() == 1
+             || !settings->value("iconMode", false).toBool()) {
+      applyListView();
+  } else {
+      applyIconView();
+  }
+
+  if (settings->value("header").toByteArray().isEmpty()) {
+      applyListColumnWidths();
+  } else {
+      applyListColumnWidths();
+  }
+  detailTree->setSortingEnabled(true);
   modelView->sort(currentSortColumn, currentSortOrder);
 
   // Load terminal command
@@ -553,18 +659,18 @@ void MainWindow::firstRunBookmarks(bool isFirstRun)
 {
     if (!isFirstRun) { return; }
     //qDebug() << "first run, setup default bookmarks";
-    modelBookmarks->addBookmark(tr("Computer"), "/", "", "computer", "", false, false);
+    modelBookmarks->addBookmark(tr("Computer"), "/", "", "folder-root", "", false, false);
 #ifdef Q_OS_MAC
-    modelBookmarks->addBookmark(tr("Applications"), "/Applications", "", "applications-other", "", false, false);
+    modelBookmarks->addBookmark(tr("Applications"), "/Applications", "", "x-content-software", "", false, false);
 #endif
-    modelBookmarks->addBookmark(tr("Home"), QDir::homePath(), "", "user-home", "", false, false);
-    modelBookmarks->addBookmark(tr("Desktop"), QString("%1/Desktop").arg(QDir::homePath()), "", "user-desktop", "", false, false);
+    modelBookmarks->addBookmark(tr("Home"), QDir::homePath(), "", "folder-home", "", false, false);
+    modelBookmarks->addBookmark(tr("Desktop"), QString("%1/Desktop").arg(QDir::homePath()), "", "folder-desktop", "", false, false);
     //modelBookmarks->addBookmark(tr("Documents"), QString("%1/Documents").arg(QDir::homePath()), "", "text-x-generic", "", false, false);
     //modelBookmarks->addBookmark(tr("Downloads"), QString("%1/Downloads").arg(QDir::homePath()), "", "applications-internet", "", false, false);
     //modelBookmarks->addBookmark(tr("Pictures"), QString("%1/Pictures").arg(QDir::homePath()), "", "image-x-generic", "", false, false);
     //modelBookmarks->addBookmark(tr("Videos"), QString("%1/Videos").arg(QDir::homePath()), "", "video-x-generic", "", false, false);
     //modelBookmarks->addBookmark(tr("Music"), QString("%1/Music").arg(QDir::homePath()), "", "audio-x-generic", "", false, false);
-    modelBookmarks->addBookmark(tr("Trash"), QString("%1/.local/share/Trash").arg(QDir::homePath()), "", "user-trash", "", false, false);
+    modelBookmarks->addBookmark(tr("Trash"), QString("%1/.local/share/Trash").arg(QDir::homePath()), "", "folder-grey", "", false, false);
     modelBookmarks->addBookmark("", "", "", "", "", false, false);
     writeBookmarks();
 }
@@ -952,12 +1058,12 @@ void MainWindow::tabChanged(int index)
     pathEdit->addItems(*tabs->getHistory(index));
 
     int type = tabs->getType(index);
-    if(currentView != type) {
-        if (type == 2) { detailAct->setChecked(1); }
-        else { detailAct->setChecked(0); }
-        if (type == 1) { iconAct->setChecked(1); }
-        else { iconAct->setChecked(0); }
-        toggleDetails();
+    if (currentView != type) {
+        if (type == 1) {
+            applyIconView();
+        } else {
+            applyListView();
+        }
     }
 
     if(!tabs->tabData(index).toString().isEmpty()) {
@@ -1273,6 +1379,9 @@ void MainWindow::writeSettings() {
   // Write general settings
   settings->setValue("viewMode", stackWidget->currentIndex());
   settings->setValue("iconMode", iconAct->isChecked());
+  settings->setValue("fileViewMode",
+                     currentView == 1 ? QStringLiteral("icon") : QStringLiteral("list"));
+  settings->setValue("foldersAlwaysFirst", modelView->foldersAlwaysFirstSetting());
   settings->setValue("zoom", zoom);
   settings->setValue("zoomTree", zoomTree);
   settings->setValue("zoomBook", zoomBook);
@@ -1289,10 +1398,18 @@ void MainWindow::writeSettings() {
   settings->setValue("windowGeo", saveGeometry());
   settings->setValue("windowMax", isMaximized());
   settings->setValue("header", detailTree->header()->saveState());
+  QHeaderView *listHeader = detailTree->header();
+  for (int col = 0; col < 5; ++col) {
+      settings->setValue(QStringLiteral("listColumnWidth%1").arg(col),
+                         listHeader->sectionSize(col));
+  }
   settings->setValue("realMimeTypes",  modelList->isRealMimeTypes());
 
   // Write bookmarks
   writeBookmarks();
+#ifndef NO_UDISKS
+  settings->setValue("disksPanelVisible", toggleDisksPanelAct->isChecked());
+#endif
 }
 //---------------------------------------------------------------------------
 
@@ -1526,11 +1643,13 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
 #ifndef NO_UDISKS
         isMedia = true;
         QString mediaPath = disksList->currentIndex().data(DISK_DEVICE_PATH).toString();
-        if (!mediaPath.isEmpty() && disks->devices.contains(mediaPath)) {
-            if (!disks->devices[mediaPath]->mountpoint.isEmpty()) { // mounted
+        const QString opPath = diskOperationBlockPath(mediaPath, disks->devices);
+        if (!mediaPath.isEmpty() && disks->devices.contains(opPath)) {
+            const QString mp = effectiveMountpointForWholeDisk(disks->devices[mediaPath], disks->devices);
+            if (!mp.isEmpty()) {
                 popup->addAction(mediaUnmountAct);
-            } else { // unmounted
-                if (disks->devices[mediaPath]->isOptical) { popup->addAction(mediaEjectAct); }
+            } else if (disks->devices[mediaPath]->isOptical) {
+                popup->addAction(mediaEjectAct);
             }
         }
 #endif
@@ -1851,33 +1970,49 @@ void MainWindow::updateGrid()
  * @brief media support
  */
 #ifndef NO_UDISKS
+void MainWindow::toggleDisksPanel()
+{
+    const bool show = toggleDisksPanelAct->isChecked();
+    if (show) {
+        dockDisks->show();
+        populateMedia();
+    } else {
+        dockDisks->hide();
+    }
+    settings->setValue("disksPanelVisible", show);
+}
+
 void MainWindow::populateMedia()
 {
-    QMapIterator<QString, Device*> device(disks->devices);
-    while (device.hasNext()) {
-        device.next();
-        if ((device.value()->isOptical && !device.value()->hasMedia)
-#ifndef __FreeBSD__
-                || (!device.value()->isOptical && !device.value()->isRemovable)
-#endif
-                || (!device.value()->isOptical && !device.value()->hasPartition)) {
-            modelDisks->removeDisk(device.value()->path);
-            continue;
+    QSet<QString> listed;
+    QMapIterator<QString, Device *> it(disks->devices);
+    while (it.hasNext()) {
+        it.next();
+        Device *d = it.value();
+        if (!shouldListWholeDisk(d, disks->devices)) { continue; }
+
+        const QString mp = effectiveMountpointForWholeDisk(d, disks->devices);
+        QString subtitle = d->name;
+        if (subtitle.isEmpty()) { subtitle = tr("Storage"); }
+        const QString rowTitle = QStringLiteral("%1 — %2").arg(d->dev, subtitle);
+        const QString icon = d->isOptical ? QStringLiteral("drive-optical")
+                                          : QStringLiteral("drive-removable-media");
+        modelDisks->upsertDisk(d->path, rowTitle, mp, icon, d->isOptical);
+        listed.insert(d->path);
+    }
+    for (const QString &path : modelDisks->allDevicePaths()) {
+        if (!listed.contains(path)) {
+            modelDisks->removeDisk(path);
         }
-        modelDisks->upsertDisk(device.value()->path,
-                               QString("%1 (%2)").arg(device.value()->name).arg(device.value()->dev),
-                               device.value()->mountpoint,
-                               device.value()->isOptical?"drive-optical":"drive-removable-media",
-                               device.value()->isOptical);
     }
     modelDisks->refreshUsage();
 }
 
 void MainWindow::handleMediaMountpointChanged(QString path, QString mountpoint)
 {
-    if (path.isEmpty()) { return; }
-    modelDisks->setMountpoint(path, mountpoint);
-    modelDisks->refreshUsage();
+    Q_UNUSED(path)
+    Q_UNUSED(mountpoint)
+    populateMedia();
 }
 
 void MainWindow::handleMediaAdded(QString path)
@@ -1888,7 +2023,8 @@ void MainWindow::handleMediaAdded(QString path)
 
 void MainWindow::handleMediaRemoved(QString path)
 {
-    modelDisks->removeDisk(path);
+    Q_UNUSED(path)
+    populateMedia();
 }
 
 void MainWindow::handleMediaChanged(QString path, bool present)
@@ -1909,7 +2045,10 @@ void MainWindow::handleMediaUnmount()
     if (!index.isValid()) { return; }
     QString path = index.data(DISK_DEVICE_PATH).toString();
     if (path.isEmpty()) { return; }
-    disks->devices[path]->unmount();
+    const QString opPath = diskOperationBlockPath(path, disks->devices);
+    if (disks->devices.contains(opPath)) {
+        disks->devices[opPath]->unmount();
+    }
 }
 
 void MainWindow::handleMediaEject()
@@ -1919,7 +2058,9 @@ void MainWindow::handleMediaEject()
     if (!index.isValid()) { return; }
     QString path = index.data(DISK_DEVICE_PATH).toString();
     if (path.isEmpty()) { return; }
-    disks->devices[path]->eject();
+    if (disks->devices.contains(path)) {
+        disks->devices[path]->eject();
+    }
 }
 
 void MainWindow::handleMediaError(QString path, QString error)
@@ -1936,7 +2077,10 @@ void MainWindow::diskActivated(QModelIndex item)
 #ifndef NO_UDISKS
     const QString devicePath = item.data(DISK_DEVICE_PATH).toString();
     if (mountpoint.isEmpty() && !devicePath.isEmpty() && disks->devices.contains(devicePath)) {
-        disks->devices[devicePath]->mount();
+        const QString mountPath = mountableBlockPath(disks->devices[devicePath], disks->devices);
+        if (disks->devices.contains(mountPath)) {
+            disks->devices[mountPath]->mount();
+        }
         // Mounting is async; handleMediaMountpointChanged() will update the
         // model once done. Re-read here in case it was already mounted.
         mountpoint = modelDisks->index(item.row()).data(DISK_MOUNTPOINT).toString();
