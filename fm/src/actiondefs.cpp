@@ -693,10 +693,6 @@ void MainWindow::createToolBars() {
   navToolBar = addToolBar(tr("Navigate"));
   navToolBar->setObjectName("Navigate");
 
-  auto *navSpacer = new QWidget(this);
-  navSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-  navToolBar->addWidget(navSpacer);
-
   navToolBar->addAction(backAct);
   navToolBar->addAction(upAct);
   navToolBar->addAction(refreshAct);
@@ -704,11 +700,15 @@ void MainWindow::createToolBars() {
   navToolBar->addAction(iconAct);
   navToolBar->addAction(listViewAct);
 
-  addressToolBar = addToolBar(tr("Address"));
-  addressToolBar->setObjectName("Address");
-  addressToolBar->addWidget(pathEdit);
-  addressToolBar->addAction(newTabAct);
-  addressToolBar->addAction(terminalAct);
+  auto *addrSpacer = new QWidget(this);
+  addrSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+  navToolBar->addWidget(addrSpacer);
+
+  navToolBar->addWidget(pathEdit);
+  navToolBar->addAction(newTabAct);
+  navToolBar->addAction(terminalAct);
+
+  addressToolBar = navToolBar;
 }
 //---------------------------------------------------------------------------
 

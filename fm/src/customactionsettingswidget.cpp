@@ -94,16 +94,18 @@ CustomActionSettingsWidget::CustomActionSettingsWidget(QWidget *parent) : QWidge
 
     scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
     auto *container = new QWidget(scrollArea);
-    modulesLayout = new QVBoxLayout(container);
-    modulesLayout->setSpacing(10);
-    scrollArea->setWidget(container);
+    auto *pageLayout = new QVBoxLayout(container);
+    pageLayout->setSpacing(10);
 
     auto *hint = new QLabel(tr("Each module is one custom context-menu action. "
                                "Icon path overrides the bundled icon when set. "
                                "Use %f, %F, %n in commands. Enable capture output to show stdout/stderr."));
     hint->setWordWrap(true);
+    pageLayout->addWidget(hint);
 
+    auto *toolbar = new QHBoxLayout();
     auto *addBtn = new QPushButton(tr("Add action module"));
     SettingsUiStyles::styleAddButton(addBtn);
     connect(addBtn, &QPushButton::clicked, this, &CustomActionSettingsWidget::addActionModule);
@@ -116,16 +118,22 @@ CustomActionSettingsWidget::CustomActionSettingsWidget(QWidget *parent) : QWidge
         setDefaults(Common::getDefaultActions());
     });
 
-    auto *footer = new QHBoxLayout();
-    footer->addWidget(addBtn);
-    footer->addWidget(infoBtn);
-    footer->addWidget(clearBtn);
-    footer->addStretch(1);
+    toolbar->addWidget(addBtn);
+    toolbar->addWidget(infoBtn);
+    toolbar->addWidget(clearBtn);
+    toolbar->addStretch(1);
+    pageLayout->addLayout(toolbar);
+
+    modulesLayout = new QVBoxLayout();
+    modulesLayout->setSpacing(10);
+    pageLayout->addLayout(modulesLayout);
+    pageLayout->addStretch(1);
+
+    scrollArea->setWidget(container);
 
     auto *outer = new QVBoxLayout(this);
-    outer->addWidget(hint);
+    outer->setContentsMargins(0, 0, 0, 0);
     outer->addWidget(scrollArea, 1);
-    outer->addLayout(footer);
 }
 
 void CustomActionSettingsWidget::loadFromSettings(QSettings *settings)
@@ -213,13 +221,12 @@ void CustomActionSettingsWidget::rebuildModules()
             modulesLayout->addWidget(buildModuleFrame(i));
         }
     }
-    modulesLayout->addStretch(1);
 }
 
 QFrame *CustomActionSettingsWidget::buildModuleFrame(int index)
 {
     CustomActionEntry *entry = &actionEntries[index];
-    auto *frame = makeModuleFrame(this);
+    auto *frame = makeModuleFrame(scrollArea->widget());
     auto *mainLay = new QVBoxLayout(frame);
 
     // Row 1: file type, name, bundled icon

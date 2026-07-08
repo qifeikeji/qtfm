@@ -230,6 +230,7 @@ MainWindow::MainWindow()
     sidebarTabs->setObjectName(QStringLiteral("sidebarPlacesTabs"));
     sidebarTabs->setTabPosition(QTabWidget::North);
     sidebarTabs->setDocumentMode(true);
+    sidebarTabs->tabBar()->setDrawBase(false);
     sidebarTabs->tabBar()->setExpanding(true);
     sidebarTabs->tabBar()->setUsesScrollButtons(false);
 
@@ -560,7 +561,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
     }
 
   // fix style — full chrome applied in applyViewChromeStyles()
-  addressToolBar->setContentsMargins(0,0,5,0);
+  navToolBar->setContentsMargins(0, 0, 5, 0);
 
   // Restore window state
   if (wState) {
@@ -1363,25 +1364,21 @@ void MainWindow::applyViewChromeStyles()
 
     const QString chromeBtnSize = QString::number(kPathBarHeight);
     const QString flatToolBtnQss = QStringLiteral(
-        "QToolBar#Navigate QToolButton, QToolBar#Address QToolButton {"
+        "QToolBar#Navigate QToolButton {"
         " border: 1px solid %1; border-radius: 4px; background: %2;"
         " padding: 0px; min-width: %4px; max-width: %4px;"
         " min-height: %4px; max-height: %4px; }"
-        "QToolBar#Navigate QToolButton:hover, QToolBar#Address QToolButton:hover {"
+        "QToolBar#Navigate QToolButton:hover {"
         " background: %3; }"
-        "QToolBar#Navigate QToolButton:pressed, QToolBar#Address QToolButton:pressed {"
+        "QToolBar#Navigate QToolButton:pressed {"
         " background: %3; }"
-        "QToolBar#Navigate QToolButton:checked, QToolBar#Address QToolButton:checked {"
+        "QToolBar#Navigate QToolButton:checked {"
         " background: %2; border: 1px solid %1; }")
         .arg(flatBorder.name(), flatBg.name(), flatHover.name(QColor::HexArgb), chromeBtnSize);
 
     if (navToolBar) {
         navToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
         navToolBar->setStyleSheet(flatToolBtnQss);
-    }
-    if (addressToolBar) {
-        addressToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
-        addressToolBar->setStyleSheet(flatToolBtnQss);
     }
     if (menuToolBar) {
         menuToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
@@ -1419,18 +1416,25 @@ void MainWindow::applyViewChromeStyles()
     tabs->setExpanding(true);
     tabs->setDocumentMode(true);
     if (sidebarTabs) {
+        sidebarTabs->tabBar()->setDrawBase(false);
         const QString sidebarTabQss = QStringLiteral(
             "QTabWidget#sidebarPlacesTabs::pane {"
             " border: none; top: 0; margin: 0; padding: 0; background: %1; }"
+            "QTabWidget#sidebarPlacesTabs QTabBar {"
+            " background: %4; border: none; }"
             "QTabWidget#sidebarPlacesTabs QTabBar::tab { min-height: 30px; max-height: 30px;"
             " padding: 4px 12px; border: none; border-radius: 0px; margin: 0px;"
-            " background: transparent; }"
-            "QTabWidget#sidebarPlacesTabs QTabBar::tab:selected { background: %2; }"
+            " border-top: none; }"
+            "QTabWidget#sidebarPlacesTabs QTabBar::tab:selected {"
+            " background: %2; border: none; border-top: none; margin-top: 0; }"
+            "QTabWidget#sidebarPlacesTabs QTabBar::tab:!selected {"
+            " min-height: 30px; max-height: 30px; background: %4;"
+            " border: none; border-top: none; margin-top: 0; padding-top: 4px; }"
             "QTabWidget#sidebarPlacesTabs QTabBar::tab:hover:!selected { background: %3; }"
-            "QTabWidget#sidebarPlacesTabs QTabBar::tab:!selected { min-height: 30px; max-height: 30px; }"
             "QTabWidget#sidebarPlacesTabs QTabBar::tab:selected:!hover {"
             " min-height: 30px; max-height: 30px; }"
-        ).arg(flatBg.name(), sidebarTabSelected.name(), sidebarTabHover.name(QColor::HexArgb));
+        ).arg(flatBg.name(), sidebarTabSelected.name(), sidebarTabHover.name(QColor::HexArgb),
+              windowBg.name());
         sidebarTabs->setStyleSheet(sidebarTabQss);
     }
 

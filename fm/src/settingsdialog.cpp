@@ -319,23 +319,16 @@ QWidget *SettingsDialog::createAppearanceSettings()
 QWidget* SettingsDialog::createActionsSettings() {
 
   QWidget* widget = new QWidget(this);
+  QVBoxLayout *outerLayout = new QVBoxLayout(widget);
+  outerLayout->setContentsMargins(0, 0, 0, 0);
 
-  QGroupBox* grpOptions = new QGroupBox(tr("Options"), widget);
-  checkOutput = new QCheckBox(grpOptions);
-  QFormLayout* layoutOptions = new QFormLayout(grpOptions);
-  layoutOptions->addRow(tr("Show dialog with action's output:"), checkOutput);
-
-  QGroupBox* grpMain = new QGroupBox(tr("Custom actions"), widget);
-  QVBoxLayout* mainLayout = new QVBoxLayout(grpMain);
-
-  customActionsSettingsWidget = new CustomActionSettingsWidget(grpMain);
-  mainLayout->addWidget(customActionsSettingsWidget);
+  customActionsSettingsWidget = new CustomActionSettingsWidget(widget);
   connect(customActionsSettingsWidget, SIGNAL(entriesChanged()),
           this, SLOT(readShortcuts()));
+  outerLayout->addWidget(customActionsSettingsWidget, 1);
 
-  QVBoxLayout *outerLayout = new QVBoxLayout(widget);
-  outerLayout->addWidget(grpMain);
-  outerLayout->addWidget(grpOptions);
+  checkOutput = new QCheckBox(tr("Show dialog with action's output"), widget);
+  outerLayout->addWidget(checkOutput);
 
   return widget;
 }
