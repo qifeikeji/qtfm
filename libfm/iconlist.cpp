@@ -38,7 +38,11 @@ void IconListDelegate::paint(QPainter *painter,
 
     if (option.state & QStyle::State_Selected) {
         painter->setPen(option.palette.highlightedText().color());
-    } else { painter->setPen(txtBrush.color()); }
+    } else if (index.data(Qt::ForegroundRole).isValid()) {
+        painter->setPen(txtBrush.color());
+    } else {
+        painter->setPen(option.palette.text().color());
+    }
 
     painter->drawPixmap(iconRect, icon.pixmap(iconsize.width(),iconsize.height()));
     painter->drawText(txtRect, Qt::AlignLeft|Qt::AlignVCenter, index.data().toString());

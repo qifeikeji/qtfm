@@ -5,6 +5,8 @@
 #include <QPainter>
 #include <QApplication>
 #include <QFontMetrics>
+#include <QLineEdit>
+#include <QFrame>
 
 namespace {
 const int kMinItemHeight = 54;
@@ -13,7 +15,23 @@ const int kIconSize = 24;
 const int kHPad = 8;
 const int kVPad = 6;
 const int kIconTextGap = 8;
+
+QString bookmarkRenameEditorStyleSheet()
+{
+    const QPalette pal = QApplication::palette();
+    return QStringLiteral(
+               "QLineEdit {"
+               " background: palette(base);"
+               " color: palette(text);"
+               " border: 1px solid %1;"
+               " border-radius: 2px;"
+               " padding: 4px 6px;"
+               " selection-background-color: #0078d4;"
+               " selection-color: #ffffff;"
+               "}")
+        .arg(pal.color(QPalette::Mid).name());
 }
+} // namespace
 
 // ------------------------------------------------------------------------
 // BookmarkItemDelegate
@@ -57,6 +75,14 @@ void BookmarkItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
         painter->setPen(QPen(lineColor, 1));
         painter->drawLine(rect.left() + margin, y, rect.right() - margin, y);
         painter->restore();
+        return;
+    }
+
+    if (m_editing && index == m_editingIndex) {
+        QStyleOptionViewItem opt(option);
+        initStyleOption(&opt, index);
+        QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
+        style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
         return;
     }
 
@@ -117,6 +143,60 @@ void BookmarkItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
     }
 
     painter->restore();
+}
+
+QWidget *BookmarkItemDelegate::createEditor(QWidget *parent,
+                                            const QStyleOptionViewItem &option,
+                                            const QModelIndex &index) const
+{
+    Q_UNUSED(option);
+    Q_UNUSED(index);
+    auto *editor = new QLineEdit(parent);
+    editor->setFrame(false);
+    editor->setStyleSheet(bookmarkRenameEditorStyleSheet());
+    QPalette pal = editor->palette();
+    pal.setColor(QPalette::Highlight, QColor(0, 120, 212));
+    pal.setColor(QPalette::HighlightedText, Qt::white);
+    editor->setPalette(pal);
+    return editor;
+}
+
+void BookmarkItemDelegate::updateEditorGeometry(QWidget *editor,
+                                                const QStyleOptionViewItem &option,
+                                                const QModelIndex &index) const
+{
+    Q_UNUSED(index);
+    editor->setGeometry(option.rect.adjusted(kHPad / 2, 2, -kHPad / 2, -2));
+}
+
+void BookmarkItemDelegate::setEditorData(QWidget *editor, const QModelIndex &index) const
+{
+    m_editing = true;
+    m_editingIndex = index;
+    auto *line = qobject_cast<QLineEdit *>(editor);
+    if (!line) {
+        return;
+    }
+    line->setText(index.data(Qt::EditRole).toString());
+    line->selectAll();
+}
+
+void BookmarkItemDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
+                                        const QModelIndex &index) const
+{
+    auto *line = qobject_cast<QLineEdit *>(editor);
+    if (line) {
+        model->setData(index, line->text().trimmed(), Qt::EditRole);
+    }
+    m_editing = false;
+    m_editingIndex = QModelIndex();
+}
+
+void BookmarkItemDelegate::closeEditor(QWidget *editor, EndEditHint hint) const
+{
+    m_editing = false;
+    m_editingIndex = QModelIndex();
+    QStyledItemDelegate::closeEditor(editor, hint);
 }
 
 // ------------------------------------------------------------------------

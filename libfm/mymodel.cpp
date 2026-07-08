@@ -555,6 +555,20 @@ void myModel::refreshItems()
     populateItem(item);
 }
 
+void myModel::refreshForegroundRoles()
+{
+    const QModelIndex dir = index(currentRootPath);
+    if (!dir.isValid()) {
+        return;
+    }
+    const int rows = rowCount(dir);
+    if (rows <= 0) {
+        return;
+    }
+    const int cols = columnCount(dir) - 1;
+    emit dataChanged(index(0, 0, dir), index(rows - 1, qMax(0, cols), dir), {Qt::ForegroundRole});
+}
+
 //---------------------------------------------------------------------------------
 QModelIndex myModel::insertFolder(QModelIndex parent)
 {
@@ -950,16 +964,19 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
 
   // Color of filename (depends on file type)
   if (role == Qt::ForegroundRole) {
-    if (!Common::readSetting("fileColor").toBool()) { return colors.windowText(); }
+    const QPalette pal = QApplication::palette();
+    if (!Common::readSetting("fileColor").toBool()) {
+      return pal.brush(QPalette::WindowText);
+    }
     QFileInfo type(item->fileInfo());
     if (cutItems.contains(type.filePath())) {
-      return colors.windowText();
+      return pal.brush(QPalette::WindowText);
     } else if (type.isHidden()) {
-      return colors.dark();
+      return pal.brush(QPalette::Dark);
     } else if (type.isSymLink()) {
-      return colors.link();
+      return pal.brush(QPalette::Link);
     } else if (type.isDir()) {
-      return colors.windowText();
+      return pal.brush(QPalette::WindowText);
     } else if (type.isExecutable()) {
       return QBrush(QColor(Qt::darkGreen));
     }

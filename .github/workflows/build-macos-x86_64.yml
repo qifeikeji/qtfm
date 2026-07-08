@@ -61,13 +61,16 @@ jobs:
           make install
           echo "PKG_CONFIG_PATH=${GITHUB_WORKSPACE}/deps-x86_64/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "${GITHUB_ENV}"
 
-      - name: Prepare app icon from app.png
+      - name: Prepare app icon from mimes/app.png
         run: |
-          chmod +x share/scripts/app-icon-from-png.sh
-          if [ -f share/images/app.png ]; then
+          chmod +x share/scripts/sync-app-icon.sh share/scripts/app-icon-from-png.sh
+          if [ -f share/icons/mimes/app.png ]; then
+            share/scripts/sync-app-icon.sh
+            share/scripts/app-icon-from-png.sh
+          elif [ -f share/images/app.png ]; then
             share/scripts/app-icon-from-png.sh
           elif [ ! -f share/images/QtFM.icns ]; then
-            echo "No share/images/app.png or QtFM.icns" >&2
+            echo "No share/icons/mimes/app.png, share/images/app.png, or QtFM.icns" >&2
             exit 1
           fi
 

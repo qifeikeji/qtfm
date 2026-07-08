@@ -3,6 +3,8 @@
 
 #include <QStyledItemDelegate>
 
+class QLineEdit;
+
 /**
  * @class BookmarkItemDelegate
  * @brief Renders a bookmark as two lines: name on top, path (grey, elided)
@@ -17,6 +19,18 @@ public:
               const QModelIndex &index) const override;
     QSize sizeHint(const QStyleOptionViewItem &option,
                   const QModelIndex &index) const override;
+    QWidget *createEditor(QWidget *parent, const QStyleOptionViewItem &option,
+                          const QModelIndex &index) const override;
+    void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option,
+                              const QModelIndex &index) const override;
+    void setEditorData(QWidget *editor, const QModelIndex &index) const override;
+    void setModelData(QWidget *editor, QAbstractItemModel *model,
+                      const QModelIndex &index) const override;
+    void closeEditor(QWidget *editor, EndEditHint hint) const override;
+
+private:
+    mutable bool m_editing = false;
+    mutable QModelIndex m_editingIndex;
 };
 
 /**

@@ -54,6 +54,11 @@ jobs:
             wget \
             qttools5-dev-tools
 
+      - name: Sync app icon (mimes/app.png → hicolor)
+        run: |
+          chmod +x share/scripts/sync-app-icon.sh
+          share/scripts/sync-app-icon.sh
+
       - name: Regenerate mimes.qrc
         run: ./share/icons/mimes/update_qrc.sh
 
@@ -102,7 +107,17 @@ jobs:
         run: |
           test -f "${GITHUB_WORKSPACE}/AppDir/usr/share/qtfm/mimes/folder.svg"
           test -f "${GITHUB_WORKSPACE}/AppDir/usr/share/qtfm/mimes/mp4.svg"
+          test -f "${GITHUB_WORKSPACE}/AppDir/usr/share/icons/hicolor/512x512/apps/qtfm.png"
           test -x "${GITHUB_WORKSPACE}/AppDir/usr/bin/qtfm"
+          CANON="${GITHUB_WORKSPACE}/share/icons/mimes/app.png"
+          DEPLOY="${GITHUB_WORKSPACE}/AppDir/usr/share/icons/hicolor/512x512/apps/qtfm.png"
+          if command -v magick >/dev/null 2>&1 && [ -f "$CANON" ]; then
+            magick "$CANON" -resize 512x512 /tmp/qtfm-icon-expected.png
+            cmp -s /tmp/qtfm-icon-expected.png "$DEPLOY" || {
+              echo "AppDir hicolor icon does not match share/icons/mimes/app.png" >&2
+              exit 1
+            }
+          fi
 
       - name: Build AppImage
         env:
@@ -125,8 +140,11 @@ jobs:
               || true
           )
 
-          ICON_PNG="${GITHUB_WORKSPACE}/share/images/app.png"
-          ICON_ARG="${APPDIR}/usr/share/icons/hicolor/scalable/apps/qtfm.svg"
+          ICON_PNG="${GITHUB_WORKSPACE}/share/icons/mimes/app.png"
+          if [ ! -f "$ICON_PNG" ]; then
+            ICON_PNG="${GITHUB_WORKSPACE}/share/images/app.png"
+          fi
+          ICON_ARG="${APPDIR}/usr/share/icons/hicolor/512x512/apps/qtfm.png"
           if [ -f "$ICON_PNG" ]; then
             # linuxdeploy accepts PNG icons only at fixed sizes (max 512x512); app.png is often 1024.
             ICON_DEPLOY="${GITHUB_WORKSPACE}/build/app-icon-512.png"

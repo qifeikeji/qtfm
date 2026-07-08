@@ -423,6 +423,14 @@
       <translation>粘贴 the file here</translation>
     </message>
     <message>
+      <source>Properties</source>
+      <translation>属性</translation>
+    </message>
+    <message>
+      <source>View properties of selected items</source>
+      <translation>查看所选项目的属性</translation>
+    </message>
+    <message>
       <source>Places</source>
       <translation>位置</translation>
     </message>

@@ -75,6 +75,7 @@ public slots:
   void clearCutItems();
   void clearIconCache();
   void forceRefresh();
+  void refreshForegroundRoles();
   void pumpThumbnailQueue();
 signals:
   void dragDropPaste(const QMimeData *data, QString newPath,

@@ -155,6 +155,7 @@ public slots:
     void updateTabBarPalette();
     void applyThemeFromSettings();
     void applyViewChromeStyles();
+    void syncPathComboDecorations();
     int addTab(QString path);
     void clearCutItems();
     void zoomInAction();

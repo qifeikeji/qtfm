@@ -23,7 +23,8 @@ HEADERS += \
     src/settingsuistyles.h \
     src/sidebaritemdelegate.h \
     src/bookmarkgroupbar.h \
-    src/bookmarkgroupproxy.h
+    src/bookmarkgroupproxy.h \
+    src/pathcombodelegate.h
 
 SOURCES += \
     src/main.cpp \
@@ -38,7 +39,8 @@ SOURCES += \
     src/actiontriggers.cpp \
     src/sidebaritemdelegate.cpp \
     src/bookmarkgroupbar.cpp \
-    src/bookmarkgroupproxy.cpp
+    src/bookmarkgroupproxy.cpp \
+    src/pathcombodelegate.cpp
 
 RESOURCES += $${top_srcdir}/share/$${TARGET}.qrc \
               $${top_srcdir}/share/mimes.qrc \

@@ -1,11 +1,15 @@
 #!/bin/sh
-# Build share/images/QtFM.icns from share/images/app.png (macOS bundle / DMG icon).
+# Build share/images/QtFM.icns from canonical share/icons/mimes/app.png (macOS bundle / DMG).
 set -e
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+CANON="$ROOT/share/icons/mimes/app.png"
 PNG="$ROOT/share/images/app.png"
 OUT="$ROOT/share/images/QtFM.icns"
+if [ -f "$CANON" ]; then
+  cp -f "$CANON" "$PNG"
+fi
 if [ ! -f "$PNG" ]; then
-  echo "Missing $PNG" >&2
+  echo "Missing $PNG (expected share/icons/mimes/app.png)" >&2
   exit 1
 fi
 if ! command -v iconutil >/dev/null 2>&1; then

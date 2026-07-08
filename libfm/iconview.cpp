@@ -5,6 +5,10 @@
 #include <QFrame>
 #include <QPainterPath>
 #include <QPlainTextEdit>
+#include <QScrollBar>
+#include <QShowEvent>
+#include <QResizeEvent>
+#include <QTimer>
 #include <QTextBlockFormat>
 #include <QTextCursor>
 #include <QTextDocument>
@@ -18,12 +22,14 @@ constexpr int kIconTop = 6;
 constexpr int kTextTopGap = 2;
 constexpr int kFramePad = 2;
 
+/** Text selection while renaming (distinct from app highlight / gray). */
+constexpr QRgb kRenameSelectionBackground = 0xff0078d4;
+constexpr QRgb kRenameSelectionForeground = 0xffffffff;
+
 QString renameEditorStyleSheet()
 {
     const QPalette pal = QApplication::palette();
     const QString border = pal.color(QPalette::Mid).name();
-    const QString selBg = pal.color(QPalette::Highlight).name();
-    const QString selFg = pal.color(QPalette::HighlightedText).name();
     return QStringLiteral(
                "QPlainTextEdit {"
                " background: palette(base);"
@@ -31,11 +37,74 @@ QString renameEditorStyleSheet()
                " border: 1px solid %1;"
                " border-radius: 2px;"
                " padding: 2px;"
-               " selection-background-color: %2;"
-               " selection-color: %3;"
+               " selection-background-color: #0078d4;"
+               " selection-color: #ffffff;"
                "}")
-        .arg(border, selBg, selFg);
+        .arg(border);
 }
+
+class RenameEditor : public QPlainTextEdit
+{
+public:
+    explicit RenameEditor(QWidget *parent = nullptr)
+        : QPlainTextEdit(parent)
+    {
+        setFrameStyle(QFrame::NoFrame);
+        setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+        setTabChangesFocus(true);
+        document()->setDocumentMargin(0);
+        setLineWrapMode(QPlainTextEdit::WidgetWidth);
+
+        QPalette pal = palette();
+        pal.setColor(QPalette::Highlight, QColor::fromRgb(kRenameSelectionBackground));
+        pal.setColor(QPalette::HighlightedText, QColor::fromRgb(kRenameSelectionForeground));
+        setPalette(pal);
+        setStyleSheet(renameEditorStyleSheet());
+
+        connect(this, &QPlainTextEdit::textChanged, this, [this]() { scrollToTail(); });
+    }
+
+    void applyRenameLayout()
+    {
+        QTextCursor cursor(document());
+        cursor.select(QTextCursor::Document);
+        QTextBlockFormat blockFormat;
+        blockFormat.setAlignment(Qt::AlignRight);
+        cursor.mergeBlockFormat(blockFormat);
+        cursor.clearSelection();
+        cursor.movePosition(QTextCursor::End);
+        setTextCursor(cursor);
+        scrollToTail();
+    }
+
+    void scrollToTail()
+    {
+        if (QScrollBar *bar = verticalScrollBar()) {
+            bar->setValue(bar->maximum());
+        }
+        QTextCursor cursor = textCursor();
+        if (!cursor.hasSelection()) {
+            cursor.movePosition(QTextCursor::End);
+            setTextCursor(cursor);
+        }
+        ensureCursorVisible();
+    }
+
+protected:
+    void showEvent(QShowEvent *event) override
+    {
+        QPlainTextEdit::showEvent(event);
+        QTimer::singleShot(0, this, [this]() { scrollToTail(); });
+    }
+
+    void resizeEvent(QResizeEvent *event) override
+    {
+        QPlainTextEdit::resizeEvent(event);
+        scrollToTail();
+    }
+};
 
 int iconPaintSize(const QStyleOptionViewItem &option)
 {
@@ -155,20 +224,8 @@ QWidget *IconViewDelegate::createEditor(QWidget *parent,
                                         const QModelIndex &index) const
 {
     Q_UNUSED(index);
-    QPlainTextEdit *editor = new QPlainTextEdit(parent);
-    editor->setFrameStyle(QFrame::NoFrame);
-    editor->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    editor->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    editor->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
-    editor->setTabChangesFocus(true);
-    editor->document()->setDocumentMargin(0);
-    editor->setFixedHeight(twoLineTextHeight(option.fontMetrics) + 2);
-    editor->setStyleSheet(renameEditorStyleSheet());
-    QPalette pal = editor->palette();
-    pal.setColor(QPalette::Highlight, QApplication::palette().color(QPalette::Highlight));
-    pal.setColor(QPalette::HighlightedText,
-                 QApplication::palette().color(QPalette::HighlightedText));
-    editor->setPalette(pal);
+    auto *editor = new RenameEditor(parent);
+    editor->setFixedHeight(twoLineTextHeight(option.fontMetrics) + 4);
     return editor;
 }
 
@@ -187,18 +244,16 @@ void IconViewDelegate::setEditorData(QWidget *editor,
 {
     _isEditing = true;
     _index = index;
-    auto *plain = qobject_cast<QPlainTextEdit *>(editor);
+    auto *plain = qobject_cast<RenameEditor *>(editor);
     if (!plain) {
         return;
     }
     plain->setPlainText(index.data(Qt::EditRole).toString());
+    plain->applyRenameLayout();
     plain->selectAll();
-    QTextCursor cursor = plain->textCursor();
-    QTextBlockFormat blockFormat;
-    blockFormat.setAlignment(Qt::AlignHCenter);
-    cursor.mergeBlockFormat(blockFormat);
-    cursor.movePosition(QTextCursor::End);
-    plain->setTextCursor(cursor);
+    if (QScrollBar *bar = plain->verticalScrollBar()) {
+        bar->setValue(bar->maximum());
+    }
 }
 
 void IconViewDelegate::setModelData(QWidget *editor,
@@ -275,6 +330,8 @@ void IconViewDelegate::paint(QPainter *painter,
 
     const QColor textColor = isSelected
         ? opt.palette.highlightedText().color()
-        : txtBrush.color();
+        : (index.data(Qt::ForegroundRole).isValid()
+               ? txtBrush.color()
+               : opt.palette.text().color());
     drawTwoLineFileName(painter, txtRect, index.data().toString(), opt.font, textColor);
 }
