@@ -87,6 +87,8 @@ public:
     static bool removeThumbsCache();
     static void setupIconTheme(QString appFilePath);
     static void installIconThemeSearchPaths(const QString &appPath);
+    /** Call before QApplication on Linux AppImage so host icon themes work. */
+    static void prepareLinuxIconThemeEnvironment();
     /** Apply theme by on-disk directory name (case-corrected). */
     static void applyIconThemeName(const QString &themeName, const QString &appPath);
     /** Map configured name to the actual theme directory name on disk. */

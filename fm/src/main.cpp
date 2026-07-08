@@ -22,6 +22,7 @@
 
 #include <QApplication>
 #include "mainwindow.h"
+#include "common.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -63,6 +64,8 @@ void msgHandler(QtMsgType type, const QMessageLogContext &context, const QString
 int main(int argc, char *argv[]) {
 
   qInstallMessageHandler(msgHandler);
+
+  Common::prepareLinuxIconThemeEnvironment();
 
   QApplication app(argc, argv);
   QApplication::setOrganizationName(APP);
