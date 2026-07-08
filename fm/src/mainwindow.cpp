@@ -51,6 +51,11 @@
 #include "sidebaritemdelegate.h"
 #include "pathcombodelegate.h"
 
+namespace {
+constexpr int kPathBarHeight = 28;
+constexpr int kPathBarIconSize = kPathBarHeight - 10;
+} // namespace
+
 #include "common.h"
 #include "openwithconfig.h"
 #include "bundledicons.h"
@@ -324,7 +329,7 @@ MainWindow::MainWindow()
     pathEdit->setEditable(true);
     pathEdit->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
     pathEdit->setMinimumWidth(100);
-    pathEdit->setFixedHeight(28);
+    pathEdit->setFixedHeight(kPathBarHeight);
     auto *pathPopupView = new QListView(pathEdit);
     pathPopupView->setItemDelegate(new PathComboItemDelegate(pathPopupView));
     pathEdit->setView(pathPopupView);
@@ -554,11 +559,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
         settings->setValue("firstRun", false);
     }
 
-  // fix style
-  setStyleSheet("QToolBar { padding: 0;border:none; }"
-                /*"QFrame { border:none; }"
-                "QListView::item,QListView::text,QListView::icon"
-                "{ border:0px;padding-top:5px;padding-left:5px; }"*/);
+  // fix style — full chrome applied in applyViewChromeStyles()
   addressToolBar->setContentsMargins(0,0,5,0);
 
   // Restore window state
@@ -1274,6 +1275,7 @@ void MainWindow::applyThemeFromSettings()
         qApp->setPalette(qApp->style()->standardPalette());
     }
     refreshBundledUiIcons();
+    applyWidgetPalettes();
     applyViewChromeStyles();
     if (bookmarkGroupBar) {
         bookmarkGroupBar->applyButtonSizes();
@@ -1290,12 +1292,50 @@ void MainWindow::applyThemeFromSettings()
 #endif
 }
 
+void MainWindow::applyWidgetPalettes()
+{
+    const QPalette pal = qApp->palette();
+    const auto syncPalette = [&pal](QWidget *w) {
+        if (!w) {
+            return;
+        }
+        w->setPalette(pal);
+        w->setAutoFillBackground(true);
+    };
+
+    syncPalette(centralWidget());
+    syncPalette(stackWidget);
+    syncPalette(list);
+    syncPalette(detailTree);
+    syncPalette(tree);
+    syncPalette(bookmarksList);
+#ifndef NO_UDISKS
+    syncPalette(disksList);
+#endif
+    syncPalette(bookmarkPage);
+    syncPalette(sidebarTabs);
+    syncPalette(dockBookmarks);
+    syncPalette(dockTree);
+    syncPalette(menuToolBar);
+    syncPalette(navToolBar);
+    syncPalette(addressToolBar);
+    syncPalette(status);
+    if (bookmarkGroupBar) {
+        bookmarkGroupBar->setPalette(pal);
+    }
+}
+
 void MainWindow::applyViewChromeStyles()
 {
     if (!tabs || !list) {
         return;
     }
     const QPalette pal = list->palette();
+    const bool darkUi = settings && settings->value(QStringLiteral("darkTheme")).toBool();
+    const QString comboArrowUrl = darkUi
+        ? QStringLiteral(":/icons/toolbar/white/chevron-down.svg")
+        : QStringLiteral(":/icons/toolbar/chevron-down.svg");
+
     QColor highlight = pal.highlight().color();
     QColor hover = highlight;
     hover.setAlpha(qMin(255, hover.alpha() + static_cast<int>(255 * 0.28)));
@@ -1310,6 +1350,7 @@ void MainWindow::applyViewChromeStyles()
 
     const QColor chromeLine = pal.color(QPalette::Mid);
     const QColor flatBg = pal.color(QPalette::Base);
+    const QColor windowBg = pal.color(QPalette::Window);
     const QColor flatBorder = pal.color(QPalette::Dark).lightness() < 128
                                   ? pal.color(QPalette::Window)
                                   : pal.color(QPalette::Mid);
@@ -1320,25 +1361,49 @@ void MainWindow::applyViewChromeStyles()
     QColor sidebarTabHover = highlight;
     sidebarTabHover.setAlpha(72);
 
+    const QString chromeBtnSize = QString::number(kPathBarHeight);
     const QString flatToolBtnQss = QStringLiteral(
         "QToolBar#Navigate QToolButton, QToolBar#Address QToolButton {"
         " border: 1px solid %1; border-radius: 4px; background: %2;"
-        " padding: 4px; min-width: 28px; max-width: 28px;"
-        " min-height: 28px; max-height: 28px; }"
+        " padding: 0px; min-width: %4px; max-width: %4px;"
+        " min-height: %4px; max-height: %4px; }"
         "QToolBar#Navigate QToolButton:hover, QToolBar#Address QToolButton:hover {"
         " background: %3; }"
         "QToolBar#Navigate QToolButton:pressed, QToolBar#Address QToolButton:pressed {"
         " background: %3; }"
         "QToolBar#Navigate QToolButton:checked, QToolBar#Address QToolButton:checked {"
         " background: %2; border: 1px solid %1; }")
-        .arg(flatBorder.name(), flatBg.name(), flatHover.name(QColor::HexArgb));
+        .arg(flatBorder.name(), flatBg.name(), flatHover.name(QColor::HexArgb), chromeBtnSize);
 
     if (navToolBar) {
+        navToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
         navToolBar->setStyleSheet(flatToolBtnQss);
     }
     if (addressToolBar) {
+        addressToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
         addressToolBar->setStyleSheet(flatToolBtnQss);
     }
+    if (menuToolBar) {
+        menuToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
+    }
+
+    const QString shellQss = QStringLiteral(
+        "QMainWindow { background-color: %1; }"
+        "QToolBar { padding: 0; border: none; background: %1; spacing: 4px; }"
+        "QMenuBar { background-color: %1; color: palette(windowText); }"
+        "QMenuBar::item:selected { background: palette(highlight); color: palette(highlighted-text); }"
+        "QStatusBar { background: %1; color: palette(windowText); }"
+        "QDockWidget { background: %1; color: palette(windowText); }"
+        "QDockWidget::title { background: %1; padding: 4px; }"
+        "QHeaderView::section {"
+        " background-color: palette(button); color: palette(buttonText);"
+        " border: none; border-right: 1px solid %2; border-bottom: 1px solid %2;"
+        " padding: 4px 6px; }"
+        "QListView, QTreeView { background-color: palette(base);"
+        " alternate-background-color: palette(alternateBase); color: palette(text); }"
+        "QTabWidget::pane { border: none; background: palette(base); }"
+    ).arg(windowBg.name(), chromeLine.name());
+    setStyleSheet(shellQss);
 
     const QString tabQss = QStringLiteral(
         "QTabBar::tab { min-height: 32px; max-height: 32px; padding: 6px 14px;"
@@ -1356,41 +1421,46 @@ void MainWindow::applyViewChromeStyles()
     if (sidebarTabs) {
         const QString sidebarTabQss = QStringLiteral(
             "QTabWidget#sidebarPlacesTabs::pane {"
-            " border: none; border-top: 1px solid %3; top: -1px; margin: 0; padding: 0; }"
+            " border: none; top: 0; margin: 0; padding: 0; background: %1; }"
             "QTabWidget#sidebarPlacesTabs QTabBar::tab { min-height: 30px; max-height: 30px;"
             " padding: 4px 12px; border: none; border-radius: 0px; margin: 0px;"
             " background: transparent; }"
-            "QTabWidget#sidebarPlacesTabs QTabBar::tab:selected { background: %1; }"
-            "QTabWidget#sidebarPlacesTabs QTabBar::tab:hover:!selected { background: %2; }"
+            "QTabWidget#sidebarPlacesTabs QTabBar::tab:selected { background: %2; }"
+            "QTabWidget#sidebarPlacesTabs QTabBar::tab:hover:!selected { background: %3; }"
             "QTabWidget#sidebarPlacesTabs QTabBar::tab:!selected { min-height: 30px; max-height: 30px; }"
             "QTabWidget#sidebarPlacesTabs QTabBar::tab:selected:!hover {"
             " min-height: 30px; max-height: 30px; }"
-        ).arg(sidebarTabSelected.name(), sidebarTabHover.name(QColor::HexArgb),
-              chromeLine.name());
+        ).arg(flatBg.name(), sidebarTabSelected.name(), sidebarTabHover.name(QColor::HexArgb));
         sidebarTabs->setStyleSheet(sidebarTabQss);
     }
 
     if (pathEdit) {
+        const QString pathBarH = QString::number(kPathBarHeight);
+        const QString dropW = QString::number(kPathBarHeight);
         const QString pathComboQss = QStringLiteral(
             "QComboBox#pathAddressCombo {"
             " background: %1; border: 1px solid %2; border-radius: 4px;"
-            " padding: 2px 34px 2px 8px; min-height: 28px; max-height: 28px; }"
+            " padding: 2px %5px 2px 8px; min-height: %4px; max-height: %4px; }"
             "QComboBox#pathAddressCombo:hover { border: 1px solid %2; }"
             "QComboBox#pathAddressCombo QLineEdit {"
             " border: none; background: transparent; padding: 0; margin: 0; }"
             "QComboBox#pathAddressCombo::drop-down {"
             " subcontrol-origin: padding; subcontrol-position: top right;"
-            " width: 28px; border: none; border-left: 1px solid %2;"
+            " width: %5px; border: none; border-left: 1px solid %2;"
             " border-top-right-radius: 4px; border-bottom-right-radius: 4px;"
             " background: transparent; }"
+            "QComboBox#pathAddressCombo::down-arrow {"
+            " width: 14px; height: 14px; image: url(%6); }"
             "QComboBox#pathAddressCombo QAbstractItemView {"
             " background: %1; border: 1px solid %2; border-radius: 4px;"
             " padding: 4px; outline: none; selection-background-color: %3;"
             " selection-color: palette(text); }"
             "QComboBox#pathAddressCombo QAbstractItemView::item {"
             " min-height: 32px; border-radius: 4px; }"
-        ).arg(flatBg.name(), flatBorder.name(), flatHover.name(QColor::HexArgb));
+        ).arg(flatBg.name(), flatBorder.name(), flatHover.name(QColor::HexArgb),
+              pathBarH, dropW, comboArrowUrl);
         pathEdit->setStyleSheet(pathComboQss);
+        pathEdit->setFixedHeight(kPathBarHeight);
     }
 
     if (customComplete && customComplete->popup()) {

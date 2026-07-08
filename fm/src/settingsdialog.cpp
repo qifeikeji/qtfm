@@ -57,10 +57,10 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
   stack->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
   // Buttons
-  QDialogButtonBox* btns = new QDialogButtonBox(this);
-  btns->setStandardButtons(QDialogButtonBox::Save | QDialogButtonBox::Cancel);
-  connect(btns, SIGNAL(accepted()), this, SLOT(accept()));
-  connect(btns, SIGNAL(rejected()), this, SLOT(reject()));
+  dialogButtonBox = new QDialogButtonBox(this);
+  dialogButtonBox->setStandardButtons(QDialogButtonBox::Save | QDialogButtonBox::Cancel);
+  connect(dialogButtonBox, SIGNAL(accepted()), this, SLOT(accept()));
+  connect(dialogButtonBox, SIGNAL(rejected()), this, SLOT(reject()));
 
   // Size
   this->setMinimumWidth(640);
@@ -73,7 +73,7 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
   layoutMain->addItem(layoutRight);
   layoutRight->addWidget(stack);
   layoutRight->addItem(new QSpacerItem(0, 10));
-  layoutRight->addWidget(btns);
+  layoutRight->addWidget(dialogButtonBox);
 
   // Icons (bundled SVGs in share/icons/settings/)
   const QIcon iconGeneral = settingsPageIcon("general");
@@ -119,6 +119,12 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
           SIGNAL(currentRowChanged(int)),
           SLOT(loadMimes(int)));
 
+#if QT_VERSION >= 0x050000
+  if (checkDarkTheme) {
+      connect(checkDarkTheme, &QCheckBox::toggled, this, &SettingsDialog::updateDialogButtonIcons);
+  }
+#endif
+
   // Align items
   for (int i = 0; i < selector->count(); i++) {
     selector->item(i)->setTextAlignment(Qt::AlignLeft | Qt::AlignVCenter);
@@ -136,6 +142,35 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
 void SettingsDialog::previewDarkTheme(bool dark)
 {
     Q_UNUSED(dark);
+}
+
+void SettingsDialog::updateDialogButtonIcons()
+{
+    if (!dialogButtonBox) {
+        return;
+    }
+    bool darkForIcons = BundledIcons::uiDarkMode();
+#if QT_VERSION >= 0x050000
+    if (checkDarkTheme) {
+        darkForIcons = checkDarkTheme->isChecked();
+    }
+#endif
+    const bool prev = BundledIcons::uiDarkMode();
+    BundledIcons::setUiDarkMode(darkForIcons);
+    const QIcon saveIcon = BundledIcons::settingsIcon(QStringLiteral("save"));
+    const QIcon cancelIcon = BundledIcons::settingsIcon(QStringLiteral("cancel"));
+    BundledIcons::setUiDarkMode(prev);
+
+    if (QPushButton *saveBtn = dialogButtonBox->button(QDialogButtonBox::Save)) {
+        if (!saveIcon.isNull()) {
+            saveBtn->setIcon(saveIcon);
+        }
+    }
+    if (QPushButton *cancelBtn = dialogButtonBox->button(QDialogButtonBox::Cancel)) {
+        if (!cancelIcon.isNull()) {
+            cancelBtn->setIcon(cancelIcon);
+        }
+    }
 }
 
 QWidget *SettingsDialog::createGeneralSettings() {
@@ -765,6 +800,7 @@ void SettingsDialog::readSettings() {
 
   // Read shortcuts
   readShortcuts();
+  updateDialogButtonIcons();
 }
 //---------------------------------------------------------------------------
 

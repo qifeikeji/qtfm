@@ -42,6 +42,8 @@
         <file>icons/settings/mime-types.svg</file>
         <file>icons/settings/systray.svg</file>
         <file>icons/settings/advanced.svg</file>
+        <file>icons/settings/save.svg</file>
+        <file>icons/settings/cancel.svg</file>
         <file>icons/toolbar/white/back.svg</file>
         <file>icons/toolbar/white/bookmark.svg</file>
         <file>icons/toolbar/white/clear.svg</file>
@@ -83,6 +85,8 @@
         <file>icons/settings/white/open-with.svg</file>
         <file>icons/settings/white/shortcuts.svg</file>
         <file>icons/settings/white/systray.svg</file>
+        <file>icons/settings/white/save.svg</file>
+        <file>icons/settings/white/cancel.svg</file>
         <file>icons/toolbar/clear-cache.svg</file>
         <file>icons/toolbar/white/clear-cache.svg</file>
         <file>icons/toolbar/tabs-on-top.svg</file>
@@ -91,6 +95,8 @@
         <file>icons/toolbar/white/show-thumbs.svg</file>
         <file>icons/toolbar/about-qtfm.svg</file>
         <file>icons/toolbar/white/about-qtfm.svg</file>
+        <file>icons/toolbar/chevron-down.svg</file>
+        <file>icons/toolbar/white/chevron-down.svg</file>
         <file>../AUTHORS</file>
     </qresource>
 </RCC>

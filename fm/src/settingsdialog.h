@@ -15,6 +15,7 @@
 #include <QComboBox>
 #include <QGroupBox>
 #include <QSpinBox>
+#include <QDialogButtonBox>
 
 /**
  * @class SettingsDialog
@@ -49,6 +50,7 @@ protected slots:
   void restartToApply(bool triggered);
   void filterMimes(QString filter);
   void previewDarkTheme(bool dark);
+  void updateDialogButtonIcons();
 
 protected:
   QWidget* createGeneralSettings();
@@ -104,6 +106,7 @@ protected:
   QCheckBox* checkWindowTitlePath;
   QLineEdit* editCopyX;
   QLineEdit* editCopyTS;
+  QDialogButtonBox *dialogButtonBox = nullptr;
 };
 
 #endif // SETTINGSDIALOG_H
