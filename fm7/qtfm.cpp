@@ -34,7 +34,7 @@ QtFM::QtFM(QWidget *parent)
     // set window icon and title
     setWindowIcon(QIcon::fromTheme("folder",
                                    QIcon::fromTheme("qtfm",
-                                                    QIcon(":/images/qtfm.png"))));
+                                                    QIcon(":/icons/app.svg"))));
     setWindowTitle(tr("Qt File Manager"));
 
     // setup mime handler

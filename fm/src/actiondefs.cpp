@@ -38,35 +38,35 @@ void MainWindow::createActionIcons() {
   icons.close();*/
 
   if (actionIcons->count() < 29) {
-    actionIcons->append(QIcon::fromTheme("folder-new",QIcon(":/images/folder-new.png")));
-    actionIcons->append(QIcon::fromTheme("document-new",QIcon(":/images/document-new.png")));
-    actionIcons->append(QIcon::fromTheme("edit-cut",QIcon(":/images/cut.png")));
-    actionIcons->append(QIcon::fromTheme("edit-copy",QIcon(":/images/copy.png")));
-    actionIcons->append(QIcon::fromTheme("edit-paste",QIcon(":/images/paste.png")));
-    actionIcons->append(QIcon::fromTheme("go-up",QIcon(":/images/up.png")));
-    actionIcons->append(QIcon::fromTheme("go-previous",QIcon(":/images/back.png")));
-    actionIcons->append(QIcon::fromTheme("go-home",QIcon(":/images/home.png")));
-    actionIcons->append(QIcon::fromTheme("view-list-details",QIcon(":/images/details.png")));
-    actionIcons->append(QIcon::fromTheme("view-list-icons",QIcon(":/images/icons.png")));
-    actionIcons->append(QIcon::fromTheme("folder-saved-search",QIcon(":/images/hidden.png")));
-    actionIcons->append(QIcon::fromTheme("address-book-new",QIcon(":/images/bookmark.png")));
-    actionIcons->append(QIcon::fromTheme("bookmark-new",QIcon(":/images/bookmark.png")));
-    actionIcons->append(QIcon::fromTheme("edit-clear",QIcon(":/images/clear.png")));
-    actionIcons->append(QIcon::fromTheme("edit-delete",QIcon(":/images/delete.png")));
-    actionIcons->append(QIcon::fromTheme("preferences-system",QIcon(":/images/preferences.png")));
-    actionIcons->append(QIcon::fromTheme("document-properties",QIcon(":/images/properties.png")));
-    actionIcons->append(QIcon::fromTheme("utilities-terminal",QIcon(":/images/terminal.png")));
-    actionIcons->append(QIcon::fromTheme("document-open",QIcon(":/images/document-open.png")));
-    actionIcons->append(QIcon::fromTheme("view-refresh",QIcon(":/images/refresh.png")));
-    actionIcons->append(QIcon::fromTheme("application-exit",QIcon(":/images/exit.png")));
-    actionIcons->append(QIcon::fromTheme("lock",QIcon(":/images/lock.png")));
-    actionIcons->append(QIcon::fromTheme("key_bindings",QIcon(":/images/key_bindings.png")));
-    actionIcons->append(QIcon::fromTheme("zoom-in",QIcon(":/images/zoom-in.png")));
-    actionIcons->append(QIcon::fromTheme("zoom-out",QIcon(":/images/zoom-out.png")));
-    actionIcons->append(QIcon::fromTheme("window-close",QIcon(":/images/window-close.png")));
-    actionIcons->append(QIcon::fromTheme("tab-new",QIcon(":/images/folder-new.png")));          //26
-    actionIcons->append(QIcon::fromTheme("user-trash",QIcon(":/images/user-trash.png")));          //27
-    actionIcons->append(QIcon::fromTheme("document-new",QIcon(":/images/document-new.png")));          //28
+    actionIcons->append(QIcon::fromTheme("folder-new", QIcon(":/icons/toolbar/folder-new.svg")));
+    actionIcons->append(QIcon::fromTheme("document-new", QIcon(":/icons/toolbar/file-new.svg")));
+    actionIcons->append(QIcon::fromTheme("edit-cut", QIcon(":/icons/toolbar/cut.svg")));
+    actionIcons->append(QIcon::fromTheme("edit-copy", QIcon(":/icons/toolbar/copy.svg")));
+    actionIcons->append(QIcon::fromTheme("edit-paste", QIcon(":/icons/toolbar/paste.svg")));
+    actionIcons->append(QIcon::fromTheme("go-up", QIcon(":/icons/toolbar/up.svg")));
+    actionIcons->append(QIcon::fromTheme("go-previous", QIcon(":/icons/toolbar/back.svg")));
+    actionIcons->append(QIcon::fromTheme("go-home", QIcon(":/icons/toolbar/home.svg")));
+    actionIcons->append(QIcon::fromTheme("view-list-details", QIcon(":/icons/toolbar/details.svg")));
+    actionIcons->append(QIcon::fromTheme("view-list-icons", QIcon(":/icons/toolbar/icons.svg")));
+    actionIcons->append(QIcon::fromTheme("folder-saved-search", QIcon(":/icons/toolbar/hidden.svg")));
+    actionIcons->append(QIcon::fromTheme("address-book-new", QIcon(":/icons/toolbar/bookmark.svg")));
+    actionIcons->append(QIcon::fromTheme("bookmark-new", QIcon(":/icons/toolbar/bookmark.svg")));
+    actionIcons->append(QIcon::fromTheme("edit-clear", QIcon(":/icons/toolbar/clear.svg")));
+    actionIcons->append(QIcon::fromTheme("edit-delete", QIcon(":/icons/toolbar/delete.svg")));
+    actionIcons->append(QIcon::fromTheme("preferences-system", QIcon(":/icons/toolbar/preferences.svg")));
+    actionIcons->append(QIcon::fromTheme("document-properties", QIcon(":/icons/toolbar/properties.svg")));
+    actionIcons->append(QIcon::fromTheme("utilities-terminal", QIcon(":/icons/toolbar/terminal.svg")));
+    actionIcons->append(QIcon::fromTheme("document-open", QIcon(":/icons/toolbar/document-open.svg")));
+    actionIcons->append(QIcon::fromTheme("view-refresh", QIcon(":/icons/toolbar/refresh.svg")));
+    actionIcons->append(QIcon::fromTheme("application-exit", QIcon(":/icons/toolbar/exit.svg")));
+    actionIcons->append(QIcon::fromTheme("lock", QIcon(":/icons/toolbar/lock.svg")));
+    actionIcons->append(QIcon::fromTheme("key_bindings", QIcon(":/icons/toolbar/key-bindings.svg")));
+    actionIcons->append(QIcon::fromTheme("zoom-in", QIcon(":/icons/toolbar/zoom-in.svg")));
+    actionIcons->append(QIcon::fromTheme("zoom-out", QIcon(":/icons/toolbar/zoom-out.svg")));
+    actionIcons->append(QIcon::fromTheme("window-close", QIcon(":/icons/toolbar/window-close.svg")));
+    actionIcons->append(QIcon::fromTheme("tab-new", QIcon(":/icons/toolbar/folder-new.svg")));
+    actionIcons->append(QIcon::fromTheme("user-trash", QIcon(":/icons/toolbar/user-trash.svg")));
+    actionIcons->append(QIcon::fromTheme("document-new", QIcon(":/icons/toolbar/file-new.svg")));
     /*icons.open(QIODevice::WriteOnly);
     QDataStream out(&icons);
     out << *actionIcons;
@@ -356,7 +356,7 @@ void MainWindow::createActions() {
   actionList->append(focusListAct);
 
   aboutAct = new QAction(tr("About %1").arg(APP_NAME), this);
-  aboutAct->setIcon(QIcon::fromTheme("qtfm", QIcon(":/images/qtfm.png")));
+  aboutAct->setIcon(QIcon::fromTheme("qtfm", QIcon(":/icons/app.svg")));
   connect(aboutAct, SIGNAL(triggered()), this, SLOT(showAboutBox()));
   actionList->append(aboutAct);
 

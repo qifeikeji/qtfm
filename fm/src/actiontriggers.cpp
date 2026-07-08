@@ -765,8 +765,8 @@ void MainWindow::showAboutBox()
 {
     QMessageBox box;
     box.setWindowTitle(tr("About %1").arg(APP_NAME));
-    box.setWindowIcon(QIcon::fromTheme("qtfm", QIcon(":/images/qtfm.png")));
-    box.setIconPixmap(QPixmap::fromImage(QImage(":/images/qtfm.png")));
+    box.setWindowIcon(QIcon::fromTheme("qtfm", QIcon(":/icons/app.svg")));
+    box.setIconPixmap(QPixmap(":/icons/app.svg").scaled(64, 64, Qt::KeepAspectRatio, Qt::SmoothTransformation));
     box.setText(QString("<h1>%1 %2</h1>"
                         "<h3 style=\"font-weight:normal;\">Qt File Manager</h3>").arg(APP_NAME).arg(APP_VERSION));
     box.setInformativeText(QString("<p style=\"text-align:justify;font-size:small;\">"

@@ -106,6 +106,8 @@ public:
     static QString hasThumbnail(const QString &filename);
     static QString getTempPath();
     static QString getTempClipboardFile();
+    /** Scale image to square BMP bytes for icon/thumbnail views (default 128px). */
+    static QByteArray thumbnailBmp(const QImage &source, int pixSize = 128);
 };
 
 #endif // COMMON_H

@@ -51,9 +51,14 @@ jobs:
             exit 0
           fi
           mkdir -p share/images /tmp/QtFM.iconset
+          if [ -f share/icons/app.svg ]; then
+            ICON_SRC=share/icons/app.svg
+          else
+            ICON_SRC=share/hicolor/scalable/apps/qtfm.svg
+          fi
           for size in 16 32 128 256 512; do
             rsvg-convert -w "${size}" -h "${size}" \
-              share/hicolor/scalable/apps/qtfm.svg \
+              "${ICON_SRC}" \
               -o "/tmp/QtFM.iconset/icon_${size}x${size}.png"
             double=$((size * 2))
             rsvg-convert -w "${double}" -h "${double}" \

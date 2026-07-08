@@ -56,7 +56,7 @@ find_package(QT NAMES Qt5 COMPONENTS Core REQUIRED)
 if(ENABLE_DBUS)
     find_package(Qt${QT_VERSION_MAJOR} 5.15 COMPONENTS DBus REQUIRED)
 endif()
-find_package(Qt${QT_VERSION_MAJOR} 5.15 COMPONENTS Gui Widgets Concurrent REQUIRED)
+find_package(Qt${QT_VERSION_MAJOR} 5.15 COMPONENTS Gui Widgets Concurrent Svg REQUIRED)
 
 # inotify
 if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
@@ -170,6 +170,7 @@ target_link_libraries(
     Qt${QT_VERSION_MAJOR}::Gui
     Qt${QT_VERSION_MAJOR}::Widgets
     Qt${QT_VERSION_MAJOR}::Concurrent
+    Qt${QT_VERSION_MAJOR}::Svg
     QtFM
 )
 target_include_directories(${PROJECT_NAME} PRIVATE fm/src libfm libfm/qtcopydialog)

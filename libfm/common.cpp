@@ -23,6 +23,9 @@
 #include <QCryptographicHash>
 #include <QUrl>
 #include <QStandardPaths>
+#include <QPainter>
+#include <QBuffer>
+#include <QImage>
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
@@ -699,4 +702,25 @@ QString Common::getTempClipboardFile()
     const QString path = getTempPath();
     if (path.isEmpty()) { return QString(); }
     return QString("%1/clipboard.tmp").arg(path);
+}
+
+QByteArray Common::thumbnailBmp(const QImage &source, int pixSize)
+{
+    if (source.isNull() || pixSize < 1) {
+        return QByteArray();
+    }
+    const QImage scaled = source.scaled(
+        pixSize, pixSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QImage canvas(pixSize, pixSize, QImage::Format_RGB32);
+    canvas.fill(Qt::black);
+    QPainter painter(&canvas);
+    painter.drawImage((pixSize - scaled.width()) / 2,
+                      (pixSize - scaled.height()) / 2,
+                      scaled);
+    painter.end();
+    QByteArray result;
+    QBuffer buffer(&result);
+    buffer.open(QIODevice::WriteOnly);
+    canvas.save(&buffer, "BMP");
+    return result;
 }
