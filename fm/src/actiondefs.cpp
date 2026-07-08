@@ -464,8 +464,9 @@ void MainWindow::createActions() {
   clearCacheAct->setIcon(QIcon::fromTheme("edit-clear"));
   connect(clearCacheAct, SIGNAL(triggered()), this, SLOT(clearCache()));
 
-  // We don't need the icon list anymore
+  // Icon list kept for refreshBundledUiIcons(); release after actions are built.
   delete actionIcons;
+  actionIcons = nullptr;
 }
 //---------------------------------------------------------------------------
 

@@ -23,6 +23,8 @@
 #include <QDockWidget>
 #include <QHeaderView>
 #include <QMessageBox>
+#include <QTabWidget>
+#include <QTabBar>
 #include <QInputDialog>
 #include <QPushButton>
 #include <QHBoxLayout>
@@ -218,12 +220,13 @@ MainWindow::MainWindow()
     dockBookmarks->setObjectName("bookmarksDock");
     dockBookmarks->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
 
-    sidebarPanel = new QWidget(dockBookmarks);
-    auto *sidebarSplit = new QHBoxLayout(sidebarPanel);
-    sidebarSplit->setContentsMargins(0, 0, 0, 0);
-    sidebarSplit->setSpacing(0);
+    sidebarTabs = new QTabWidget(dockBookmarks);
+    sidebarTabs->setTabPosition(QTabWidget::North);
+    sidebarTabs->setDocumentMode(true);
+    sidebarTabs->tabBar()->setExpanding(true);
+    sidebarTabs->tabBar()->setUsesScrollButtons(false);
 
-    bookmarkPage = new QWidget(sidebarPanel);
+    bookmarkPage = new QWidget(sidebarTabs);
     auto *bookmarkLayout = new QHBoxLayout(bookmarkPage);
     bookmarkLayout->setContentsMargins(0, 0, 0, 0);
     bookmarkLayout->setSpacing(0);
@@ -237,18 +240,18 @@ MainWindow::MainWindow()
     bookmarksList->setFocusPolicy(Qt::ClickFocus);
     bookmarkLayout->addWidget(bookmarksList, 1);
 
-    sidebarSplit->addWidget(bookmarkPage, 1);
+    sidebarTabs->addTab(bookmarkPage, tr("Bookmarks"));
 
 #ifndef NO_UDISKS
-    disksList = new QListView(sidebarPanel);
+    disksList = new QListView(sidebarTabs);
     disksList->setMinimumHeight(24);
     disksList->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     disksList->setFocusPolicy(Qt::ClickFocus);
-    sidebarSplit->addWidget(disksList, 1);
+    sidebarTabs->addTab(disksList, tr("Disks"));
 #endif
 
-    sidebarPanel->setMinimumWidth(200);
-    dockBookmarks->setWidget(sidebarPanel);
+    sidebarTabs->setMinimumWidth(200);
+    dockBookmarks->setWidget(sidebarTabs);
     addDockWidget(Qt::LeftDockWidgetArea, dockBookmarks);
 
     QWidget *main = new QWidget(this);
@@ -594,7 +597,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   disksList->setIconSize(QSize(24,24));
   disksList->setItemDelegate(new DiskItemDelegate(disksList));
   disksList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-  sidebarPanel->setMinimumWidth(200);
+  sidebarTabs->setMinimumWidth(200);
 #endif
 
   // Load information whether bookmarks are displayed
