@@ -1,6 +1,32 @@
 #include "sortmodel.h"
 #include "mymodel.h"
 
+#include <QFileInfo>
+
+static QString canonicalFilePathIfExists(const QString &path)
+{
+    const QFileInfo fi(path);
+    if (fi.exists()) {
+        return fi.canonicalFilePath();
+    }
+    return QDir::cleanPath(path);
+}
+
+void viewsSortProxyModel::setSingleFileFilter(const QString &absoluteFilePath)
+{
+    m_singleFileCanonical = canonicalFilePathIfExists(absoluteFilePath);
+    invalidateFilter();
+}
+
+void viewsSortProxyModel::clearSingleFileFilter()
+{
+    if (m_singleFileCanonical.isEmpty()) {
+        return;
+    }
+    m_singleFileCanonical.clear();
+    invalidateFilter();
+}
+
 //---------------------------------------------------------------------------------
 bool mainTreeFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
@@ -18,13 +44,21 @@ bool mainTreeFilterProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex
 //---------------------------------------------------------------------------------
 bool viewsSortProxyModel::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const
 {
-    if (this->filterRegExp().isEmpty()) { return true; }
+    if (sourceModel() == nullptr) { return false; }
 
     QModelIndex index0 = sourceModel()->index(sourceRow, 0, sourceParent);
     myModel* fileModel = qobject_cast<myModel*>(sourceModel());
+    if (fileModel == nullptr) { return false; }
+
+    if (!m_singleFileCanonical.isEmpty()) {
+        return canonicalFilePathIfExists(fileModel->filePath(index0))
+               == m_singleFileCanonical;
+    }
+
+    if (this->filterRegExp().isEmpty()) { return true; }
 
     if (fileModel->fileInfo(index0).isHidden()) { return false; }
-    else { return true; }
+    return true;
 }
 
 //---------------------------------------------------------------------------------

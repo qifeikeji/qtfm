@@ -89,6 +89,15 @@ MainWindow::MainWindow()
         } else if (QUrl(startPath).isLocalFile()) {
             startPath = QUrl(args.at(1)).toLocalFile();
         }
+        const QFileInfo argInfo(startPath);
+        if (argInfo.exists()) {
+            if (argInfo.isFile()) {
+                pendingSingleFileTarget = argInfo.canonicalFilePath();
+                startPath = argInfo.absolutePath();
+            } else {
+                startPath = argInfo.canonicalFilePath();
+            }
+        }
     }
 
     settings = new QSettings(Common::configFile(), QSettings::IniFormat);
@@ -222,6 +231,9 @@ MainWindow::MainWindow()
     treeSelectionModel = tree->selectionModel();
     connect(treeSelectionModel, SIGNAL(currentChanged(QModelIndex,QModelIndex)),
             this, SLOT(treeSelectionChanged(QModelIndex,QModelIndex)));
+    if (!pendingSingleFileTarget.isEmpty()) {
+        skipNextSingleFileClear = true;
+    }
     tree->setCurrentIndex(modelTree->mapFromSource(modelList->index(startPath)));
     tree->scrollTo(tree->currentIndex());
 
@@ -638,6 +650,13 @@ void MainWindow::treeSelectionChanged(QModelIndex current, QModelIndex previous)
     QFileInfo name = modelList->fileInfo(modelTree->mapToSource(current));
     if (!name.exists() || name.isFile()) { return; }
 
+    if (skipNextSingleFileClear) {
+        skipNextSingleFileClear = false;
+    } else {
+        modelView->clearSingleFileFilter();
+        pendingSingleFileTarget.clear();
+    }
+
     curIndex = name;
     if (showPathInWindowTitle) {
         if (curIndex.fileName().isEmpty()) { setWindowTitle(curIndex.absolutePath()); }
@@ -689,6 +708,11 @@ void MainWindow::treeSelectionChanged(QModelIndex current, QModelIndex previous)
 
     listSelectionModel->blockSignals(0);
     updateGrid();
+
+    if (!pendingSingleFileTarget.isEmpty()) {
+        modelView->setSingleFileFilter(pendingSingleFileTarget);
+    }
+
     qDebug() << "trigger dirloaded on tree selection changed";
     QTimer::singleShot(30,this,SLOT(dirLoaded()));
 }
@@ -732,6 +756,21 @@ void MainWindow::dirLoaded(bool thumbs)
       QMetaObject::invokeMethod(modelList, [modelListPtr, items]() {
         modelListPtr->loadThumbs(items);
       }, Qt::QueuedConnection);
+    }
+
+    if (!pendingSingleFileTarget.isEmpty()) {
+        const QModelIndex src = modelList->index(pendingSingleFileTarget);
+        if (src.isValid()) {
+            const QModelIndex prox = modelView->mapFromSource(src);
+            if (prox.isValid()) {
+                listSelectionModel->setCurrentIndex(prox, QItemSelectionModel::ClearAndSelect);
+                if (currentView == 2) {
+                    detailTree->scrollTo(prox);
+                } else {
+                    list->scrollTo(prox);
+                }
+            }
+        }
     }
     updateGrid();
 }

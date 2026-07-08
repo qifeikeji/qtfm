@@ -1,6 +1,7 @@
 
 #include <QSortFilterProxyModel>
 #include <QModelIndex>
+#include <QDir>
 
 //---------------------------------------------------------------------------------
 // Subclass QSortFilterProxyModel and override 'filterAcceptsRow' to only show
@@ -18,7 +19,15 @@ protected:
 //---------------------------------------------------------------------------------
 class viewsSortProxyModel : public QSortFilterProxyModel
 {
+public:
+    void setSingleFileFilter(const QString &absoluteFilePath);
+    void clearSingleFileFilter();
+    bool hasSingleFileFilter() const { return !m_singleFileCanonical.isEmpty(); }
+
 protected:
     bool filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) const;
     bool lessThan(const QModelIndex &left, const QModelIndex &right) const;
+
+private:
+    QString m_singleFileCanonical;
 };

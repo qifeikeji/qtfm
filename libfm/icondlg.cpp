@@ -46,7 +46,7 @@ icondlg::icondlg(QWidget *parent)
     iconView->setTextElideMode(Qt::ElideNone);
     iconView->setWordWrap(true);
 
-    iconDelegate = new IconViewDelegate(this);
+    iconDelegate = new IconViewDelegate();
     iconDelegate->setCellGap(kCellGap);
     iconView->setItemDelegate(iconDelegate);
     applyGridLayout();

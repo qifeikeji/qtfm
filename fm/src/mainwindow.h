@@ -257,6 +257,9 @@ private:
     QLabel * statusName;
     QLabel * statusDate;
     QString startPath;
+    /** When set, list view shows only this file until the user navigates elsewhere. */
+    QString pendingSingleFileTarget;
+    bool skipNextSingleFileClear = false;
 
     QAction *closeAct;
     QAction *exitAct;
