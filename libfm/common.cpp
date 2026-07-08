@@ -8,7 +8,7 @@
 #include "common.h"
 
 #include <QDir>
-#include <QFile>
+#include <QFileInfo>
 #include <QDebug>
 #include <QIcon>
 #include <QDirIterator>
@@ -334,6 +334,14 @@ QStringList Common::iconLocations(QString appPath)
     }
     if (QDir(dotIcons).exists()) {
         result << dotIcons;
+    }
+    const QString appDir = QFileInfo(appPath).absoluteDir().absolutePath();
+    const QString bundledIcons = QDir(appDir).filePath(QStringLiteral("../share/icons"));
+    if (QDir(bundledIcons).exists()) {
+        const QString canonical = QDir(bundledIcons).canonicalPath();
+        if (!canonical.isEmpty()) {
+            result << canonical;
+        }
     }
     result << QString("%1/../share/icons").arg(appPath);
     result.removeDuplicates();

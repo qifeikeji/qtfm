@@ -1152,10 +1152,8 @@ QVariant myModel::findIcon(myModelItem *item) const {
     if (type.fileName().endsWith(".app")) {
         return iconFactory->icon(type);
     }
-    return QIcon::fromTheme("folder", iconFactory->icon(type));
-#else
-    return iconFactory->icon(type);
 #endif
+    return FileUtils::searchFolderIcon(type, iconFactory->icon(type));
   }
 
     // If thumbnails are allowed and current file has it, show it

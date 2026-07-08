@@ -232,6 +232,59 @@ QIcon FileUtils::searchMimeIcon(QString mime, const QIcon &defaultIcon) {
 }
 //---------------------------------------------------------------------------
 
+static QString directoryThemeIconName(const QFileInfo &info)
+{
+    const QString name = info.fileName();
+    if (name.isEmpty()) {
+        return QStringLiteral("folder");
+    }
+    if (name == QLatin1String("home")) {
+        return QStringLiteral("folder-home");
+    }
+    if (name == QLatin1String("Desktop") || name == QLatin1String("desktop")) {
+        return QStringLiteral("folder-desktop");
+    }
+    if (name == QLatin1String("Documents")) {
+        return QStringLiteral("folder-documents");
+    }
+    if (name == QLatin1String("Downloads") || name == QLatin1String("Download")) {
+        return QStringLiteral("folder-download");
+    }
+    if (name == QLatin1String("Music")) {
+        return QStringLiteral("folder-music");
+    }
+    if (name == QLatin1String("Pictures")) {
+        return QStringLiteral("folder-pictures");
+    }
+    if (name == QLatin1String("Videos")) {
+        return QStringLiteral("folder-videos");
+    }
+    if (name == QLatin1String("Templates")) {
+        return QStringLiteral("folder-templates");
+    }
+    if (name == QLatin1String("Public")) {
+        return QStringLiteral("folder-publicshare");
+    }
+    if (name == QLatin1String("root")) {
+        return QStringLiteral("folder-red");
+    }
+    if (info.isSymLink()) {
+        return QStringLiteral("folder-visiting");
+    }
+    return QStringLiteral("folder");
+}
+
+QIcon FileUtils::searchFolderIcon(const QFileInfo &info, const QIcon &defaultIcon)
+{
+    const QString primary = directoryThemeIconName(info);
+    QIcon icon = QIcon::fromTheme(primary);
+    if (icon.isNull() && primary != QLatin1String("folder")) {
+        icon = QIcon::fromTheme(QStringLiteral("folder"));
+    }
+    return icon.isNull() ? defaultIcon : icon;
+}
+//---------------------------------------------------------------------------
+
 /**
  * @brief Searches for generic icon
  * @param category

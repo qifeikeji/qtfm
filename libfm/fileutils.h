@@ -28,6 +28,8 @@ public:
        const QIcon &defaultIcon = QIcon::fromTheme("unknown"));
   static QIcon searchMimeIcon(QString mime,
       const QIcon &defaultIcon = QIcon::fromTheme("unknown"));
+  static QIcon searchFolderIcon(const QFileInfo &info,
+      const QIcon &defaultIcon = QIcon());
   static QIcon searchAppIcon(const DesktopFile &app,
       const QIcon &defaultIcon = QIcon::fromTheme("application-x-executable"));
 };
