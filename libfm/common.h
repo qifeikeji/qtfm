@@ -111,6 +111,16 @@ public:
                                        const QImage &source);
     /** First page of PDF via pdftoppm (poppler); empty image on failure. */
     static QImage pdfFirstPageImage(const QString &pdfPath);
+    /**
+     * First frame (or embedded cover art) of a video/audio file, extracted by
+     * running the external `ffmpeg` binary as a subprocess. Running the
+     * decoder out-of-process means a malformed media file can only crash the
+     * short-lived helper process, never the main application. Works the same
+     * way on macOS and Linux as long as `ffmpeg` is installed and on PATH.
+     * Returns a null QImage on any failure (missing binary, decode error,
+     * timeout, etc).
+     */
+    static QImage videoFirstFrameImage(const QString &mediaPath);
     static QString getThumbnailHash(const QString &filename);
     static QString hasThumbnail(const QString &filename);
     static QString getTempPath();

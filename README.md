@@ -14,10 +14,11 @@ Qt File Manager for Linux, FreeBSD, NetBSD, OpenBSD and macOS.
     * Auto mount (and open) storage/optical devices when added *(not default)*
     * Auto play CD/DVD *(not default)*
   * Extensive thumbnail support
-    * Supports image formats through ``ImageMagick``
-    * Supports PDF and related documents
-    * Supports video formats through ``FFmpeg``
-    * Supports embedded images in media files
+    * Supports common image formats natively via Qt
+    * Supports PDF via the ``pdftoppm`` tool (``poppler-utils``), if installed
+    * Supports video/audio (including embedded cover art) via the ``ffmpeg``
+      command-line tool, if installed (run out-of-process so a malformed
+      media file can't crash QtFM itself)
 
 ## Default shortcuts
 
@@ -92,7 +93,6 @@ Build options:
  * ``CONFIG+=with_magick`` : This will enable ``ImageMagick`` support.
    * ``MAGICK_PC=`` : Custom ``Magick++`` pkg-config .pc file.
    * ``CONFIG+=oldmagick`` : If you have ``ImageMagick`` older than 6.9 *(Ubuntu)*.
- * ``CONFIG+=with_ffmpeg`` : This will enable FFmpeg support *(**NOTE!** requires ImageMagick)*.
  * ``CONFIG+=no_tray`` : This will disable ``qtfm-tray`` (``no_dbus`` will also disable this feature).
  * ``CONFIG+=no_dbus`` : This will disable D-Bus session and ``udisks`` features in (lib)QtFM, ``qtfm-tray`` will also not be built.
  * ``CONFIG+=with_includes`` : Install library includes and pkg-config
@@ -122,7 +122,6 @@ Since version 6.3.0 building with CMake is supported.
 Build options (added):
 ```
 ENABLE_MAGICK "Enable support for ImageMagick" (default true)
-ENABLE_FFMPEG "Enable support for FFmpeg v3" (default true)
 ENABLE_DBUS "Enable support for D-Bus" (default true)
 ENABLE_UDISKS "Enable support for udisks" (default true)
 ENABLE_TRAY "Enable support for qtfm-tray" (default true)
@@ -145,7 +144,7 @@ sudo make install
 ### qmake
 
 ```
-qmake PREFIX=/usr CONFIG+=with_magick CONFIG+=with_ffmpeg ..
+qmake PREFIX=/usr CONFIG+=with_magick ..
 make -jX
 make INSTALL_ROOT=<package> install
 ```

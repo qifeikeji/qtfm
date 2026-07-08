@@ -26,7 +26,7 @@ if [ "${SETUP}" = 1 ]; then
     sudo add-apt-repository -y ppa:jonathonf/ffmpeg-3
     sudo add-apt-repository -y ppa:george-edison55/cmake-3.x
     sudo apt-get update
-    sudo apt-get -y install tree cmake git build-essential qtbase5-dev qt5-qmake libmagick++-dev libavdevice-dev libswscale-dev libavformat-dev libavcodec-dev libavutil-dev
+    sudo apt-get -y install tree cmake git build-essential qtbase5-dev qt5-qmake libmagick++-dev ffmpeg poppler-utils
     #curl -L https://sourceforge.net/projects/qt-file-manager/files/sdk/qtfm-sdk-trusty-6.1.tar.bz2/download --output download.tar.bz2
     #tar xf download.tar.bz2 -C /opt
     #rm -f download.tar.bz2
@@ -47,7 +47,7 @@ fi
 if [ "${OS}" = "Linux" ]; then
     mkdir $CWD/build1
     cd $CWD/build1
-    qmake -qt=qt5 CONFIG+=release PREFIX=/usr CONFIG+=with_magick CONFIG+=oldmagick CONFIG+=with_ffmpeg ..
+    qmake -qt=qt5 CONFIG+=release PREFIX=/usr CONFIG+=with_magick CONFIG+=oldmagick ..
     make
     make INSTALL_ROOT=`pwd`/pkg install
     tree pkg

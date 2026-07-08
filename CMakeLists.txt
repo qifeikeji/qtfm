@@ -21,7 +21,6 @@ add_compile_options(-Wall -Wextra)
 
 # configure
 set(ENABLE_MAGICK true CACHE BOOL "Enable support for ImageMagick")
-set(ENABLE_FFMPEG true CACHE BOOL "Enable support for FFmpeg")
 set(ENABLE_DBUS true CACHE BOOL "Enable support for D-Bus")
 set(ENABLE_UDISKS true CACHE BOOL "Enable support for udisks")
 set(ENABLE_TRAY true CACHE BOOL "Enable support for qtfm-tray")
@@ -31,17 +30,11 @@ if(ENABLE_MAGICK)
     add_definitions(-DWITH_MAGICK)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(MAGICK REQUIRED Magick++)
-    # ffmpeg
-    if(ENABLE_FFMPEG)
-        pkg_check_modules(AVDEVICE REQUIRED libavdevice)
-        pkg_check_modules(SWSCALE REQUIRED libswscale)
-        pkg_check_modules(AVFORMAT REQUIRED libavformat)
-        pkg_check_modules(AVCODEC REQUIRED libavcodec)
-        pkg_check_modules(AVUTIL REQUIRED libavutil)
-        add_definitions(-DWITH_FFMPEG)
-        add_compile_options(-fpermissive) # a fix for ffmpeg 5
-    endif()
 endif()
+
+# Video/audio thumbnails shell out to the `ffmpeg` binary at runtime (see
+# Common::videoFirstFrameImage) instead of linking libav*, so no ffmpeg dev
+# packages or WITH_FFMPEG define are required to build qtfm anymore.
 
 # dbus
 if(NOT ENABLE_DBUS)
@@ -125,15 +118,6 @@ if(ENABLE_MAGICK)
     add_definitions(${MAGICK_HDRI})
     target_include_directories(QtFM PRIVATE ${MAGICK_INCLUDE_DIRS})
     target_link_libraries(QtFM ${MAGICK_LIBRARIES})
-    if(ENABLE_FFMPEG)
-        target_include_directories(QtFM PRIVATE ${AVUTIL_INCLUDEDIR})
-        target_link_libraries(QtFM
-                              ${AVDEVICE_LIBRARIES}
-                              ${SWSCALE_LIBRARIES}
-                              ${AVFORMAT_LIBRARIES}
-                              ${AVCODEC_LIBRARIES}
-                              ${AVUTIL_LIBRARIES})
-    endif()
 endif()
 target_include_directories(QtFM PRIVATE libfm libfm/qtcopydialog ${NOTIFY_INCLUDEDIR})
 

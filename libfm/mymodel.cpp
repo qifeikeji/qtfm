@@ -35,16 +35,6 @@
 #include <QtConcurrent/QtConcurrent>
 #include "fileutils.h"
 
-#ifdef WITH_FFMPEG
-extern "C" {
-#include <libavcodec/avcodec.h>
-#include <libavutil/avutil.h>
-#include <libavutil/imgutils.h>
-#include <libavdevice/avdevice.h>
-#include <libswscale/swscale.h>
-}
-#endif
-
 /**
  * @brief Creates file system model
  * @param realMime
@@ -52,20 +42,6 @@ extern "C" {
  */
 myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
     : QAbstractItemModel(parent) {
-
-#ifdef WITH_FFMPEG
-#if (LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100))
-    av_register_all();
-#endif
-    avdevice_register_all();
-#if (LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100))
-    avcodec_register_all();
-#endif
-    avformat_network_init();
-#ifdef QT_NO_DEBUG
-    av_log_set_level(AV_LOG_QUIET);
-#endif
-#endif
 
   // Stores mime utils
   mimeUtilsPtr = mimeUtils;
@@ -765,11 +741,9 @@ bool myModel::fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils)
   if (mime == QLatin1String("application/pdf")) {
     return true;
   }
-#ifdef WITH_FFMPEG
   if (mime.startsWith(QLatin1String("audio/"))) {
     return true;
   }
-#endif
   static const QSet<QString> kExt = {
       QStringLiteral("jpg"), QStringLiteral("jpeg"), QStringLiteral("png"),
       QStringLiteral("gif"), QStringLiteral("webp"), QStringLiteral("bmp"),
@@ -803,7 +777,6 @@ QString myModel::generateThumbnailToCache(const QString &item, const QString &it
 
   const QString mime = itemMime;
 
-#ifdef WITH_FFMPEG
   static const QSet<QString> kVideoExt = {
       QStringLiteral("mp4"), QStringLiteral("mkv"), QStringLiteral("mov"),
       QStringLiteral("avi"), QStringLiteral("webm"), QStringLiteral("m4v"),
@@ -815,19 +788,15 @@ QString myModel::generateThumbnailToCache(const QString &item, const QString &it
                        || kVideoExt.contains(ext);
   const bool isAudio = mime.startsWith(QLatin1String("audio/"));
   if (isVideo || isAudio) {
-    QByteArray frame = myModel::getVideoFrame(item, true);
-    if (frame.isEmpty()) {
-      frame = myModel::getVideoFrame(item, false);
-    }
-    if (!frame.isEmpty()) {
-      QImage img;
-      if (img.loadFromData(frame, "BMP") && !img.isNull()) {
-        return Common::writeThumbnailForFile(item, img);
-      }
+    // Decoding is done by the external ffmpeg binary (see
+    // Common::videoFirstFrameImage) so a malformed/hostile media file can
+    // only crash a short-lived helper process, never qtfm itself.
+    const QImage img = Common::videoFirstFrameImage(item);
+    if (!img.isNull()) {
+      return Common::writeThumbnailForFile(item, img);
     }
     return QString();
   }
-#endif
 
   if (itemMime == QLatin1String("application/pdf")
       || item.endsWith(QLatin1String(".pdf"), Qt::CaseInsensitive)) {
@@ -873,200 +842,6 @@ QString myModel::generateThumbnailToCache(const QString &item, const QString &it
   return Common::writeThumbnailForFile(item, img);
 }
 
-#ifdef WITH_FFMPEG
-QByteArray myModel::getVideoFrame(QString file, bool getEmbedded, int videoFrame, int pixSize)
-{
-    QByteArray result;
-    if (file.isEmpty()) { return result; }
-
-    AVFormatContext *pFormatCtx = nullptr;
-    if (avformat_open_input(&pFormatCtx, file.toUtf8().constData(), nullptr, nullptr) != 0) {
-        return result;
-    }
-    if (avformat_find_stream_info(pFormatCtx, nullptr) < 0) {
-        avformat_close_input(&pFormatCtx);
-        return result;
-    }
-
-    int videoStream = -1;
-    int coverStream = -1;
-    int attachedStream = -1;
-
-    for (unsigned i = 0; i < pFormatCtx->nb_streams; i++) {
-        AVStream *stream = pFormatCtx->streams[i];
-        if (stream->disposition & AV_DISPOSITION_ATTACHED_PIC) {
-            attachedStream = static_cast<int>(i);
-        }
-        if (stream->codecpar->codec_type != AVMEDIA_TYPE_VIDEO) {
-            continue;
-        }
-        if (videoStream < 0) {
-            videoStream = static_cast<int>(i);
-        }
-        const AVCodecID id = stream->codecpar->codec_id;
-        if (id == AV_CODEC_ID_MJPEG || id == AV_CODEC_ID_PNG || id == AV_CODEC_ID_GIF
-            || id == AV_CODEC_ID_BMP || id == AV_CODEC_ID_TIFF) {
-            coverStream = static_cast<int>(i);
-        }
-    }
-
-    auto decodeStreamToThumb = [&](int streamIndex) -> QByteArray {
-        if (streamIndex < 0) { return QByteArray(); }
-        const AVCodec *codec = avcodec_find_decoder(
-            pFormatCtx->streams[streamIndex]->codecpar->codec_id);
-        AVCodecContext *ctx = avcodec_alloc_context3(nullptr);
-        if (codec == nullptr || ctx == nullptr) { return QByteArray(); }
-        if (avcodec_parameters_to_context(ctx, pFormatCtx->streams[streamIndex]->codecpar) < 0
-            || avcodec_open2(ctx, codec, nullptr) < 0) {
-            avcodec_free_context(&ctx);
-            return QByteArray();
-        }
-        av_seek_frame(pFormatCtx, streamIndex, 0, AVSEEK_FLAG_BACKWARD);
-        AVFrame *frame = av_frame_alloc();
-        AVPacket packet;
-        av_init_packet(&packet);
-        QByteArray thumb;
-        while (av_read_frame(pFormatCtx, &packet) >= 0) {
-            if (packet.stream_index != streamIndex) {
-                av_packet_unref(&packet);
-                continue;
-            }
-            if (avcodec_send_packet(ctx, &packet) == 0
-                && avcodec_receive_frame(ctx, frame) == 0) {
-                if (ctx->width <= 0 || ctx->height <= 0
-                    || ctx->width > 8192 || ctx->height > 8192) {
-                    av_packet_unref(&packet);
-                    break;
-                }
-                SwsContext *sws = sws_getCachedContext(
-                    nullptr, ctx->width, ctx->height, ctx->pix_fmt,
-                    ctx->width, ctx->height, AV_PIX_FMT_RGB24,
-                    SWS_BILINEAR, nullptr, nullptr, nullptr);
-                if (sws == nullptr) {
-                    av_packet_unref(&packet);
-                    break;
-                }
-                QImage image(ctx->width, ctx->height, QImage::Format_RGB888);
-                uint8_t *dest[] = { image.bits() };
-                int destStride[] = { static_cast<int>(image.bytesPerLine()) };
-                sws_scale(sws, frame->data, frame->linesize, 0, ctx->height,
-                          dest, destStride);
-                sws_freeContext(sws);
-                thumb = Common::thumbnailBmp(image, pixSize);
-            }
-            av_packet_unref(&packet);
-            if (!thumb.isEmpty()) { break; }
-        }
-        av_frame_free(&frame);
-        avcodec_free_context(&ctx);
-        return thumb;
-    };
-
-    if (getEmbedded) {
-        if (attachedStream >= 0) {
-            const AVPacket &pkt = pFormatCtx->streams[attachedStream]->attached_pic;
-            if (pkt.size > 0) {
-                QImage img = QImage::fromData(
-                    reinterpret_cast<const uchar *>(pkt.data),
-                    static_cast<int>(pkt.size));
-                result = Common::thumbnailBmp(img, pixSize);
-            }
-        }
-        if (result.isEmpty() && coverStream >= 0) {
-            result = decodeStreamToThumb(coverStream);
-        }
-        avformat_close_input(&pFormatCtx);
-        return result;
-    }
-
-    if (videoStream < 0) {
-        avformat_close_input(&pFormatCtx);
-        return result;
-    }
-    if (coverStream == videoStream && pFormatCtx->nb_streams > 1) {
-        for (unsigned i = 0; i < pFormatCtx->nb_streams; i++) {
-            if (static_cast<int>(i) != coverStream
-                && pFormatCtx->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-                videoStream = static_cast<int>(i);
-                break;
-            }
-        }
-    }
-
-    const AVCodec *codec = avcodec_find_decoder(
-        pFormatCtx->streams[videoStream]->codecpar->codec_id);
-    AVCodecContext *pCodecCtx = avcodec_alloc_context3(nullptr);
-    if (codec == nullptr || pCodecCtx == nullptr) {
-        avformat_close_input(&pFormatCtx);
-        return result;
-    }
-    if (avcodec_parameters_to_context(pCodecCtx, pFormatCtx->streams[videoStream]->codecpar) < 0
-        || avcodec_open2(pCodecCtx, codec, nullptr) < 0) {
-        avcodec_free_context(&pCodecCtx);
-        avformat_close_input(&pFormatCtx);
-        return result;
-    }
-
-    AVFrame *pFrame = av_frame_alloc();
-    AVPacket packet;
-    av_init_packet(&packet);
-
-    const double fps = av_q2d(pFormatCtx->streams[videoStream]->r_frame_rate);
-    int maxFrame = 0;
-    if (videoFrame >= 0) {
-        maxFrame = videoFrame;
-    }
-
-    if (maxFrame > 0 && fps > 0) {
-        const int64_t seekT = static_cast<int64_t>(maxFrame)
-            * pFormatCtx->streams[videoStream]->r_frame_rate.den
-            * pFormatCtx->streams[videoStream]->time_base.den
-            / (static_cast<int64_t>(pFormatCtx->streams[videoStream]->r_frame_rate.num)
-               * pFormatCtx->streams[videoStream]->time_base.num);
-        av_seek_frame(pFormatCtx, videoStream, seekT, AVSEEK_FLAG_BACKWARD);
-    } else {
-        av_seek_frame(pFormatCtx, videoStream, 0, AVSEEK_FLAG_BACKWARD);
-    }
-
-    int currentFrame = 0;
-    while (av_read_frame(pFormatCtx, &packet) >= 0) {
-        if (packet.stream_index != videoStream) {
-            av_packet_unref(&packet);
-            continue;
-        }
-        if (currentFrame < maxFrame) {
-            currentFrame++;
-            av_packet_unref(&packet);
-            continue;
-        }
-        if (avcodec_send_packet(pCodecCtx, &packet) == 0
-            && avcodec_receive_frame(pCodecCtx, pFrame) == 0
-            && pCodecCtx->width > 0 && pCodecCtx->height > 0
-            && pCodecCtx->width <= 8192 && pCodecCtx->height <= 8192) {
-            SwsContext *sws = sws_getCachedContext(
-                nullptr, pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
-                pCodecCtx->width, pCodecCtx->height, AV_PIX_FMT_RGB24,
-                SWS_BICUBIC, nullptr, nullptr, nullptr);
-            if (sws != nullptr) {
-                QImage image(pCodecCtx->width, pCodecCtx->height, QImage::Format_RGB888);
-                uint8_t *dest[] = { image.bits() };
-                int destStride[] = { static_cast<int>(image.bytesPerLine()) };
-                sws_scale(sws, pFrame->data, pFrame->linesize, 0, pCodecCtx->height,
-                          dest, destStride);
-                sws_freeContext(sws);
-                result = Common::thumbnailBmp(image, pixSize);
-            }
-        }
-        av_packet_unref(&packet);
-        if (!result.isEmpty()) { break; }
-    }
-
-    av_frame_free(&pFrame);
-    avcodec_free_context(&pCodecCtx);
-    avformat_close_input(&pFormatCtx);
-    return result;
-}
-#endif
 //---------------------------------------------------------------------------
 
 /**

@@ -665,6 +665,92 @@ QImage Common::pdfFirstPageImage(const QString &pdfPath)
     return img;
 }
 
+namespace {
+
+/** Runs ffmpeg with the given extra args, writing a single frame to outPng.
+ *  Returns true on success (process exited 0 and the file was written). */
+bool runFfmpegExtract(const QString &ffmpeg, const QStringList &extraArgs,
+                      const QString &mediaPath, const QString &outPng)
+{
+    QProcess proc;
+    proc.setProgram(ffmpeg);
+    QStringList args;
+    args << QStringLiteral("-y")
+         << QStringLiteral("-loglevel") << QStringLiteral("error")
+         << QStringLiteral("-nostdin");
+    args += extraArgs;
+    args << QStringLiteral("-i") << mediaPath;
+    args << QStringLiteral("-frames:v") << QStringLiteral("1")
+         << QStringLiteral("-vf")
+         << QStringLiteral("scale='min(%1,iw)':'min(%1,ih)':force_original_aspect_ratio=decrease")
+                .arg(Common::thumbnailPixelSize)
+         << outPng;
+    proc.setArguments(args);
+    proc.setStandardInputFile(QProcess::nullDevice());
+    proc.start();
+    if (!proc.waitForFinished(15000)) {
+        proc.kill();
+        proc.waitForFinished(2000);
+        return false;
+    }
+    return proc.exitStatus() == QProcess::NormalExit
+        && proc.exitCode() == 0
+        && QFileInfo::exists(outPng)
+        && QFileInfo(outPng).size() > 0;
+}
+
+} // namespace
+
+QImage Common::videoFirstFrameImage(const QString &mediaPath)
+{
+    if (mediaPath.isEmpty() || !QFileInfo::exists(mediaPath)) {
+        return QImage();
+    }
+    const QString ffmpeg = QStandardPaths::findExecutable(QStringLiteral("ffmpeg"));
+    if (ffmpeg.isEmpty()) {
+        return QImage();
+    }
+
+    QTemporaryFile tmp(QDir::tempPath() + QStringLiteral("/qtfm-vid-XXXXXX"));
+    tmp.setAutoRemove(false);
+    if (!tmp.open()) {
+        return QImage();
+    }
+    const QString outPng = tmp.fileName() + QStringLiteral(".png");
+    tmp.close();
+    tmp.remove();
+
+    // 1) Try to grab embedded cover art (works for most audio files, and for
+    //    some videos with an attached picture stream).
+    bool ok = runFfmpegExtract(ffmpeg,
+                               { QStringLiteral("-an") },
+                               mediaPath, outPng);
+
+    // 2) Otherwise decode a real frame a little bit into the stream (avoids
+    //    all-black leading frames); fall back to the very first frame.
+    if (!ok) {
+        ok = runFfmpegExtract(ffmpeg,
+                              { QStringLiteral("-ss"), QStringLiteral("1") },
+                              mediaPath, outPng);
+    }
+    if (!ok) {
+        ok = runFfmpegExtract(ffmpeg, QStringList(), mediaPath, outPng);
+    }
+
+    if (!ok) {
+        QFile::remove(outPng);
+        return QImage();
+    }
+
+    QImage img;
+    if (!img.load(outPng)) {
+        QFile::remove(outPng);
+        return QImage();
+    }
+    QFile::remove(outPng);
+    return img;
+}
+
 QString Common::hasThumbnail(const QString &filename)
 {
     if (!QFile::exists(filename)) {

@@ -52,11 +52,6 @@ public:
   QString filePath(const QModelIndex &index);
   QString getMimeType(const QModelIndex &index);
   QStringList mimeTypes() const;
-#ifdef WITH_FFMPEG
-  static QByteArray getVideoFrame(QString file, bool getEmbedded = false,
-                                  int videoFrame = -1,
-                                  int pixSize = Common::thumbnailPixelSize);
-#endif
   QFileInfo fileInfo(const QModelIndex &index);
   Qt::DropActions supportedDropActions () const;
   QMimeData* mimeData(const QModelIndexList & indexes) const;

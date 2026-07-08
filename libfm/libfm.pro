@@ -106,4 +106,6 @@ unix:!macx {
 }
 
 CONFIG(with_magick): include($${top_srcdir}/share/imagemagick.pri)
-CONFIG(with_ffmpeg): include($${top_srcdir}/share/ffmpeg.pri)
+# Video/audio thumbnails now shell out to the `ffmpeg` binary at runtime
+# (see Common::videoFirstFrameImage), so libav*/CONFIG(with_ffmpeg) is no
+# longer needed here.

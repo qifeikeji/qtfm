@@ -47,11 +47,8 @@ jobs:
             qt5-qmake \
             libqt5svg5-dev \
             libmagick++-dev \
-            libavdevice-dev \
-            libswscale-dev \
-            libavformat-dev \
-            libavcodec-dev \
-            libavutil-dev \
+            ffmpeg \
+            poppler-utils \
             libfuse2 \
             file \
             wget
@@ -63,7 +60,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          qmake CONFIG+=with_magick CONFIG+=with_ffmpeg CONFIG+=release PREFIX=/usr ..
+          qmake CONFIG+=with_magick CONFIG+=release PREFIX=/usr ..
           set -o pipefail
           make -j"$(nproc)" 2>&1 | tee build.log
           make_rc=${PIPESTATUS[0]}
