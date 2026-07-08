@@ -702,8 +702,9 @@ void MainWindow::dirLoaded(bool thumbs)
     statusDate->setText(QString("%1").arg(total));
 
     if (thumbsAct->isChecked() && thumbs) {
-      QMetaObject::invokeMethod(modelList, [modelList, items]() {
-        modelList->loadThumbs(items);
+      myModel *modelListPtr = modelList;
+      QMetaObject::invokeMethod(modelList, [modelListPtr, items]() {
+        modelListPtr->loadThumbs(items);
       }, Qt::QueuedConnection);
     }
     updateGrid();
