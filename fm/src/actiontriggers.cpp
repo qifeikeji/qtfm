@@ -835,6 +835,10 @@ void MainWindow::showMacOpenWithHelp()
 #endif
 
 //---------------------------------------------------------------------------
+/**
+ * @brief Displays settings dialog
+ */
+void MainWindow::showEditDialog() {
 
   // Deletes current list of custom actions
   customActManager->freeActions();
