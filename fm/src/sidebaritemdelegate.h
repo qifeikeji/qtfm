@@ -10,6 +10,7 @@
  */
 class BookmarkItemDelegate : public QStyledItemDelegate
 {
+    Q_OBJECT
 public:
     explicit BookmarkItemDelegate(QObject *parent = nullptr);
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
@@ -26,6 +27,7 @@ public:
  */
 class DiskItemDelegate : public QStyledItemDelegate
 {
+    Q_OBJECT
 public:
     explicit DiskItemDelegate(QObject *parent = nullptr);
     void paint(QPainter *painter, const QStyleOptionViewItem &option,

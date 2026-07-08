@@ -43,7 +43,7 @@ public:
 public slots:
     void scanTheme();
     void loadIcons();
-    void accept();
+    void accept() override;
 
 private slots:
     void onIconActivated(const QModelIndex &index);
