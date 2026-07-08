@@ -815,8 +815,9 @@ void MainWindow::showEditDialog() {
                  false /* don't reload thumb state */);
 
     QString newTheme = settings->value("fallbackTheme").toString();
-    if (oldTheme.compare(newTheme) != 0) {
-      Common::setupIconTheme(qApp->applicationFilePath());
+    if (oldTheme.compare(newTheme, Qt::CaseInsensitive) != 0) {
+      Common::applyIconThemeName(newTheme, qApp->applicationFilePath());
+      settings->setValue("fallbackTheme", QIcon::themeName());
       modelList->clearIconCache();
       modelList->refreshItems();
       customActManager->readActions();

@@ -87,6 +87,12 @@ public:
     static bool removeThumbsCache();
     static void setupIconTheme(QString appFilePath);
     static void installIconThemeSearchPaths(const QString &appPath);
+    /** Apply theme by on-disk directory name (case-corrected). */
+    static void applyIconThemeName(const QString &themeName, const QString &appPath);
+    /** Map configured name to the actual theme directory name on disk. */
+    static QString resolveIconThemeDirectoryName(const QString &themeName,
+                                                 const QString &appPath);
+    static bool isValidIconTheme(const QString &themeDirPath);
     static DragMode int2dad(int value);
     static QVariant readSetting(QString key,
                                 QString fallback = QString());

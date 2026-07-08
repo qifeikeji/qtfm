@@ -723,7 +723,19 @@ void SettingsDialog::readSettings() {
   QStringList iconThemes;
   iconThemes << Common::getIconThemes(qApp->applicationFilePath());
   cmbIconTheme->addItems(iconThemes);
-  cmbIconTheme->setCurrentIndex(iconThemes.indexOf(currentTheme));
+  int themeIndex = iconThemes.indexOf(currentTheme);
+  if (themeIndex < 0) {
+    for (int i = 0; i < iconThemes.size(); ++i) {
+      if (iconThemes.at(i).compare(currentTheme, Qt::CaseInsensitive) == 0) {
+        themeIndex = i;
+        break;
+      }
+    }
+  }
+  if (themeIndex < 0 && !iconThemes.isEmpty()) {
+    themeIndex = 0;
+  }
+  cmbIconTheme->setCurrentIndex(themeIndex);
 #endif
 
   // Read custom actions
@@ -932,7 +944,12 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("defMimeAppsFile", cmbDefaultMimeApps->currentText());
 
   const QString oldTheme = settingsPtr->value("fallbackTheme").toString();
-  const QString newTheme = cmbIconTheme->currentText();
+  QString newTheme = cmbIconTheme->currentText();
+  const QString canonical = Common::resolveIconThemeDirectoryName(
+      newTheme, qApp->applicationFilePath());
+  if (!canonical.isEmpty()) {
+    newTheme = canonical;
+  }
   settingsPtr->setValue("fallbackTheme", newTheme);
   if (oldTheme != newTheme) {
       settingsPtr->setValue("clearCache", true);
