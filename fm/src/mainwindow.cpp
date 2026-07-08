@@ -109,6 +109,7 @@ QString diskOperationBlockPath(const QString &wholeDiskPath,
 
 bool shouldListWholeDisk(Device *whole, const QMap<QString, Device *> &devices)
 {
+    Q_UNUSED(devices);
     if (uDisks2::isIgnoredBlockDevice(whole->dev)) { return false; }
     if (uDisks2::isPartitionBlock(whole->path)) { return false; }
 
@@ -1621,9 +1622,9 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
     if (focusWidget() == bookmarksList) {
       listSelectionModel->clearSelection();
       if (bookmarksList->indexAt(bookmarksList->mapFromGlobal(event->globalPos())).isValid()) {
-        curIndex = bookmarksList->currentIndex().data(BOOKMARK_PATH).toString();
+        const QString bookmarkPath = bookmarksList->currentIndex().data(BOOKMARK_PATH).toString();
         popup->addAction(delBookmarkAct);
-        if (!curIndex.isEmpty()) {
+        if (!bookmarkPath.isEmpty()) {
             popup->addAction(renameBookmarkAct);
             popup->addAction(editBookmarkAct);	//icon
         }
