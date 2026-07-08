@@ -240,7 +240,7 @@ private:
     int currentSortColumn;  // COLUMN_NAME, COLUMN_SIZE, COLUMN_DATE, ...
     Qt::SortOrder currentSortOrder;
 
-    QCompleter *customComplete;
+    QCompleter *customComplete = nullptr;
     tabBar *tabs;
     MimeUtils *mimeUtils;
 

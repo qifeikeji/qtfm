@@ -455,6 +455,7 @@ void MainWindow::lateStart() {
   customComplete->setCompletionMode(QCompleter::UnfilteredPopupCompletion);
   customComplete->setMaxVisibleItems(10);
   pathEdit->setCompleter(customComplete);
+  applyViewChromeStyles();
 
   // Tabs configuration
   tabs->setDrawBase(0);
@@ -1467,8 +1468,9 @@ void MainWindow::applyViewChromeStyles()
         pathEdit->setFixedHeight(kPathBarHeight);
     }
 
-    if (customComplete && customComplete->popup()) {
+    if (customComplete) {
         QAbstractItemView *pop = customComplete->popup();
+        if (pop) {
         const QString completerQss = QStringLiteral(
             "QAbstractItemView { background: %1; border: 1px solid %2;"
             " border-radius: 4px; padding: 4px; outline: none; }"
@@ -1482,6 +1484,7 @@ void MainWindow::applyViewChromeStyles()
             tree->setIndentation(24);
             tree->setRootIsDecorated(false);
             tree->setUniformRowHeights(true);
+        }
         }
     }
 
