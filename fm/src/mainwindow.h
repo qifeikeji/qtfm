@@ -105,6 +105,8 @@ public slots:
     bool linkFiles(const QList<QUrl> &files, const QString &newPath);
     void newDir();
     void newFile();
+    void newMdFile();
+    void newTxtFile();
     void pathEditChanged(QString);
     void terminalRun();
     void executeFile(QModelIndex, bool);
@@ -170,7 +172,7 @@ public slots:
     void writeBookmarkGroups();
     void selectBookmarkGroup(const QString &groupId);
     void addBookmarkGroup();
-    void changeBookmarkGroupIcon(const QString &groupId);
+    void removeBookmarkGroup(const QString &groupId);
     void refreshBookmarkGroupBar();
     void handleBookmarksChanged();
     void firstRunCustomActions(bool isFirstRun);
@@ -223,6 +225,7 @@ private:
     int zoomList;
     int zoomDetail;
     int zoomBook;
+    int bookmarkGroupTabSize;
     int iconViewGap = 4;
     int currentView;        // 0=list, 1=icons, 2=details
     int currentSortColumn;  // COLUMN_NAME, COLUMN_SIZE, COLUMN_DATE, ...
@@ -309,6 +312,8 @@ private:
     QAction *sortAscAct;
     QAction *newDirAct;
     QAction *newFileAct;
+    QAction *newMdFileAct;
+    QAction *newTxtFileAct;
     QAction *cutAct;
     QAction *copyAct;
     QAction *pasteAct;

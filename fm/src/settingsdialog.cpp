@@ -202,6 +202,9 @@ QWidget *SettingsDialog::createAppearanceSettings()
   spinListRowHeight = new QSpinBox(grpAppear);
   spinListRowHeight->setRange(18, 128);
   spinListRowHeight->setSuffix(tr(" px"));
+  spinBookmarkGroupTabSize = new QSpinBox(grpAppear);
+  spinBookmarkGroupTabSize->setRange(24, 128);
+  spinBookmarkGroupTabSize->setSuffix(tr(" px"));
   checkFoldersAlwaysFirst = new QCheckBox(grpAppear);
   spinListColName = new QSpinBox(grpAppear);
   spinListColSize = new QSpinBox(grpAppear);
@@ -225,6 +228,7 @@ QWidget *SettingsDialog::createAppearanceSettings()
     layoutAppear->addRow(tr("Icon view spacing"), spinIconViewGap);
     layoutAppear->addRow(tr("Icon view size"), spinIconViewSize);
     layoutAppear->addRow(tr("List row height"), spinListRowHeight);
+    layoutAppear->addRow(tr("Bookmark group tab size"), spinBookmarkGroupTabSize);
     layoutAppear->addRow(tr("Folders always first (list)"), checkFoldersAlwaysFirst);
     layoutAppear->addRow(tr("List column: Name"), spinListColName);
     layoutAppear->addRow(tr("List column: Size"), spinListColSize);
@@ -670,6 +674,7 @@ void SettingsDialog::readSettings() {
   spinIconViewGap->setValue(settingsPtr->value("iconViewGap", 4).toInt());
   spinIconViewSize->setValue(settingsPtr->value("zoom", 48).toInt());
   spinListRowHeight->setValue(settingsPtr->value("zoomDetail", 24).toInt());
+  spinBookmarkGroupTabSize->setValue(settingsPtr->value("bookmarkGroupTabSize", 40).toInt());
   checkFoldersAlwaysFirst->setChecked(settingsPtr->value("foldersAlwaysFirst", true).toBool());
   spinListColName->setValue(settingsPtr->value("listColumnWidth1", 220).toInt());
   spinListColSize->setValue(settingsPtr->value("listColumnWidth2", 90).toInt());
@@ -896,6 +901,7 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("iconViewGap", spinIconViewGap->value());
   settingsPtr->setValue("zoom", spinIconViewSize->value());
   settingsPtr->setValue("zoomDetail", spinListRowHeight->value());
+  settingsPtr->setValue("bookmarkGroupTabSize", spinBookmarkGroupTabSize->value());
   settingsPtr->setValue("foldersAlwaysFirst", checkFoldersAlwaysFirst->isChecked());
   settingsPtr->setValue("listColumnWidth1", spinListColName->value());
   settingsPtr->setValue("listColumnWidth2", spinListColSize->value());

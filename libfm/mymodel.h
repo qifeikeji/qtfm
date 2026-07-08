@@ -48,6 +48,8 @@ public:
   QModelIndex parent(const QModelIndex &index) const;
   QModelIndex insertFolder(QModelIndex parent);
   QModelIndex insertFile(QModelIndex parent);
+  /** Creates an empty file with a unique name ending in @p suffix (e.g. "md", "txt"). */
+  QModelIndex insertFileWithSuffix(QModelIndex parent, const QString &suffix);
   int rowCount(const QModelIndex &parent) const;
   qint64 size(const QModelIndex &index);
   QString fileName(const QModelIndex &index);

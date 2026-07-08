@@ -25,6 +25,7 @@
         <file>icons/toolbar/refresh.svg</file>
         <file>icons/toolbar/terminal.svg</file>
         <file>icons/toolbar/sort.svg</file>
+        <file>icons/toolbar/tab-add.svg</file>
         <file>icons/toolbar/view-icon-mode.svg</file>
         <file>icons/toolbar/view-list-mode.svg</file>
         <file>icons/toolbar/up.svg</file>

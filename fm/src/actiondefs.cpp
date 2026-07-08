@@ -94,6 +94,18 @@ void MainWindow::createActions() {
   newFileAct->setIcon(actionIcons->at(1));
   actionList->append(newFileAct);
 
+  newMdFileAct = new QAction(tr("New Markdown file"), this);
+  newMdFileAct->setStatusTip(tr("Create a new Markdown (.md) file"));
+  connect(newMdFileAct, SIGNAL(triggered()), this, SLOT(newMdFile()));
+  newMdFileAct->setIcon(actionIcons->at(1));
+  actionList->append(newMdFileAct);
+
+  newTxtFileAct = new QAction(tr("New text file"), this);
+  newTxtFileAct->setStatusTip(tr("Create a new text (.txt) file"));
+  connect(newTxtFileAct, SIGNAL(triggered()), this, SLOT(newTxtFile()));
+  newTxtFileAct->setIcon(actionIcons->at(1));
+  actionList->append(newTxtFileAct);
+
   newWinAct = new QAction(tr("New window"), this);
   connect(newWinAct, SIGNAL(triggered()), this, SLOT(newWindow()));
   newWinAct->setIcon(actionIcons->at(28));
@@ -640,7 +652,6 @@ void MainWindow::zoomInAction()
     } else if (focusWidget() == bookmarksList) {
         (zoomBook == 64) ? zoomBook=64 : zoomBook+= 8;
         bookmarksList->setIconSize(QSize(zoomBook,zoomBook));
-        bookmarkGroupBar->setTabIconSize(zoomBook);
         zoomLevel = zoomBook;
     } else {
         if (currentView == 1) {
@@ -678,7 +689,6 @@ void MainWindow::zoomOutAction()
     } else if(focusWidget() == bookmarksList) {
         (zoomBook == 16) ? zoomBook=16 : zoomBook-= 8;
         bookmarksList->setIconSize(QSize(zoomBook,zoomBook));
-        bookmarkGroupBar->setTabIconSize(zoomBook);
         zoomLevel = zoomBook;
     } else {
         if (currentView == 1) {

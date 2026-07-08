@@ -606,6 +606,39 @@ QModelIndex myModel::insertFile(QModelIndex parent)
 }
 
 //---------------------------------------------------------------------------------
+QModelIndex myModel::insertFileWithSuffix(QModelIndex parent, const QString &suffix)
+{
+    myModelItem *item = static_cast<myModelItem*>(parent.internalPointer());
+    if (item == nullptr || suffix.isEmpty()) {
+        return QModelIndex();
+    }
+
+    int num = 0;
+    QString name;
+    do {
+        num++;
+        if (num == 1) {
+            name = QStringLiteral("untitled.%1").arg(suffix);
+        } else {
+            name = QStringLiteral("untitled_%1.%2").arg(num).arg(suffix);
+        }
+    } while (item->hasChild(name));
+
+    const QString path = currentRootPath + SEPARATOR + name;
+    QFile temp(path);
+    if (!temp.open(QIODevice::WriteOnly)) {
+        return QModelIndex();
+    }
+    temp.close();
+
+    beginInsertRows(parent, item->childCount(), item->childCount());
+    new myModelItem(QFileInfo(path), item);
+    endInsertRows();
+
+    return index(item->childCount() - 1, COLUMN_NAME, parent);
+}
+
+//---------------------------------------------------------------------------------
 Qt::DropActions myModel::supportedDropActions() const
 {
     return Qt::CopyAction | Qt::MoveAction;

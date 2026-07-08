@@ -20,6 +20,11 @@ public:
     virtual QModelIndex indexAt (const QPoint& point) const;
     virtual void scrollTo(const QModelIndex& index, ScrollHint hint = EnsureVisible);
 
+    /** Raw hit test (any column). */
+    QModelIndex indexAtAnyColumn(const QPoint &viewportPos) const;
+    /** True if viewportPos lies in a name-column row cell (full cell, not text width only). */
+    bool isNameColumnRowHit(const QPoint &viewportPos) const;
+
 protected:
 
     virtual bool event(QEvent* event);

@@ -156,16 +156,33 @@ void DfmQTreeView::paintEvent(QPaintEvent* event)
     }
 }
 
+QModelIndex DfmQTreeView::indexAtAnyColumn(const QPoint &viewportPos) const
+{
+    return QTreeView::indexAt(viewportPos);
+}
+
+bool DfmQTreeView::isNameColumnRowHit(const QPoint &viewportPos) const
+{
+    const QModelIndex index = QTreeView::indexAt(viewportPos);
+    if (!index.isValid() || index.column() != COLUMN_NAME) {
+        return false;
+    }
+    return visualRect(index).contains(viewportPos);
+}
+
 QModelIndex DfmQTreeView::indexAt(const QPoint& point) const
 {
-    // The blank portion of the name column counts as empty space
     const QModelIndex index = QTreeView::indexAt(point);
-    bool isTheNameColumn = index.column() == COLUMN_NAME;
-    if (!isTheNameColumn) return QModelIndex(); //only do selection on the name column.
-    const bool isAboveEmptySpace  = !m_useDefaultIndexAt &&
-                                    isTheNameColumn &&
-                                    !nameColumnRect(index).contains(point);
-    return isAboveEmptySpace ? QModelIndex() : index;
+    if (!index.isValid()) {
+        return QModelIndex();
+    }
+    if (index.column() != COLUMN_NAME) {
+        return QModelIndex();
+    }
+    if (!visualRect(index).contains(point)) {
+        return QModelIndex();
+    }
+    return index;
 }
 
 void DfmQTreeView::setSelection(const QRect& rect, QItemSelectionModel::SelectionFlags command)

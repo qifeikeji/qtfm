@@ -349,6 +349,8 @@ MainWindow::MainWindow()
             this, &MainWindow::addBookmarkGroup);
     connect(bookmarkGroupBar, &BookmarkGroupBar::groupIconChangeRequested,
             this, &MainWindow::changeBookmarkGroupIcon);
+    connect(bookmarkGroupBar, &BookmarkGroupBar::groupDeleteRequested,
+            this, &MainWindow::removeBookmarkGroup);
 
     // Create disks model
 #ifndef NO_UDISKS
@@ -384,7 +386,7 @@ void MainWindow::lateStart() {
   // Configure bookmarks list
   bookmarksList->setDragDropMode(QAbstractItemView::DragDrop);
   bookmarksList->setDropIndicatorShown(true);
-  bookmarksList->setDefaultDropAction(Qt::MoveAction);
+  bookmarksList->setDefaultDropAction(Qt::CopyAction);
   bookmarksList->setSelectionMode(QAbstractItemView::ExtendedSelection);
   bookmarksList->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
@@ -397,6 +399,7 @@ void MainWindow::lateStart() {
 
   // Configure detail view
   detailTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
+  detailTree->setSelectionBehavior(QAbstractItemView::SelectRows);
   detailTree->setDragDropMode(QAbstractItemView::DragDrop);
   detailTree->setDefaultDropAction(Qt::MoveAction);
   detailTree->setDropIndicatorShown(true);
@@ -573,13 +576,13 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   bookmarksList->setFlow(QListView::TopToBottom);
   bookmarksList->setIconSize(QSize(24,24));
   bookmarksList->setItemDelegate(new BookmarkItemDelegate(bookmarksList));
-  bookmarkGroupBar->setTabIconSize(24);
 
 #ifndef NO_UDISKS
   disksList->setResizeMode(QListView::Adjust);
   disksList->setFlow(QListView::TopToBottom);
   disksList->setIconSize(QSize(24,24));
   disksList->setItemDelegate(new DiskItemDelegate(disksList));
+  disksList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   disksList->setMinimumWidth(248);
   sidebarTabs->setMinimumWidth(248);
 #endif
@@ -597,6 +600,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   zoom = settings->value("zoom", 48).toInt();
   zoomTree = settings->value("zoomTree", 16).toInt();
   zoomBook = settings->value("zoomBook", 24).toInt();
+  bookmarkGroupTabSize = settings->value("bookmarkGroupTabSize", 40).toInt();
   zoomList = settings->value("zoomList", 24).toInt();
   zoomDetail = settings->value("zoomDetail", 32).toInt();
   iconViewGap = settings->value("iconViewGap", 4).toInt();
@@ -605,7 +609,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   detailTree->setIconSize(QSize(zoomDetail, zoomDetail));
   tree->setIconSize(QSize(zoomTree, zoomTree));
   bookmarksList->setIconSize(QSize(zoomBook, zoomBook));
-  bookmarkGroupBar->setTabIconSize(zoomBook);
+  bookmarkGroupBar->setTabButtonSize(bookmarkGroupTabSize);
 
   // Load information whether thumbnails can be shown
   if (thumbState) {
@@ -838,6 +842,55 @@ void MainWindow::changeBookmarkGroupIcon(const QString &groupId)
     }
     refreshBookmarkGroupBar();
     writeBookmarkGroups();
+}
+
+void MainWindow::removeBookmarkGroup(const QString &groupId)
+{
+    if (groupId.isEmpty()) {
+        return;
+    }
+    if (bookmarkGroups.size() <= 1) {
+        QMessageBox::information(this, tr("Delete bookmark group"),
+                                 tr("At least one bookmark group must remain."));
+        return;
+    }
+
+    QString label = groupId;
+    for (const BookmarkGroupInfo &g : bookmarkGroups) {
+        if (g.id == groupId) {
+            label = g.id;
+            break;
+        }
+    }
+
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this, tr("Delete bookmark group"),
+        tr("Delete group \"%1\" and all bookmarks in it?").arg(label),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (answer != QMessageBox::Yes) {
+        return;
+    }
+
+    for (int i = modelBookmarks->rowCount() - 1; i >= 0; --i) {
+        if (modelBookmarks->item(i)->data(BOOKMARK_GROUP).toString() == groupId) {
+            modelBookmarks->removeRow(i);
+        }
+    }
+
+    for (int i = 0; i < bookmarkGroups.size(); ++i) {
+        if (bookmarkGroups.at(i).id == groupId) {
+            bookmarkGroups.removeAt(i);
+            break;
+        }
+    }
+
+    if (currentBookmarkGroupId == groupId) {
+        currentBookmarkGroupId = bookmarkGroups.first().id;
+    }
+    refreshBookmarkGroupBar();
+    selectBookmarkGroup(currentBookmarkGroupId);
+    writeBookmarkGroups();
+    writeBookmarks();
 }
 
 void MainWindow::handleBookmarksChanged()
@@ -1522,6 +1575,8 @@ void MainWindow::writeSettings() {
   settings->setValue("zoom", zoom);
   settings->setValue("zoomTree", zoomTree);
   settings->setValue("zoomBook", zoomBook);
+  settings->setValue("bookmarkGroupTabSize",
+                     bookmarkGroupBar ? bookmarkGroupBar->tabButtonSize() : bookmarkGroupTabSize);
   settings->setValue("zoomList", zoomList);
   settings->setValue("zoomDetail", zoomDetail);
   settings->setValue("iconViewGap", iconViewGap);
@@ -1552,6 +1607,23 @@ void MainWindow::writeSettings() {
  * @param event
  */
 void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
+
+  QWidget *hit = QApplication::widgetAt(event->globalPos());
+  const auto isUnder = [hit](QWidget *root) {
+      if (!hit || !root) {
+          return false;
+      }
+      for (QWidget *w = hit; w; w = w->parentWidget()) {
+          if (w == root) {
+              return true;
+          }
+      }
+      return false;
+  };
+
+  if (bookmarkGroupBar && isUnder(bookmarkGroupBar)) {
+      return;
+  }
 
   // Retrieve widget under mouse
   QMenu *popup;
@@ -1596,7 +1668,71 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
   bool isMedia = false;
   bool isTreeFile = false;
 
+  if (isUnder(bookmarksList)) {
+    listSelectionModel->clearSelection();
+    if (bookmarksList->indexAt(bookmarksList->mapFromGlobal(event->globalPos())).isValid()) {
+      const QString bookmarkPath = bookmarksList->currentIndex().data(BOOKMARK_PATH).toString();
+      if (!bookmarkPath.isEmpty()) {
+          popup->addAction(renameBookmarkAct);
+          popup->addAction(editBookmarkAct);
+      }
+      popup->addSeparator();
+      popup->addAction(delBookmarkAct);
+    } else {
+      bookmarksList->clearSelection();
+      popup->addAction(addSeparatorAct);
+      popup->addAction(wrapBookmarksAct);
+    }
+    popup->exec(event->globalPos());
+    delete popup;
+    return;
+  }
+
+  if (isUnder(disksList)) {
+    listSelectionModel->clearSelection();
+    if (disksList->indexAt(disksList->mapFromGlobal(event->globalPos())).isValid()) {
+#ifndef NO_UDISKS
+      isMedia = true;
+      QString mediaPath = disksList->currentIndex().data(DISK_DEVICE_PATH).toString();
+      const QString opPath = diskOperationBlockPath(mediaPath, disks->devices);
+      if (!mediaPath.isEmpty() && disks->devices.contains(opPath)) {
+          const QString mp = effectiveMountpointForWholeDisk(disks->devices[mediaPath], disks->devices);
+          if (!mp.isEmpty()) {
+              popup->addAction(mediaUnmountAct);
+          } else if (disks->devices[mediaPath]->isOptical) {
+              popup->addAction(mediaEjectAct);
+          }
+      }
+#endif
+    } else {
+      disksList->clearSelection();
+    }
+    if (!popup->actions().isEmpty()) {
+      popup->exec(event->globalPos());
+    }
+    delete popup;
+    return;
+  }
+
   if (focusWidget() == list || focusWidget() == detailTree) {
+
+    if (!isUnder(stackWidget)) {
+      delete popup;
+      return;
+    }
+
+    if (currentView == 2 && isUnder(detailTree)) {
+      const QPoint vp = detailTree->viewport()->mapFromGlobal(event->globalPos());
+      if (!detailTree->isNameColumnRowHit(vp)) {
+        listSelectionModel->clearSelection();
+      } else {
+        const QModelIndex idx = detailTree->indexAt(vp);
+        if (idx.isValid()) {
+          listSelectionModel->setCurrentIndex(
+              idx, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+        }
+      }
+    }
 
     // Clear selection in bookmarks
     bookmarksList->clearSelection();
@@ -1733,6 +1869,8 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
       popup->addSeparator();
       popup->addAction(newDirAct);
       popup->addAction(newFileAct);
+      popup->addAction(newMdFileAct);
+      popup->addAction(newTxtFileAct);
       popup->addSeparator();
       if (pasteAct->isEnabled()) {
         popup->addAction(pasteAct);
@@ -1755,46 +1893,8 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
       popup->addAction(folderPropertiesAct);
     }
   }
-  // Tree or bookmarks
+  // Tree (sidebar folder tree)
   else {
-    if (focusWidget() == bookmarksList) {
-      listSelectionModel->clearSelection();
-      if (bookmarksList->indexAt(bookmarksList->mapFromGlobal(event->globalPos())).isValid()) {
-        const QString bookmarkPath = bookmarksList->currentIndex().data(BOOKMARK_PATH).toString();
-        if (!bookmarkPath.isEmpty()) {
-            popup->addAction(renameBookmarkAct);
-            popup->addAction(editBookmarkAct);	//icon
-        }
-        popup->addSeparator();
-        popup->addAction(delBookmarkAct);
-      } else {
-        bookmarksList->clearSelection();
-        popup->addAction(addSeparatorAct);	//separator
-        popup->addAction(wrapBookmarksAct);
-      }
-      popup->addSeparator();
-    } else if (focusWidget() == disksList) {
-      listSelectionModel->clearSelection();
-      if (disksList->indexAt(disksList->mapFromGlobal(event->globalPos())).isValid()) {
-#ifndef NO_UDISKS
-        isMedia = true;
-        QString mediaPath = disksList->currentIndex().data(DISK_DEVICE_PATH).toString();
-        const QString opPath = diskOperationBlockPath(mediaPath, disks->devices);
-        if (!mediaPath.isEmpty() && disks->devices.contains(opPath)) {
-            const QString mp = effectiveMountpointForWholeDisk(disks->devices[mediaPath], disks->devices);
-            if (!mp.isEmpty()) {
-                popup->addAction(mediaUnmountAct);
-            } else if (disks->devices[mediaPath]->isOptical) {
-                popup->addAction(mediaEjectAct);
-            }
-        }
-#endif
-      } else {
-        disksList->clearSelection();
-      }
-      popup->addSeparator();
-    } else {
-      // tree
       curIndex = modelList->filePath(modelTree->mapToSource(tree->currentIndex()));
       if (curIndex.isFile()) { isTreeFile = true;}
 
@@ -1817,7 +1917,6 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
           }
           popup->addAction(deleteAct);
       }
-    }
     popup->addSeparator();
 
     if (!isTreeFile) { // not a selected file in tree (dock)
@@ -1835,6 +1934,10 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
     }
   }
 
+  if (popup->actions().isEmpty()) {
+    delete popup;
+    return;
+  }
   popup->exec(event->globalPos());
   delete popup;
 }

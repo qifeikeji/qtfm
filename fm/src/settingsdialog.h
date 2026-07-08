@@ -77,6 +77,7 @@ protected:
   QSpinBox* spinIconViewGap;
   QSpinBox* spinIconViewSize;
   QSpinBox* spinListRowHeight;
+  QSpinBox* spinBookmarkGroupTabSize;
   QCheckBox* checkFoldersAlwaysFirst;
   QSpinBox* spinListColName;
   QSpinBox* spinListColSize;

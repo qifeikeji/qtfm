@@ -280,6 +280,46 @@ void MainWindow::newFile() {
   if (stackWidget->currentIndex() == 0) list->edit(fileIndex);
   else detailTree->edit(fileIndex);
 }
+
+void MainWindow::newMdFile()
+{
+  if (!QFileInfo(pathEdit->itemText(0)).isWritable()) {
+    status->showMessage(tr("The current directory is not writable, unable to create new file."));
+    return;
+  }
+  QModelIndex i = modelList->index(pathEdit->itemText(0));
+  const QModelIndex fileIndex =
+      modelView->mapFromSource(modelList->insertFileWithSuffix(i, QStringLiteral("md")));
+  if (!fileIndex.isValid()) {
+    return;
+  }
+  listSelectionModel->setCurrentIndex(fileIndex, QItemSelectionModel::ClearAndSelect);
+  if (stackWidget->currentIndex() == 0) {
+    list->edit(fileIndex);
+  } else {
+    detailTree->edit(fileIndex);
+  }
+}
+
+void MainWindow::newTxtFile()
+{
+  if (!QFileInfo(pathEdit->itemText(0)).isWritable()) {
+    status->showMessage(tr("The current directory is not writable, unable to create new file."));
+    return;
+  }
+  QModelIndex i = modelList->index(pathEdit->itemText(0));
+  const QModelIndex fileIndex =
+      modelView->mapFromSource(modelList->insertFileWithSuffix(i, QStringLiteral("txt")));
+  if (!fileIndex.isValid()) {
+    return;
+  }
+  listSelectionModel->setCurrentIndex(fileIndex, QItemSelectionModel::ClearAndSelect);
+  if (stackWidget->currentIndex() == 0) {
+    list->edit(fileIndex);
+  } else {
+    detailTree->edit(fileIndex);
+  }
+}
 //---------------------------------------------------------------------------
 
 /**

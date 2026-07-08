@@ -26,10 +26,7 @@
 #include <QApplication>
 #include <QUrl>
 #include <QDir>
-#include <QPushButton>
 #include <QFileInfo>
-#include <QMessageBox>
-#include <QAbstractButton>
 #include <QModelIndex>
 
 bookmarkmodel::bookmarkmodel(/*QHash<QString,
@@ -118,112 +115,33 @@ bool bookmarkmodel::dropMimeData(const QMimeData * data,
                                  int column,
                                  const QModelIndex &parent)
 {
-    //moving its own items around
-    if (data->hasFormat("application/x-qstandarditemmodeldatalist"))
-    if (parent.column() == -1) {
-        return QStandardItemModel::dropMimeData(data,
-                                                action,
-                                                row,
-                                                column,
-                                                parent);
+    // Reorder bookmarks within the list
+    if (data->hasFormat("application/x-qstandarditemmodeldatalist")) {
+        if (parent.column() == -1) {
+            return QStandardItemModel::dropMimeData(data,
+                                                    action,
+                                                    row,
+                                                    column,
+                                                    parent);
+        }
+        return false;
     }
 
-    QList<QUrl> files = data->urls();
-    QStringList cutList;
-    QString parentPath = parent.data(BOOKMARK_PATH).toString();
-
-    // Holding ctrl is copy, holding shift is move, holding alt is ask
-    Qt::KeyboardModifiers mods = QApplication::keyboardModifiers();
-    Common::DragMode mode = Common::getDefaultDragAndDrop();
-    if (mods == Qt::ControlModifier) {
-        mode = Common::getDADctrlMod();
-    } else if (mods == Qt::ShiftModifier) {
-        mode = Common::getDADshiftMod();
-    } else if (mods == Qt::AltModifier) {
-        mode = Common::getDADaltMod();
+    if (!data->hasUrls()) {
+        return false;
     }
 
-    // check if src/dst differ
-    QString extraDialogText;
-    foreach(QUrl path, files) {
-        if (parent.column() == -1) { continue; }
-        QFileInfo file(path.toLocalFile());
-        // get original path
-        QStringList getOldPath = file.absoluteFilePath().split("/",
-                                                               Qt::SkipEmptyParts);
-        QString oldPath;
-        for (int i=0;i<getOldPath.size()-1;++i) {
-            oldPath.append(QString("/%1").arg(getOldPath.at(i)));
-        }
-        QString oldDevice = Common::getDeviceForDir(oldPath);
-        QString newDevice = Common::getDeviceForDir(parentPath);
-        if (oldDevice != newDevice) {
-            extraDialogText = QString(tr("Source and destination is on a different storage."));
-            mode = Common::DM_UNKNOWN;
-            break;
-        }
-    }
-
-    // If drag mode is unknown then ask what to do
-    if (mode == Common::DM_UNKNOWN) {
-        QMessageBox box;
-        box.setWindowTitle(tr("Select file action"));
-        box.setWindowIcon(QIcon::fromTheme("qtfm",
-                                           QIcon(":/icons/app.svg")));
-        box.setIconPixmap(QIcon::fromTheme("dialog-information").pixmap(QSize(32, 32)));
-        box.setText(QString("<h3>%1</h3>")
-                    .arg(tr("What do you want to do?")));
-        if (!extraDialogText.isEmpty()) {
-            box.setText(QString("%1<p>%2</p>")
-            .arg(box.text())
-            .arg(extraDialogText));
-        }
-        QAbstractButton *move = box.addButton(tr("Move here"),
-                                              QMessageBox::ActionRole);
-        QAbstractButton *copy = box.addButton(tr("Copy here"),
-                                              QMessageBox::ActionRole);
-        QAbstractButton *link = box.addButton(tr("Link here"),
-                                              QMessageBox::ActionRole);
-        QAbstractButton *canc = box.addButton(QMessageBox::Cancel);
-        move->setIcon(QIcon::fromTheme("edit-cut"));
-        copy->setIcon(QIcon::fromTheme("edit-copy"));
-        link->setIcon(QIcon::fromTheme("insert-link"));
-        canc->setIcon(QIcon::fromTheme("edit-delete"));
-        box.exec();
-        if (box.clickedButton() == move) {
-            mode = Common::DM_MOVE;
-        } else if (box.clickedButton() == copy) {
-            mode = Common::DM_COPY;
-        } else if (box.clickedButton() == link) {
-            mode = Common::DM_LINK;
-        } else if (box.clickedButton() == canc) {
-            return false;
-        }
-    }
-
+    // External drags (e.g. from the file view): bookmark folders only — never move/copy
+    // files into a bookmark path, including when dropped on a bookmark row.
     bool addedFolder = false;
-    foreach(QUrl path, files) {
-        QFileInfo file(path.toLocalFile());
-        // drag to bookmark list background: add folder bookmark to active group
-        if (parent.column() == -1 || !parent.isValid()) {
-            if (file.isDir()) {
-                addBookmark(file.fileName(), file.filePath(), QStringLiteral("0"), QString(),
-                            QString(), false, true, m_activeGroupId);
-                addedFolder = true;
-            }
+    foreach (const QUrl &url, data->urls()) {
+        const QFileInfo file(url.toLocalFile());
+        if (!file.exists() || !file.isDir()) {
             continue;
-        } else {
-            if (mode == Common::DM_MOVE) {
-                if (file.absoluteDir() != parentPath) { cutList.append(file.filePath()); }
-            }
         }
+        addBookmark(file.fileName(), file.filePath(), QStringLiteral("0"), QString(),
+                    QString(), false, true, m_activeGroupId);
+        addedFolder = true;
     }
-    if (addedFolder) {
-        return true;
-    }
-    emit bookmarkPaste(data,
-                       parentPath,
-                       cutList,
-                       mode==Common::DM_LINK?true:false);
-    return false;
+    return addedFolder;
 }

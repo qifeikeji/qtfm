@@ -8,7 +8,6 @@
 
 namespace {
 const int kMinItemHeight = 54;
-const int kDiskProgressMinWidth = 200;
 const int kIconSize = 24;
 const int kHPad = 8;
 const int kVPad = 6;
@@ -112,8 +111,6 @@ QSize DiskItemDelegate::sizeHint(const QStyleOptionViewItem &option,
     Q_UNUSED(index);
     QSize size = QStyledItemDelegate::sizeHint(option, index);
     size.setHeight(qMax(size.height(), kMinItemHeight));
-    const int minRowWidth = kHPad + kIconSize + kIconTextGap + kDiskProgressMinWidth + kHPad;
-    size.setWidth(qMax(size.width(), minRowWidth));
     return size;
 }
 
@@ -158,7 +155,7 @@ void DiskItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     // Second line: usage progress bar, or a muted "not mounted" placeholder.
     const int barHeight = 8;
     const int barTop = rect.top() + kVPad + nameFm.height() + 6;
-    const int barWidth = qMax(kDiskProgressMinWidth, textWidth);
+    const int barWidth = qMax(0, textWidth);
     const QRect barRect(textLeft, barTop, qMax(0, barWidth), barHeight);
 
     QColor freeColor = textColor;

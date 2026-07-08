@@ -22,24 +22,28 @@ public:
     explicit BookmarkGroupBar(QWidget *parent = nullptr);
 
     void setGroups(const QVector<BookmarkGroupInfo> &groups, const QString &currentGroupId);
-    void setTabIconSize(int size);
+    /** Side length of group tab and “+” buttons (default 40 px). */
+    void setTabButtonSize(int size);
+    int tabButtonSize() const { return m_tabButtonSize; }
     QString currentGroupId() const { return m_currentGroupId; }
 
 signals:
     void currentGroupChanged(const QString &groupId);
     void addGroupRequested();
     void groupIconChangeRequested(const QString &groupId);
+    void groupDeleteRequested(const QString &groupId);
 
 protected:
-    bool eventFilter(QObject *watched, QEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
 
 private:
     void rebuildButtons();
     void selectGroup(const QString &groupId);
+    void applyButtonSizes();
 
     QVector<BookmarkGroupInfo> m_groups;
     QString m_currentGroupId;
-    int m_iconSize = 24;
+    int m_tabButtonSize = 40;
 
     QVBoxLayout *m_layout = nullptr;
     QButtonGroup *m_buttonGroup = nullptr;
