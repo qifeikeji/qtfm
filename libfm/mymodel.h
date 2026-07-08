@@ -1,24 +1,3 @@
-/****************************************************************************
-* This file is part of qtFM, a simple, fast file manager.
-* Copyright (C) 2010,2011,2012 Wittfella
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program.  If not, see <http://www.gnu.org/licenses/>
-*
-* Contact e-mail: wittfella@qtfm.org
-*
-****************************************************************************/
-
 #ifndef MYMODEL_H
 #define MYMODEL_H
 
@@ -27,6 +6,9 @@
 #include "mimeutils.h"
 
 #include "common.h"
+
+#include <QAtomicInt>
+#include <QMutex>
 
 /**
  * @class myModel
@@ -70,9 +52,10 @@ public:
   QString filePath(const QModelIndex &index);
   QString getMimeType(const QModelIndex &index);
   QStringList mimeTypes() const;
-  QByteArray getThumb(QString item);
 #ifdef WITH_FFMPEG
-  QByteArray getVideoFrame(QString file, bool getEmbedded = false, int videoFrame = -1, int pixSize = 128);
+  static QByteArray getVideoFrame(QString file, bool getEmbedded = false,
+                                  int videoFrame = -1,
+                                  int pixSize = Common::thumbnailPixelSize);
 #endif
   QFileInfo fileInfo(const QModelIndex &index);
   Qt::DropActions supportedDropActions () const;
@@ -89,6 +72,7 @@ public slots:
   void clearCutItems();
   void clearIconCache();
   void forceRefresh();
+  void pumpThumbnailQueue();
 signals:
   void dragDropPaste(const QMimeData *data, QString newPath,
                      Common::DragMode mode = Common::DM_UNKNOWN);
@@ -104,15 +88,22 @@ protected:
   QVariant findIcon(myModelItem *item) const;
   QVariant findMimeIcon(myModelItem *item) const;
 private:
+  static bool fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils);
+  static QString generateThumbnailToCache(const QString &absolutePath,
+                                          MimeUtils *mimeUtils);
+
   bool realMimeTypes;
   bool showThumbs;
-  int thumbCount;
 
   QPalette colors;
   QStringList cutItems;
   QHash<QString,QString> *mimeGlob;
   QHash<QString,QString> *mimeGeneric;
-  QHash<QString,QByteArray> *thumbs;
+  QHash<QString, QString> *thumbPaths;
+
+  mutable QMutex thumbMutex;
+  QStringList thumbQueue;
+  QAtomicInt thumbActiveJobs;
 
   myModelItem* rootItem;
   MimeUtils* mimeUtilsPtr;

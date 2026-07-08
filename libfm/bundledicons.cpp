@@ -112,6 +112,9 @@ QIcon loadIconFromBaseName(const QString &baseName)
     for (const char *ext : extensions) {
         const QString resource = QStringLiteral(":/icons/mimes/") + key
                                  + QString::fromLatin1(ext);
+        if (!QFile::exists(resource)) {
+            continue;
+        }
         QIcon icon;
         if (resource.endsWith(QLatin1String(".svg"), Qt::CaseInsensitive)) {
             icon = iconFromSvgFile(resource);
@@ -142,6 +145,9 @@ QString findIconFilePath(const QString &baseName)
     }
     for (const char *ext : extensions) {
         const QString resource = QStringLiteral(":/icons/mimes/") + key + QString::fromLatin1(ext);
+        if (!QFile::exists(resource)) {
+            continue;
+        }
         if (QFileInfo::exists(resource)) {
             return resource;
         }

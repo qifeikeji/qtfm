@@ -100,12 +100,21 @@ public:
     static QString formatSize(qint64 num);
     static QString getDriveInfo(QString path);
     static QString getXdgCacheHome();
+    static constexpr int thumbnailPixelSize = 200;
+    static QString qtfmThumbnailCacheDir();
+    static QString thumbnailCacheFile(const QString &absoluteFilePath);
+    static bool isThumbnailCacheValid(const QString &absoluteFilePath,
+                                      const QString &cacheFile = QString());
+    static QImage scaleToSquareThumbnail(const QImage &source);
+    /** Write 200px PNG thumb; returns cache path or empty. */
+    static QString writeThumbnailForFile(const QString &absoluteFilePath,
+                                       const QImage &source);
     static QString getThumbnailHash(const QString &filename);
     static QString hasThumbnail(const QString &filename);
     static QString getTempPath();
     static QString getTempClipboardFile();
-    /** Scale image to square BMP bytes for icon/thumbnail views (default 128px). */
-    static QByteArray thumbnailBmp(const QImage &source, int pixSize = 128);
+    /** Scale image to square BMP bytes for icon/thumbnail views. */
+    static QByteArray thumbnailBmp(const QImage &source, int pixSize = thumbnailPixelSize);
 };
 
 #endif // COMMON_H

@@ -22,6 +22,7 @@
 #include <QPalette>
 #include <QVector>
 #include <QCryptographicHash>
+#include <QPainter>
 #include <QUrl>
 #include <QStandardPaths>
 #include <QPainter>
@@ -337,9 +338,13 @@ bool Common::removeFolderCache()
 
 bool Common::removeThumbsCache()
 {
-    QFile cache(QString("%1/thumbs.cache").arg(Common::configDir()));
-    if (cache.exists()) {
-        return cache.remove();
+    const QString dirPath = qtfmThumbnailCacheDir();
+    if (QDir(dirPath).exists()) {
+        return QDir(dirPath).removeRecursively();
+    }
+    QFile legacy(QString("%1/thumbs.cache").arg(Common::configDir()));
+    if (legacy.exists()) {
+        return legacy.remove();
     }
     return false;
 }
@@ -522,24 +527,108 @@ QString Common::getXdgCacheHome()
     return result;
 }
 
+QString Common::qtfmThumbnailCacheDir()
+{
+    return getXdgCacheHome() + QStringLiteral("/qtfm/thumbnails/")
+           + QString::number(thumbnailPixelSize);
+}
+
 QString Common::getThumbnailHash(const QString &filename)
 {
-    if (!filename.isEmpty()) {
-        QString filenameString = QUrl::fromUserInput(filename).toString();
-        QString hash = QString(QCryptographicHash::hash(filenameString.toUtf8(),
-                                                        QCryptographicHash::Md5).toHex());
-        return hash;
+    if (filename.isEmpty()) {
+        return QString();
     }
-    return QString();
+    QFileInfo info(filename);
+    const QByteArray payload = info.absoluteFilePath().toUtf8()
+        + QByteArray::number(info.size())
+        + QByteArray::number(info.lastModified().toSecsSinceEpoch());
+    return QString(QCryptographicHash::hash(payload, QCryptographicHash::Md5).toHex());
+}
+
+QString Common::thumbnailCacheFile(const QString &absoluteFilePath)
+{
+    const QString hash = getThumbnailHash(absoluteFilePath);
+    if (hash.length() < 2) {
+        return QString();
+    }
+    return QStringLiteral("%1/%2/%3.png")
+        .arg(qtfmThumbnailCacheDir())
+        .arg(hash.left(2))
+        .arg(hash);
+}
+
+bool Common::isThumbnailCacheValid(const QString &absoluteFilePath,
+                                   const QString &cacheFile)
+{
+    if (absoluteFilePath.isEmpty()) {
+        return false;
+    }
+    const QString path = cacheFile.isEmpty()
+                             ? thumbnailCacheFile(absoluteFilePath)
+                             : cacheFile;
+    if (!QFileInfo::exists(path)) {
+        return false;
+    }
+    const QFileInfo src(absoluteFilePath);
+    if (!src.exists() || !src.isFile()) {
+        return false;
+    }
+    return QFileInfo(path).lastModified() >= src.lastModified();
+}
+
+QImage Common::scaleToSquareThumbnail(const QImage &source)
+{
+    if (source.isNull()) {
+        return QImage();
+    }
+    const int side = thumbnailPixelSize;
+    const QImage scaled = source.scaled(
+        side, side, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    QImage canvas(side, side, QImage::Format_ARGB32);
+    canvas.fill(Qt::transparent);
+    QPainter painter(&canvas);
+    painter.drawImage((side - scaled.width()) / 2,
+                      (side - scaled.height()) / 2,
+                      scaled);
+    painter.end();
+    return canvas;
+}
+
+QString Common::writeThumbnailForFile(const QString &absoluteFilePath,
+                                      const QImage &source)
+{
+    const QImage canvas = scaleToSquareThumbnail(source);
+    if (canvas.isNull()) {
+        return QString();
+    }
+    const QString outPath = thumbnailCacheFile(absoluteFilePath);
+    if (outPath.isEmpty()) {
+        return QString();
+    }
+    QDir().mkpath(QFileInfo(outPath).absolutePath());
+    if (!canvas.save(outPath, "PNG")) {
+        return QString();
+    }
+    return outPath;
 }
 
 QString Common::hasThumbnail(const QString &filename)
 {
-    if (QFile::exists(filename)) {
-        QString imagePath = QString("%1/thumbnails/normal/%2.png")
-                            .arg(getXdgCacheHome())
-                            .arg(getThumbnailHash(filename));
-        if (QFile::exists(imagePath)) { return imagePath; }
+    if (!QFile::exists(filename)) {
+        return QString();
+    }
+    const QString qtfmPath = thumbnailCacheFile(filename);
+    if (isThumbnailCacheValid(filename, qtfmPath)) {
+        return qtfmPath;
+    }
+    const QString filenameString = QUrl::fromUserInput(filename).toString();
+    const QString legacyHash = QString(
+        QCryptographicHash::hash(filenameString.toUtf8(), QCryptographicHash::Md5).toHex());
+    const QString imagePath = QStringLiteral("%1/thumbnails/normal/%2.png")
+                                  .arg(getXdgCacheHome())
+                                  .arg(legacyHash);
+    if (QFile::exists(imagePath)) {
+        return imagePath;
     }
     return QString();
 }

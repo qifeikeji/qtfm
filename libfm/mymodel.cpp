@@ -25,12 +25,19 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <QApplication>
+#include <QBuffer>
+#include <QImageReader>
+#include <QImageWriter>
 #include <QMessageBox>
 #include <QImage>
+#include <QPainter>
+#include <QSet>
+#include <QtConcurrent/QtConcurrent>
 #include "fileutils.h"
 
 #ifdef WITH_MAGICK
 #include <Magick++.h>
+#include <string>
 #endif
 
 #ifdef WITH_FFMPEG
@@ -76,9 +83,10 @@ myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
   mimeGlob = new QHash<QString,QString>;
   mimeIcons = new QHash<QString,QIcon>;
   folderIcons = new QHash<QString,QIcon>;
-  thumbs = new QHash<QString,QByteArray>;
+  thumbPaths = new QHash<QString, QString>;
   icons = new QCache<QString,QIcon>;
   icons->setMaxCost(500);
+  thumbActiveJobs.storeRelaxed(0);
 
   // Loads cached mime icons
   QFile fileIcons(QString("%1/file.cache").arg(Common::configDir()));
@@ -138,7 +146,7 @@ myModel::~myModel() {
   delete mimeGlob;
   delete mimeIcons;
   delete folderIcons;
-  delete thumbs;
+  delete thumbPaths;
   delete icons;
   delete rootItem;
   delete iconFactory;
@@ -396,6 +404,10 @@ void myModel::addWatcher(myModelItem *item)
 //---------------------------------------------------------------------------------
 bool myModel::setRootPath(const QString& path)
 {
+    if (path != currentRootPath) {
+        QMutexLocker lock(&thumbMutex);
+        thumbQueue.clear();
+    }
     currentRootPath = path;
 
     myModelItem *item = rootItem->matchPath(path.split(SEPARATOR));
@@ -619,19 +631,6 @@ void myModel::cacheInfo()
         out << *folderIcons;
         fileIcons.close();
     }
-
-    if(thumbs->count() > thumbCount) {
-        fileIcons.setFileName(QString("%1/thumbs.cache").arg(Common::configDir()));
-        if(fileIcons.size() > 10000000) { fileIcons.remove(); }
-        else {
-            if (fileIcons.open(QIODevice::WriteOnly)) {
-                QDataStream out(&fileIcons);
-                out.setDevice(&fileIcons);
-                out << *thumbs;
-                fileIcons.close();
-            }
-        }
-    }
 }
 
 //---------------------------------------------------------------------------
@@ -663,195 +662,214 @@ void myModel::loadMimeTypes() const {
 //---------------------------------------------------------------------------
 
 /**
- * @brief Loads thumbnails
+ * @brief Loads thumbnails (disk cache + queued background generation)
  * @param indexes
  */
 void myModel::loadThumbs(QModelIndexList indexes) {
 
-  // Types that should be thumbnailed
   QStringList files;
+  QString listDir;
 
-  // Remember files with valid mime
-  foreach (QModelIndex item, indexes) {
-    QString filename = filePath(item);
-    QString mimetype = mimeUtilsPtr->getMimeType(filename);
-    //qDebug() << "mime for file" << filename << mimetype;
-    if (mimetype.startsWith(QString("image"))
-#ifdef WITH_MAGICK
-        || mimetype == QString("application/pdf")
-#ifdef WITH_FFMPEG
-        || mimetype.startsWith(QString("video"))
-        || mimetype == QString("audio/mpeg")
-#endif
-#endif
-        || filename.endsWith(".desktop")
-        )
-    { files.append(filename); }
+  for (const QModelIndex &item : indexes) {
+    const QString filename = filePath(item);
+    if (filename.isEmpty()) {
+      continue;
+    }
+    if (listDir.isEmpty()) {
+      listDir = QFileInfo(filename).absolutePath();
+    }
+    if (fileWantsThumbnail(filename, mimeUtilsPtr)) {
+      files.append(filename);
+    }
   }
 
-  // Loads thumbnails from cache
-  if (files.count()) {
-    QFileInfo pathInfo (files.at(0));
-    if (thumbs->count() == 0) {
-        qDebug() << "thumbs are empty, try to load cache ...";
-      QFile fileIcons(QString("%1/thumbs.cache").arg(Common::configDir()));
-      if (fileIcons.open(QIODevice::ReadOnly)) {
-          qDebug() << "load thumbs from cache ...";
-          QDataStream out(&fileIcons);
-          out >> *thumbs;
-          fileIcons.close();
+  if (files.isEmpty()) {
+    return;
+  }
+
+  bool scheduled = false;
+  {
+    QMutexLocker lock(&thumbMutex);
+    for (const QString &path : files) {
+      const QString cache = Common::thumbnailCacheFile(path);
+      if (Common::isThumbnailCacheValid(path, cache)) {
+        thumbPaths->insert(path, cache);
+        continue;
       }
-      thumbCount = thumbs->count();
-      qDebug() << "thumbcount" << thumbCount;
+      if (!thumbQueue.contains(path)) {
+        thumbQueue.append(path);
+        scheduled = true;
+      }
+    }
+  }
+
+  emit thumbUpdate(listDir);
+
+  if (scheduled) {
+    QMetaObject::invokeMethod(this, "pumpThumbnailQueue", Qt::QueuedConnection);
+  }
+}
+
+void myModel::pumpThumbnailQueue()
+{
+  constexpr int kMaxConcurrent = 2;
+  while (thumbActiveJobs.loadRelaxed() < kMaxConcurrent) {
+    QString path;
+    {
+      QMutexLocker lock(&thumbMutex);
+      if (thumbQueue.isEmpty()) {
+        return;
+      }
+      path = thumbQueue.takeFirst();
     }
 
-    foreach (QString item, files) {
-      if (!thumbs->contains(item) ||
-          (item.split("/").takeLast() == lastEventFilename && !lastEventFilename.isEmpty()))
-      {
-          qDebug() << "gen new thumb" << item;
-          QByteArray thumb = getThumb(item);
-          if (thumb.size()>0) {
-              thumbs->insert(item, thumb);
-              if (item.split("/").takeLast() == lastEventFilename) {
-                  qDebug() << "save new thumb cache";
-                  lastEventFilename.clear();
-                  QFile fileIcons(QString("%1/thumbs.cache").arg(Common::configDir()));
-                  if(fileIcons.size() > 10000000) { fileIcons.remove(); }
-                  else {
-                      if (fileIcons.open(QIODevice::WriteOnly)) {
-                          QDataStream out(&fileIcons);
-                          out.setDevice(&fileIcons);
-                          out << *thumbs;
-                          fileIcons.close();
-                      }
-                  }
-              }
-          }
+    thumbActiveJobs.ref();
+    MimeUtils *mime = mimeUtilsPtr;
+    QtConcurrent::run([this, path, mime]() {
+      const QString cache = generateThumbnailToCache(path, mime);
+      if (!cache.isEmpty()) {
+        QMutexLocker lock(&thumbMutex);
+        thumbPaths->insert(path, cache);
       }
-    }
-    emit thumbUpdate(pathInfo.absolutePath());
+      thumbActiveJobs.deref();
+      const QString dir = QFileInfo(path).absolutePath();
+      QMetaObject::invokeMethod(this, [this, dir]() {
+        emit thumbUpdate(dir);
+        pumpThumbnailQueue();
+      }, Qt::QueuedConnection);
+    });
   }
 }
 
 //---------------------------------------------------------------------------
 
-/**
- * @brief Creates thumbnail for given item
- * @param item
- * @return thumbnail
- */
-QByteArray myModel::getThumb(QString item) {
-
-  if (item.isEmpty()) { return QByteArray(); }
-  if (item.endsWith(".desktop")) {
-      QString iconFile = Common::findIcon("", QIcon::themeName(), Common::getDesktopIcon(item));
-      if (!iconFile.isEmpty()) {
-          QPixmap pix = QPixmap::fromImage(QImage(iconFile));
-          if (!pix.isNull()) {
-              QByteArray raw;
-              QBuffer buffer(&raw);
-              buffer.open(QIODevice::WriteOnly);
-              pix.save(&buffer, "PNG");
-              return raw;
-          }
-      }
-      return QByteArray();
+bool myModel::fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils)
+{
+  if (path.isEmpty() || !QFileInfo::exists(path)) {
+    return false;
   }
-#ifdef WITH_FFMPEG
-  QString itemMime = mimeUtilsPtr->getMimeType(item);
-  if (itemMime.startsWith(QStringLiteral("video"))) {
-      QByteArray embedded = getVideoFrame(item, true);
-      if (!embedded.isEmpty()) {
-          return embedded;
-      }
-      return getVideoFrame(item, false);
+  if (path.endsWith(QLatin1String(".desktop"))) {
+    return true;
   }
-  if (itemMime.startsWith(QStringLiteral("audio"))) {
-      QByteArray embedded = getVideoFrame(item, true);
-      if (!embedded.isEmpty()) {
-          return embedded;
-      }
+  const QString mime = mimeUtils->getMimeType(path);
+  if (mime.startsWith(QLatin1String("image/"))
+      || mime.startsWith(QLatin1String("video/"))) {
+    return true;
   }
-#endif
 #ifdef WITH_MAGICK
-  QByteArray result;
-  qDebug() << "generate thumbnail for" << item;
-  try {
-      Magick::Image background(Magick::Geometry(128, 128), Magick::ColorRGB(0, 0, 0));
-#ifndef OLDMAGICK
-      background.quiet(true);
+  if (mime == QLatin1String("application/pdf")) {
+    return true;
+  }
 #endif
-#if MagickLibVersion >= 0x700
-      background.alpha(true);
-#else
-      background.matte(true);
+#ifdef WITH_FFMPEG
+  if (mime.startsWith(QLatin1String("audio/"))) {
+    return true;
+  }
 #endif
-      background.backgroundColor(background.pixelColor(0,0));
-      background.transparent(background.pixelColor(0,0));
+  static const QSet<QString> kExt = {
+      QStringLiteral("jpg"), QStringLiteral("jpeg"), QStringLiteral("png"),
+      QStringLiteral("gif"), QStringLiteral("webp"), QStringLiteral("bmp"),
+      QStringLiteral("tif"), QStringLiteral("tiff"), QStringLiteral("heic"),
+      QStringLiteral("heif"), QStringLiteral("avif"), QStringLiteral("svg"),
+      QStringLiteral("mp4"), QStringLiteral("mkv"), QStringLiteral("mov"),
+      QStringLiteral("avi"), QStringLiteral("webm"), QStringLiteral("m4v"),
+      QStringLiteral("mpeg"), QStringLiteral("mpg"), QStringLiteral("wmv"),
+      QStringLiteral("pdf"),
+  };
+  return kExt.contains(FileUtils::getRealSuffix(path).toLower());
+}
 
+QString myModel::generateThumbnailToCache(const QString &item, MimeUtils *mimeUtils)
+{
+  if (item.isEmpty()) {
+    return QString();
+  }
+
+  if (item.endsWith(QLatin1String(".desktop"))) {
+    const QString iconFile = Common::findIcon(
+        QString(), QIcon::themeName(), Common::getDesktopIcon(item));
+    if (!iconFile.isEmpty()) {
+      QImage img(iconFile);
+      if (!img.isNull()) {
+        return Common::writeThumbnailForFile(item, img);
+      }
+    }
+    return QString();
+  }
+
+  const QString itemMime = mimeUtils->getMimeType(item);
+
+#ifdef WITH_FFMPEG
+  if (itemMime.startsWith(QLatin1String("video"))
+      || itemMime.startsWith(QLatin1String("audio/"))) {
+    QByteArray frame = myModel::getVideoFrame(item, true);
+    if (frame.isEmpty()) {
+      frame = myModel::getVideoFrame(item, false);
+    }
+    if (!frame.isEmpty()) {
+      QImage img;
+      if (img.loadFromData(frame, "BMP") && !img.isNull()) {
+        return Common::writeThumbnailForFile(item, img);
+      }
+    }
+    return QString();
+  }
+#endif
+
+#ifdef WITH_MAGICK
+  if (itemMime == QLatin1String("application/pdf")) {
+    try {
       Magick::Image thumb;
 #ifndef OLDMAGICK
       thumb.quiet(true);
 #endif
-      QString filename = item;
-      thumb.read(filename.toUtf8().data());
-      thumb.scale(Magick::Geometry(128, 128));
-      if (thumb.depth()>8) { thumb.depth(8); }
-      int offsetX = 0;
-      int offsetY = 0;
-      if (thumb.columns()<background.columns()) {
-          offsetX = (background.columns()-thumb.columns())/2;
+      const QByteArray pathUtf8 = item.toUtf8();
+      std::string spec(pathUtf8.constData(), static_cast<size_t>(pathUtf8.size()));
+      spec += "[0]";
+      thumb.read(spec);
+      thumb.scale(Magick::Geometry(Common::thumbnailPixelSize,
+                                   Common::thumbnailPixelSize));
+      if (thumb.depth() > 8) {
+        thumb.depth(8);
       }
-      if (thumb.rows()<background.rows()) {
-          offsetY = (background.rows()-thumb.rows())/2;
-      }
-      background.composite(thumb, offsetX, offsetY, Magick::OverCompositeOp);
-      background.magick("BMP");
       Magick::Blob buffer;
-      background.write(&buffer);
-      result = QByteArray((char*)buffer.data(), buffer.length());
-  }
-  catch(Magick::Error &error_ ) {
+      thumb.magick("PNG");
+      thumb.write(&buffer);
+      const size_t len = buffer.length();
+      if (len > 0 && buffer.data() != nullptr) {
+        QImage img;
+        if (img.loadFromData(static_cast<const uchar *>(buffer.data()),
+                             static_cast<int>(len), "PNG")
+            && !img.isNull()) {
+          return Common::writeThumbnailForFile(item, img);
+        }
+      }
+    } catch (Magick::Error &error_) {
       qWarning() << error_.what();
-  }
-  catch(Magick::Warning &warn_ ) {
+    } catch (Magick::Warning &warn_) {
       qWarning() << warn_.what();
+    }
+    return QString();
   }
-  return result;
-#else
-  // Thumbnail image
-  QImage theThumb, background;
-  QImageReader pic(item);
-  int w = pic.size().width();
-  int h = pic.size().height();
-
-  // Background
-  background = QImage(128, 128, QImage::Format_RGB32);
-  background.fill(QApplication::palette().color(QPalette::Base).rgb());
-
-  // Scale image and create its shadow template (background.png)
-  if (w > 128 || h > 128) {
-    pic.setScaledSize(QSize(123, 93));
-    QImage temp = pic.read();
-    if (temp.isNull()) { return QByteArray(); }
-    theThumb = temp;
-  } else {
-    pic.setScaledSize(QSize(64, 64));
-    theThumb = pic.read();
-  }
-
-  QPainter painter(&background);
-  painter.drawImage(QPoint((128 - theThumb.width()) / 2,
-                           (128 - theThumb.height()) / 2), theThumb);
-
-  // Write it to buffer
-  QBuffer buffer;
-  QImageWriter writer(&buffer, "jpg");
-  writer.setQuality(50);
-  writer.write(background);
-  return buffer.buffer();
 #endif
+
+  QImageReader pic(item);
+  pic.setAutoTransform(true);
+  if (!pic.canRead()) {
+    return QString();
+  }
+  const QSize srcSize = pic.size();
+  if (srcSize.isValid() && (srcSize.width() > Common::thumbnailPixelSize
+                            || srcSize.height() > Common::thumbnailPixelSize)) {
+    pic.setScaledSize(srcSize.scaled(Common::thumbnailPixelSize,
+                                     Common::thumbnailPixelSize,
+                                     Qt::KeepAspectRatio));
+  }
+  const QImage img = pic.read();
+  if (img.isNull()) {
+    return QString();
+  }
+  return Common::writeThumbnailForFile(item, img);
 }
 
 #ifdef WITH_FFMPEG
@@ -916,15 +934,23 @@ QByteArray myModel::getVideoFrame(QString file, bool getEmbedded, int videoFrame
             }
             if (avcodec_send_packet(ctx, &packet) == 0
                 && avcodec_receive_frame(ctx, frame) == 0) {
+                if (ctx->width <= 0 || ctx->height <= 0) {
+                    av_packet_unref(&packet);
+                    break;
+                }
                 SwsContext *sws = sws_getCachedContext(
                     nullptr, ctx->width, ctx->height, ctx->pix_fmt,
                     ctx->width, ctx->height, AV_PIX_FMT_RGB24,
                     SWS_BILINEAR, nullptr, nullptr, nullptr);
+                if (sws == nullptr) {
+                    av_packet_unref(&packet);
+                    break;
+                }
                 QImage image(ctx->width, ctx->height, QImage::Format_RGB888);
-                const uint8_t *srcSlice[] = { image.bits() };
-                int srcStride[] = { static_cast<int>(image.bytesPerLine()) };
+                uint8_t *dest[] = { image.bits() };
+                int destStride[] = { static_cast<int>(image.bytesPerLine()) };
                 sws_scale(sws, frame->data, frame->linesize, 0, ctx->height,
-                          const_cast<uint8_t **>(srcSlice), srcStride);
+                          dest, destStride);
                 sws_freeContext(sws);
                 thumb = Common::thumbnailBmp(image, pixSize);
             }
@@ -986,9 +1012,10 @@ QByteArray myModel::getVideoFrame(QString file, bool getEmbedded, int videoFrame
     av_init_packet(&packet);
 
     const double fps = av_q2d(pFormatCtx->streams[videoStream]->r_frame_rate);
-    const double dur = static_cast<double>(pFormatCtx->duration) / AV_TIME_BASE;
-    int maxFrame = (fps > 0 && dur > 0) ? qRound((dur * fps) / 2) : 0;
-    if (videoFrame >= 0) { maxFrame = videoFrame; }
+    int maxFrame = 0;
+    if (videoFrame >= 0) {
+        maxFrame = videoFrame;
+    }
 
     if (maxFrame > 0 && fps > 0) {
         const int64_t seekT = static_cast<int64_t>(maxFrame)
@@ -997,6 +1024,8 @@ QByteArray myModel::getVideoFrame(QString file, bool getEmbedded, int videoFrame
             / (static_cast<int64_t>(pFormatCtx->streams[videoStream]->r_frame_rate.num)
                * pFormatCtx->streams[videoStream]->time_base.num);
         av_seek_frame(pFormatCtx, videoStream, seekT, AVSEEK_FLAG_BACKWARD);
+    } else {
+        av_seek_frame(pFormatCtx, videoStream, 0, AVSEEK_FLAG_BACKWARD);
     }
 
     int currentFrame = 0;
@@ -1011,18 +1040,21 @@ QByteArray myModel::getVideoFrame(QString file, bool getEmbedded, int videoFrame
             continue;
         }
         if (avcodec_send_packet(pCodecCtx, &packet) == 0
-            && avcodec_receive_frame(pCodecCtx, pFrame) == 0) {
+            && avcodec_receive_frame(pCodecCtx, pFrame) == 0
+            && pCodecCtx->width > 0 && pCodecCtx->height > 0) {
             SwsContext *sws = sws_getCachedContext(
                 nullptr, pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
                 pCodecCtx->width, pCodecCtx->height, AV_PIX_FMT_RGB24,
                 SWS_BICUBIC, nullptr, nullptr, nullptr);
-            QImage image(pCodecCtx->width, pCodecCtx->height, QImage::Format_RGB888);
-            uint8_t *dest[] = { image.bits() };
-            int destStride[] = { static_cast<int>(image.bytesPerLine()) };
-            sws_scale(sws, pFrame->data, pFrame->linesize, 0, pCodecCtx->height,
-                      dest, destStride);
-            sws_freeContext(sws);
-            result = Common::thumbnailBmp(image, pixSize);
+            if (sws != nullptr) {
+                QImage image(pCodecCtx->width, pCodecCtx->height, QImage::Format_RGB888);
+                uint8_t *dest[] = { image.bits() };
+                int destStride[] = { static_cast<int>(image.bytesPerLine()) };
+                sws_scale(sws, pFrame->data, pFrame->linesize, 0, pCodecCtx->height,
+                          dest, destStride);
+                sws_freeContext(sws);
+                result = Common::thumbnailBmp(image, pixSize);
+            }
         }
         av_packet_unref(&packet);
         if (!result.isEmpty()) { break; }
@@ -1168,12 +1200,14 @@ QVariant myModel::findIcon(myModelItem *item) const {
         if (icons->contains(item->absoluteFilePath())) {
             qDebug() << "USING ICON CACHE FOR" << item->absoluteFilePath();
             return *icons->object(item->absoluteFilePath());
-        } else if (thumbs->contains(item->absoluteFilePath())) {
+        } else if (thumbPaths->contains(item->absoluteFilePath())) {
             qDebug() << "USING THUMB CACHE FOR" << item->absoluteFilePath();
             QPixmap pic;
-            pic.loadFromData(thumbs->value(item->absoluteFilePath()));
-            icons->insert(item->absoluteFilePath(), new QIcon(pic), 1);
-            return *icons->object(item->absoluteFilePath());
+            pic.load(thumbPaths->value(item->absoluteFilePath()));
+            if (!pic.isNull()) {
+                icons->insert(item->absoluteFilePath(), new QIcon(pic), 1);
+                return *icons->object(item->absoluteFilePath());
+            }
         } else if (!Common::hasThumbnail(item->absoluteFilePath()).isEmpty()) {
             qDebug() << "USING XDG CACHE FOR" << item->absoluteFilePath();
             QPixmap pic;
