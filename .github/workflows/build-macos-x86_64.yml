@@ -91,13 +91,17 @@ jobs:
           file "${bin}"
           file "${bin}" | grep x86_64
 
-      - name: Package QtFM.app
-        run: |
-          (cd build/fm && zip -r -y ../../QtFM-macos-x86_64.zip QtFM.app)
+      - name: Deploy Qt libraries (macdeployqt)
+        run: macdeployqt build/fm/QtFM.app -always-overwrite
 
-      - name: Upload QtFM.app
+      - name: Build DMG
+        run: |
+          chmod +x share/scripts/make-macos-dmg.sh
+          share/scripts/make-macos-dmg.sh build/fm/QtFM.app QtFM-macos-x86_64.dmg QtFM
+
+      - name: Upload QtFM DMG
         uses: actions/upload-artifact@v4
         with:
           name: QtFM-macos-x86_64
-          path: QtFM-macos-x86_64.zip
+          path: QtFM-macos-x86_64.dmg
           if-no-files-found: error
