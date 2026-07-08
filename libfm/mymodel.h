@@ -73,6 +73,7 @@ public slots:
   void clearIconCache();
   void forceRefresh();
   void pumpThumbnailQueue();
+  void thumbGenerationFinished(const QString &dir);
 signals:
   void dragDropPaste(const QMimeData *data, QString newPath,
                      Common::DragMode mode = Common::DM_UNKNOWN);

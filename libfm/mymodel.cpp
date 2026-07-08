@@ -705,6 +705,12 @@ void myModel::loadThumbs(QModelIndexList indexes) {
   }
 }
 
+void myModel::thumbGenerationFinished(const QString &dir)
+{
+  emit thumbUpdate(dir);
+  pumpThumbnailQueue();
+}
+
 namespace {
 
 QMutex g_thumbnailGeneratorMutex;
@@ -714,7 +720,7 @@ QMutex g_thumbnailGeneratorMutex;
 void myModel::pumpThumbnailQueue()
 {
   constexpr int kMaxConcurrent = 1;
-  while (thumbActiveJobs.loadRelaxed() < kMaxConcurrent) {
+  while (thumbActiveJobs.load() < kMaxConcurrent) {
     QString path;
     QString itemMime;
     {
@@ -739,10 +745,8 @@ void myModel::pumpThumbnailQueue()
       }
       thumbActiveJobs.deref();
       const QString dir = QFileInfo(path).absolutePath();
-      QMetaObject::invokeMethod(this, [this, dir]() {
-        emit thumbUpdate(dir);
-        pumpThumbnailQueue();
-      }, Qt::QueuedConnection);
+      QMetaObject::invokeMethod(this, "thumbGenerationFinished", Qt::QueuedConnection,
+                                Q_ARG(QString, dir));
     });
   }
 }

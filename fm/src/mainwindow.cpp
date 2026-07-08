@@ -29,6 +29,7 @@
 #include <QStatusBar>
 #include <QMenu>
 #include <QMenuBar>
+#include <QTimer>
 #ifndef NO_DBUS
 #include <QDBusConnection>
 #include <QDBusError>
@@ -702,9 +703,9 @@ void MainWindow::dirLoaded(bool thumbs)
     statusDate->setText(QString("%1").arg(total));
 
     if (thumbsAct->isChecked() && thumbs) {
-      QMetaObject::invokeMethod(modelList, [modelList, items]() {
+      QTimer::singleShot(0, modelList, [modelList, items]() {
         modelList->loadThumbs(items);
-      }, Qt::QueuedConnection);
+      });
     }
     updateGrid();
 }
