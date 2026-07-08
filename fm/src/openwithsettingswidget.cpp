@@ -109,7 +109,7 @@ OpenWithSettingsWidget::OpenWithSettingsWidget(QWidget *parent) : QWidget(parent
 #endif
     hint->setWordWrap(true);
     outer->addWidget(hint);
-    outer->setStyleSheet(QString::fromLatin1(kModuleStyle));
+    setStyleSheet(QString::fromLatin1(kModuleStyle));
     outer->addWidget(scrollArea, 1);
 }
 
