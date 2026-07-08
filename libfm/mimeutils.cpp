@@ -48,6 +48,9 @@ bool startDetachedCommand(const QString &commandLine, const QString &termCmd,
     if (line.isEmpty()) {
         return false;
     }
+#ifndef Q_OS_DARWIN
+    Q_UNUSED(contextFile);
+#endif
 
 #ifdef Q_OS_DARWIN
     if (termCmd.isEmpty()) {
