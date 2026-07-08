@@ -163,7 +163,7 @@ void IconViewDelegate::setEditorData(QWidget *editor,
     QTextCursor cursor = plain->textCursor();
     QTextBlockFormat blockFormat;
     blockFormat.setAlignment(Qt::AlignHCenter);
-    cursor.select(QTextDocument::SelectDocument);
+    cursor.select(QTextCursor::SelectDocument);
     cursor.mergeBlockFormat(blockFormat);
     cursor.movePosition(QTextCursor::End);
     plain->setTextCursor(cursor);
