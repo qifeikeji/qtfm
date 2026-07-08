@@ -1,0 +1,84 @@
+# CI: macOS x86_64, deployment target 12.5+
+name: Build macOS x86_64 (12.5+)
+
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+env:
+  MACOSX_DEPLOYMENT_TARGET: "12.5"
+  QT_VERSION: "5.15.2"
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 5 (x86_64)
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: mac
+          target: desktop
+          arch: x64
+          modules: qtbase
+          cache: true
+
+      - name: Install build tools
+        run: brew install autoconf automake libtool librsvg pkg-config
+
+      - name: Build libinotify-kqueue (x86_64)
+        run: |
+          git clone --depth 1 https://github.com/libinotify-kqueue/libinotify-kqueue.git /tmp/libinotify-kqueue
+          cd /tmp/libinotify-kqueue
+          export CFLAGS="-arch x86_64"
+          export CXXFLAGS="-arch x86_64"
+          export LDFLAGS="-arch x86_64"
+          ./autogen.sh
+          ./configure --prefix="${GITHUB_WORKSPACE}/deps-x86_64"
+          make -j"$(sysctl -n hw.ncpu)"
+          make install
+          echo "PKG_CONFIG_PATH=${GITHUB_WORKSPACE}/deps-x86_64/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "${GITHUB_ENV}"
+
+      - name: Prepare app icon (if missing)
+        run: |
+          if [ -f share/images/QtFM.icns ]; then
+            exit 0
+          fi
+          mkdir -p share/images /tmp/QtFM.iconset
+          for size in 16 32 128 256 512; do
+            rsvg-convert -w "${size}" -h "${size}" \
+              share/hicolor/scalable/apps/qtfm.svg \
+              -o "/tmp/QtFM.iconset/icon_${size}x${size}.png"
+            double=$((size * 2))
+            rsvg-convert -w "${double}" -h "${double}" \
+              share/hicolor/scalable/apps/qtfm.svg \
+              -o "/tmp/QtFM.iconset/icon_${size}x${size}@2x.png"
+          done
+          iconutil -c icns /tmp/QtFM.iconset -o share/images/QtFM.icns
+
+      - name: Build (qmake release, x86_64)
+        run: |
+          mkdir -p build
+          cd build
+          qmake CONFIG+=release \
+            QMAKE_APPLE_DEVICE_ARCHS=x86_64 \
+            QMAKE_MACOSX_DEPLOYMENT_TARGET=12.5 \
+            ..
+          make -j"$(sysctl -n hw.ncpu)"
+
+      - name: Verify binary
+        run: |
+          bin="build/fm/QtFM.app/Contents/MacOS/QtFM"
+          test -f "${bin}"
+          file "${bin}"
+          file "${bin}" | grep x86_64
+          otool -l "${bin}" | awk '/LC_BUILD_VERSION/{getline; print} /minos/{print}' | head -20

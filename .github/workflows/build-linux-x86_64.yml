@@ -1,0 +1,53 @@
+# CI: Linux x86_64 (ubuntu-22.04)
+name: Build Linux x86_64
+
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify runner is x86_64
+        run: |
+          arch="$(uname -m)"
+          echo "Runner architecture: ${arch}"
+          test "${arch}" = "x86_64"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            pkg-config \
+            qtbase5-dev \
+            qt5-qmake \
+            libmagick++-dev \
+            libavdevice-dev \
+            libswscale-dev \
+            libavformat-dev \
+            libavcodec-dev \
+            libavutil-dev
+
+      - name: Build (qmake release)
+        run: |
+          mkdir -p build
+          cd build
+          qmake CONFIG+=with_magick CONFIG+=with_ffmpeg CONFIG+=release PREFIX=/usr ..
+          make -j"$(nproc)"
+
+      - name: Verify binary
+        run: |
+          file build/bin/qtfm
+          file build/bin/qtfm | grep -E 'x86-64|Intel 80386'
+          test -x build/bin/qtfm
