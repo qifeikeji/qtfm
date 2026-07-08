@@ -24,6 +24,7 @@ INSTALLS += target desktop man
 
 # Don't link against libfm if static (too many 3rdparty depends)
 CONFIG(staticlib) {
+    QT += svg
     SOURCES += \
         $${top_srcdir}/libfm/common.cpp \
         $${top_srcdir}/libfm/disks.cpp \

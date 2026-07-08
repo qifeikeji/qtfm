@@ -1,6 +1,6 @@
 include($${top_srcdir}/share/qtfm.pri)
 
-QT += widgets concurrent
+QT += widgets concurrent svg
 
 TARGET = QtFM
 VERSION = $${QTFM_MAJOR}.$${QTFM_MINOR}.$${QTFM_PATCH}

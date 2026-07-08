@@ -20,6 +20,9 @@ public:
     static QIcon iconForMimeType(const QString &mime);
     static QIcon iconForFolder(const QFileInfo &info);
     static QIcon iconForExecutable();
+    /** Guaranteed non-null when empty.svg is available; scales to requested size. */
+    static QIcon emptyIcon();
+    static QPixmap iconPixmap(const QIcon &icon, int size);
     static QString baseNameForSuffix(const QString &suffix);
     static QString baseNameForMime(const QString &mime);
 };

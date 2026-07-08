@@ -4,8 +4,11 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QHash>
+#include <QPainter>
+#include <QPixmap>
 #include <QSet>
 #include <QStandardPaths>
+#include <QSvgRenderer>
 
 namespace {
 
@@ -58,6 +61,24 @@ QString resolveBundledBaseName(const QString &name)
     return aliases.value(key, key);
 }
 
+QIcon iconFromSvgFile(const QString &path)
+{
+    QSvgRenderer renderer(path);
+    if (!renderer.isValid()) {
+        return QIcon();
+    }
+    QIcon icon;
+    const int sizes[] = {16, 24, 32, 48, 64, 96, 128, 192, 256};
+    for (int size : sizes) {
+        QPixmap pm(size, size);
+        pm.fill(Qt::transparent);
+        QPainter painter(&pm);
+        renderer.render(&painter);
+        icon.addPixmap(pm);
+    }
+    return icon;
+}
+
 QIcon loadIconFromBaseName(const QString &baseName)
 {
     static QHash<QString, QIcon> cache;
@@ -75,7 +96,12 @@ QIcon loadIconFromBaseName(const QString &baseName)
             if (!QFileInfo::exists(path)) {
                 continue;
             }
-            QIcon icon(path);
+            QIcon icon;
+            if (path.endsWith(QLatin1String(".svg"), Qt::CaseInsensitive)) {
+                icon = iconFromSvgFile(path);
+            } else {
+                icon = QIcon(path);
+            }
             if (!icon.isNull()) {
                 cache.insert(key, icon);
                 return icon;
@@ -86,7 +112,12 @@ QIcon loadIconFromBaseName(const QString &baseName)
     for (const char *ext : extensions) {
         const QString resource = QStringLiteral(":/icons/mimes/") + key
                                  + QString::fromLatin1(ext);
-        QIcon icon(resource);
+        QIcon icon;
+        if (resource.endsWith(QLatin1String(".svg"), Qt::CaseInsensitive)) {
+            icon = iconFromSvgFile(resource);
+        } else {
+            icon = QIcon(resource);
+        }
         if (!icon.isNull()) {
             cache.insert(key, icon);
             return icon;
@@ -130,6 +161,26 @@ QIcon iconWithFallbacks(const QStringList &baseNames)
 }
 
 } // namespace
+
+QIcon BundledIcons::emptyIcon()
+{
+    static QIcon empty = loadIconFromBaseName(QStringLiteral("empty"));
+    return empty;
+}
+
+QPixmap BundledIcons::iconPixmap(const QIcon &icon, int size)
+{
+    const QSize pxSize(qMax(size, 1), qMax(size, 1));
+    QIcon use = icon;
+    if (use.isNull()) {
+        use = emptyIcon();
+    }
+    QPixmap pm = use.pixmap(pxSize);
+    if (!pm.isNull()) {
+        return pm;
+    }
+    return emptyIcon().pixmap(pxSize);
+}
 
 QString BundledIcons::baseNameForSuffix(const QString &suffix)
 {

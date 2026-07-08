@@ -20,6 +20,7 @@
 ****************************************************************************/
 
 #include "mymodel.h"
+#include "bundledicons.h"
 #include <sys/inotify.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -27,7 +28,6 @@
 #include <QMessageBox>
 #include <QImage>
 #include "fileutils.h"
-#include "bundledicons.h"
 
 #ifdef WITH_MAGICK
 #include <Magick++.h>
@@ -86,6 +86,12 @@ myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
       QDataStream out(&fileIcons);
       out >> *mimeIcons;
       fileIcons.close();
+      const QList<QString> staleKeys = mimeIcons->keys();
+      for (const QString &key : staleKeys) {
+          if (mimeIcons->value(key).isNull()) {
+              mimeIcons->remove(key);
+          }
+      }
   }
 
   // Loads folder cache
@@ -1183,8 +1189,12 @@ QVariant myModel::findIcon(myModelItem *item) const {
   // If there is icon for current suffix then return it
   QString suffix = FileUtils::getRealSuffix(type.fileName()); /*type.suffix();*/
   if (mimeIcons->contains(suffix)) {
-      qDebug() << "USING SUFFIX ICON FOR" << suffix << item->absoluteFilePath();
-      return mimeIcons->value(suffix);
+      const QIcon cached = mimeIcons->value(suffix);
+      if (!cached.isNull()) {
+          qDebug() << "USING SUFFIX ICON FOR" << suffix << item->absoluteFilePath();
+          return cached;
+      }
+      mimeIcons->remove(suffix);
   }
 
   // The icon
@@ -1207,6 +1217,10 @@ QVariant myModel::findIcon(myModelItem *item) const {
     suffix = "exec";
     if (mimeIcons->contains(suffix)) {
       theIcon = mimeIcons->value(suffix);
+      if (theIcon.isNull()) {
+          mimeIcons->remove(suffix);
+          theIcon = BundledIcons::iconForExecutable();
+      }
     } else {
       theIcon = BundledIcons::iconForExecutable();
     }
@@ -1229,7 +1243,9 @@ QVariant myModel::findIcon(myModelItem *item) const {
     theIcon = BundledIcons::iconForFileSuffix(suffix);
   }
 
-  // Insert icon to the list of icons
+  if (theIcon.isNull()) {
+    theIcon = BundledIcons::emptyIcon();
+  }
   mimeIcons->insert(suffix, theIcon);
   return theIcon;
 }
@@ -1247,11 +1263,18 @@ QVariant myModel::findMimeIcon(myModelItem *item) const {
   // Retrieve mime and search cache for it
   QString mime = mimeUtilsPtr->getMimeType(item->absoluteFilePath());
   if (mimeIcons->contains(mime)) {
-    return mimeIcons->value(mime);
+    const QIcon cached = mimeIcons->value(mime);
+    if (!cached.isNull()) {
+      return cached;
+    }
+    mimeIcons->remove(mime);
   }
 
   // Search file system for icon
   QIcon theIcon = FileUtils::searchMimeIcon(mime);
+  if (theIcon.isNull()) {
+    theIcon = BundledIcons::emptyIcon();
+  }
   mimeIcons->insert(mime, theIcon);
   return theIcon;
 }

@@ -1,5 +1,7 @@
 #include "iconview.h"
+#include "bundledicons.h"
 
+#include <QListView>
 #include <QPainterPath>
 #include <QTextLayout>
 #include <QTextOption>
@@ -7,9 +9,26 @@
 namespace {
 
 constexpr int kInterCellGap = 4;
-constexpr int kIconTop = 8;
-constexpr int kTextTopGap = 4;
-constexpr int kBottomPad = 4;
+constexpr int kIconTop = 6;
+constexpr int kTextTopGap = 2;
+constexpr int kFramePad = 2;
+
+int iconPaintSize(const QStyleOptionViewItem &option)
+{
+    int zoom = option.decorationSize.width();
+    if (const auto *view = qobject_cast<const QListView *>(option.widget)) {
+        const QSize iconSize = view->iconSize();
+        if (iconSize.width() > 0) {
+            zoom = iconSize.width();
+        }
+    }
+    return qMax(zoom, IconViewDelegate::iconZoomMin);
+}
+
+int twoLineTextHeight(const QFontMetrics &fm)
+{
+    return fm.height() * 2 + 2;
+}
 
 void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &text,
                          const QFont &font, const QColor &color)
@@ -65,9 +84,9 @@ void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &te
 
 QSize IconViewDelegate::iconGridSize(int zoom, const QFontMetrics &fm)
 {
-    const int textHeight = fm.lineSpacing() * 2;
+    const int textHeight = twoLineTextHeight(fm);
     const int cellWidth = zoom + kInterCellGap;
-    const int cellHeight = kIconTop + zoom + kTextTopGap + textHeight + kBottomPad;
+    const int cellHeight = kIconTop + zoom + kTextTopGap + textHeight + kFramePad;
     return QSize(cellWidth, cellHeight);
 }
 
@@ -105,50 +124,53 @@ QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem &option,
                                  const QModelIndex &index) const
 {
     Q_UNUSED(index);
-    return iconGridSize(option.decorationSize.width(), option.fontMetrics);
+    return iconGridSize(iconPaintSize(option), option.fontMetrics);
 }
 
 void IconViewDelegate::paint(QPainter *painter,
                              const QStyleOptionViewItem &option,
                              const QModelIndex &index) const
 {
+    QStyleOptionViewItem opt = option;
+    initStyleOption(&opt, index);
+
     QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
-    const int zoom = option.decorationSize.width();
-    QSize iconsize = icon.actualSize(option.decorationSize);
-    if (iconsize.width() > zoom || iconsize.height() > zoom) {
-        iconsize = QSize(zoom, zoom);
-    }
-    QRect item = option.rect;
+
+    const int zoom = iconPaintSize(opt);
+    QRect item = opt.rect;
     const int inset = kInterCellGap / 2;
-    QRect iconRect(item.left() + (item.width() - iconsize.width()) / 2,
+    QRect iconRect(item.left() + (item.width() - zoom) / 2,
                    item.top() + kIconTop,
-                   iconsize.width(), iconsize.height());
-    const QFontMetrics fm = option.fontMetrics;
-    const int textHeight = fm.lineSpacing() * 2;
+                   zoom, zoom);
+    const QFontMetrics fm = opt.fontMetrics;
+    const int textHeight = twoLineTextHeight(fm);
     QRect txtRect(item.left() + inset, iconRect.bottom() + kTextTopGap,
                   item.width() - 2 * inset, textHeight);
     QBrush txtBrush = qvariant_cast<QBrush>(index.data(Qt::ForegroundRole));
-    bool isSelected = option.state & QStyle::State_Selected;
+    bool isSelected = opt.state & QStyle::State_Selected;
     bool isEditing = _isEditing && index==_index;
 
     painter->setRenderHint(QPainter::Antialiasing);
 
     if (isSelected && !isEditing) {
         QPainterPath path;
-        QRect frame(item.left() + inset, item.top() + kIconTop / 2,
-                    item.width() - 2 * inset, item.height() - kIconTop / 2 - kBottomPad / 2);
+        const int frameTop = iconRect.top() - kFramePad;
+        const int frameBottom = txtRect.bottom() + kFramePad;
+        QRect frame(item.left() + inset, frameTop,
+                    item.width() - 2 * inset, frameBottom - frameTop);
         path.addRoundedRect(frame, 15, 15);
         painter->setOpacity(0.7);
-        painter->fillPath(path, option.palette.highlight());
+        painter->fillPath(path, opt.palette.highlight());
         painter->setOpacity(1.0);
     }
 
-    painter->drawPixmap(iconRect, icon.pixmap(iconsize.width(), iconsize.height()));
+    const QPixmap pm = BundledIcons::iconPixmap(icon, zoom);
+    painter->drawPixmap(iconRect, pm);
 
     if (isEditing) { return; }
 
     const QColor textColor = isSelected
-        ? option.palette.highlightedText().color()
+        ? opt.palette.highlightedText().color()
         : txtBrush.color();
-    drawTwoLineFileName(painter, txtRect, index.data().toString(), option.font, textColor);
+    drawTwoLineFileName(painter, txtRect, index.data().toString(), opt.font, textColor);
 }
