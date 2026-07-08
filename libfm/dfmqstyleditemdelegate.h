@@ -3,8 +3,13 @@
 
 #include <QtWidgets>
 
-// First column, index 0, is the Name column
-#define COLUMN_NAME 0
+#define COLUMN_ICON 0
+#define COLUMN_NAME 1
+#define COLUMN_SIZE 2
+#define COLUMN_DATE 3
+#define COLUMN_FORMAT 4
+#define COLUMN_FOLDER 5
+#define LIST_COLUMN_COUNT 6
 
 /**
  * Extends QFileItemDelegate by a minimized selection way

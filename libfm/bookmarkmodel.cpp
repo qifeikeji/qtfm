@@ -34,8 +34,19 @@
 
 bookmarkmodel::bookmarkmodel(/*QHash<QString,
                              QIcon> *icons*/)
+    : m_activeGroupId(QStringLiteral("default"))
 {
     //folderIcons = icons;
+}
+
+void bookmarkmodel::setActiveGroupId(const QString &groupId)
+{
+    m_activeGroupId = groupId.isEmpty() ? QStringLiteral("default") : groupId;
+}
+
+QString bookmarkmodel::activeGroupId() const
+{
+    return m_activeGroupId;
 }
 
 void bookmarkmodel::addBookmark(QString name,
@@ -44,7 +55,8 @@ void bookmarkmodel::addBookmark(QString name,
                                 QString icon,
                                 QString mediaPath,
                                 bool isMedia,
-                                bool changed)
+                                bool changed,
+                                const QString &groupId)
 {
     if (path.isEmpty() && !isMedia) { //add separator
         QStandardItem *item = new QStandardItem(BundledIcons::emptyIcon(), "");
@@ -53,6 +65,7 @@ void bookmarkmodel::addBookmark(QString name,
         flags ^= Qt::ItemIsEditable; //not editable
         item->setFlags(flags);
         item->setFont(QFont("sans", 8)); //force size to prevent 2 rows of background tiling
+        item->setData(m_activeGroupId, BOOKMARK_GROUP);
         this->appendRow(item);
         return;
     }
@@ -75,6 +88,8 @@ void bookmarkmodel::addBookmark(QString name,
     item->setData(isMedia, MEDIA_MODEL);
     item->setToolTip(path);
     item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+    const QString gid = groupId.isEmpty() ? m_activeGroupId : groupId;
+    item->setData(gid.isEmpty() ? QStringLiteral("default") : gid, BOOKMARK_GROUP);
     if (isMedia) { item->setData(mediaPath, MEDIA_PATH); }
     this->appendRow(item);
     if (changed) { emit bookmarksChanged(); }
@@ -186,20 +201,25 @@ bool bookmarkmodel::dropMimeData(const QMimeData * data,
         }
     }
 
+    bool addedFolder = false;
     foreach(QUrl path, files) {
         QFileInfo file(path.toLocalFile());
-        //drag to bookmark window, add a new bookmark
-        if (parent.column() == -1) {
-            if (file.isDir()) this->addBookmark(file.fileName(),
-                                                file.filePath(),
-                                                nullptr,
-                                                "");
-            return false;
+        // drag to bookmark list background: add folder bookmark to active group
+        if (parent.column() == -1 || !parent.isValid()) {
+            if (file.isDir()) {
+                addBookmark(file.fileName(), file.filePath(), QStringLiteral("0"), QString(),
+                            QString(), false, true, m_activeGroupId);
+                addedFolder = true;
+            }
+            continue;
         } else {
             if (mode == Common::DM_MOVE) {
                 if (file.absoluteDir() != parentPath) { cutList.append(file.filePath()); }
             }
         }
+    }
+    if (addedFolder) {
+        return true;
     }
     emit bookmarkPaste(data,
                        parentPath,

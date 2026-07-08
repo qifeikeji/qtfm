@@ -26,6 +26,8 @@
 #include <QTabWidget>
 #include <QInputDialog>
 #include <QPushButton>
+#include <QHBoxLayout>
+#include <QDateTime>
 #include <QApplication>
 #include <QStatusBar>
 #include <QMenu>
@@ -213,10 +215,20 @@ MainWindow::MainWindow()
     sidebarTabs->setTabPosition(QTabWidget::North);
     sidebarTabs->setDocumentMode(true);
 
-    bookmarksList = new QListView(sidebarTabs);
+    bookmarkPage = new QWidget(sidebarTabs);
+    auto *bookmarkLayout = new QHBoxLayout(bookmarkPage);
+    bookmarkLayout->setContentsMargins(0, 0, 0, 0);
+    bookmarkLayout->setSpacing(0);
+
+    bookmarkGroupBar = new BookmarkGroupBar(bookmarkPage);
+    bookmarkLayout->addWidget(bookmarkGroupBar);
+
+    bookmarksList = new QListView(bookmarkPage);
     bookmarksList->setMinimumHeight(24);
     bookmarksList->setFocusPolicy(Qt::ClickFocus);
-    sidebarTabs->addTab(bookmarksList, tr("Bookmarks"));
+    bookmarkLayout->addWidget(bookmarksList, 1);
+
+    sidebarTabs->addTab(bookmarkPage, tr("Bookmarks"));
 
 #ifndef NO_UDISKS
     disksList = new QListView(sidebarTabs);
@@ -264,10 +276,11 @@ MainWindow::MainWindow()
     tree->setHeaderHidden(true);
     tree->setUniformRowHeights(true);
     tree->setModel(modelTree);
-    tree->hideColumn(1);
-    tree->hideColumn(2);
-    tree->hideColumn(3);
-    tree->hideColumn(4);
+    tree->hideColumn(COLUMN_ICON);
+    tree->hideColumn(COLUMN_SIZE);
+    tree->hideColumn(COLUMN_DATE);
+    tree->hideColumn(COLUMN_FORMAT);
+    tree->hideColumn(COLUMN_FOLDER);
 
     modelView = new viewsSortProxyModel();
     modelView->setSourceModel(modelList);
@@ -326,6 +339,16 @@ MainWindow::MainWindow()
     // Create bookmarks model
     modelBookmarks = new bookmarkmodel(/*modelList->folderIcons*/);
     connect(modelBookmarks, SIGNAL(bookmarksChanged()), this, SLOT(handleBookmarksChanged()));
+
+    bookmarkListProxy = new BookmarkGroupProxy(this);
+    bookmarkListProxy->setSourceModel(modelBookmarks);
+
+    connect(bookmarkGroupBar, &BookmarkGroupBar::currentGroupChanged,
+            this, &MainWindow::selectBookmarkGroup);
+    connect(bookmarkGroupBar, &BookmarkGroupBar::addGroupRequested,
+            this, &MainWindow::addBookmarkGroup);
+    connect(bookmarkGroupBar, &BookmarkGroupBar::groupIconChangeRequested,
+            this, &MainWindow::changeBookmarkGroupIcon);
 
     // Create disks model
 #ifndef NO_UDISKS
@@ -531,24 +554,34 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   modelBookmarks->removeRows(0, modelBookmarks->rowCount());
 
   // Load bookmarks
+  loadBookmarkGroups();
+  currentBookmarkGroupId = bookmarkGroups.isEmpty()
+                               ? QStringLiteral("default")
+                               : bookmarkGroups.first().id;
+  modelBookmarks->setActiveGroupId(currentBookmarkGroupId);
+  bookmarkListProxy->setGroupId(currentBookmarkGroupId);
   loadBookmarks();
 
   // Set bookmarks
   firstRunBookmarks(isFirstRun);
+  refreshBookmarkGroupBar();
 #ifndef NO_UDISKS
   populateMedia();
 #endif
-  bookmarksList->setModel(modelBookmarks);
+  bookmarksList->setModel(bookmarkListProxy);
   bookmarksList->setResizeMode(QListView::Adjust);
   bookmarksList->setFlow(QListView::TopToBottom);
   bookmarksList->setIconSize(QSize(24,24));
   bookmarksList->setItemDelegate(new BookmarkItemDelegate(bookmarksList));
+  bookmarkGroupBar->setTabIconSize(24);
 
 #ifndef NO_UDISKS
   disksList->setResizeMode(QListView::Adjust);
   disksList->setFlow(QListView::TopToBottom);
   disksList->setIconSize(QSize(24,24));
   disksList->setItemDelegate(new DiskItemDelegate(disksList));
+  disksList->setMinimumWidth(248);
+  sidebarTabs->setMinimumWidth(248);
 #endif
 
   // Load information whether bookmarks are displayed
@@ -572,6 +605,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   detailTree->setIconSize(QSize(zoomDetail, zoomDetail));
   tree->setIconSize(QSize(zoomTree, zoomTree));
   bookmarksList->setIconSize(QSize(zoomBook, zoomBook));
+  bookmarkGroupBar->setTabIconSize(zoomBook);
 
   // Load information whether thumbnails can be shown
   if (thumbState) {
@@ -591,14 +625,24 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
       }
       settings->setValue("listColumnLayoutV2", true);
   }
+  if (!settings->value(QStringLiteral("listColumnLayoutV3"), false).toBool()) {
+      sortBy = qBound(0, sortBy + 1, COLUMN_FOLDER);
+      for (int col = 4; col >= 0; --col) {
+          settings->setValue(QStringLiteral("listColumnWidth%1").arg(col + 1),
+                             settings->value(QStringLiteral("listColumnWidth%1").arg(col)).toInt());
+      }
+      settings->setValue(QStringLiteral("listColumnWidth0"), 0);
+      settings->setValue(QStringLiteral("header"), QByteArray());
+      settings->setValue(QStringLiteral("listColumnLayoutV3"), true);
+  }
   currentSortColumn = sortBy;
   currentSortOrder = static_cast<Qt::SortOrder>(
       settings->value("sortOrder", static_cast<int>(Qt::DescendingOrder)).toInt());
 
   switch (currentSortColumn) {
-  case 0: setSortColumn(sortNameAct); break;
-  case 1: setSortColumn(sortSizeAct); break;
-  case 2: setSortColumn(sortDateAct); break;
+  case COLUMN_NAME: setSortColumn(sortNameAct); break;
+  case COLUMN_SIZE: setSortColumn(sortSizeAct); break;
+  case COLUMN_DATE: setSortColumn(sortDateAct); break;
   default: break;
   }
   setSortOrder(currentSortOrder);
@@ -680,7 +724,10 @@ void MainWindow::loadBookmarks()
     settings->beginGroup("bookmarks");
     foreach (QString key,settings->childKeys()) {
       QStringList temp(settings->value(key).toStringList());
-      modelBookmarks->addBookmark(temp[0], temp[1], temp[2], temp.last(), "", false, false);
+      const QString icon = temp.size() > 3 ? temp[3] : QString();
+      const QString group = temp.size() > 4 ? temp[4] : QStringLiteral("default");
+      modelBookmarks->addBookmark(temp.value(0), temp.value(1), temp.value(2), icon,
+                                  QString(), false, false, group);
     }
     settings->endGroup();
 }
@@ -695,11 +742,102 @@ void MainWindow::writeBookmarks()
       temp << modelBookmarks->item(i)->text()
            << modelBookmarks->item(i)->data(BOOKMARK_PATH).toString()
            << modelBookmarks->item(i)->data(BOOKMARKS_AUTO).toString()
-           << modelBookmarks->item(i)->data(BOOKMARK_ICON).toString();
+           << modelBookmarks->item(i)->data(BOOKMARK_ICON).toString()
+           << modelBookmarks->item(i)->data(BOOKMARK_GROUP).toString();
       QString number = QString("%1").arg(i, 4, 10, QChar('0'));
       settings->setValue(number, temp);
     }
     settings->endGroup();
+    writeBookmarkGroups();
+}
+
+void MainWindow::loadBookmarkGroups()
+{
+    bookmarkGroups.clear();
+    settings->beginGroup("bookmarkGroups");
+    const QStringList keys = settings->childKeys();
+    if (keys.isEmpty()) {
+        BookmarkGroupInfo def;
+        def.id = QStringLiteral("default");
+        def.iconName = QStringLiteral("folder");
+        bookmarkGroups.append(def);
+    } else {
+        foreach (const QString &key, keys) {
+            const QStringList temp = settings->value(key).toStringList();
+            if (temp.size() < 2) { continue; }
+            BookmarkGroupInfo g;
+            g.id = temp.at(0);
+            g.iconName = temp.at(1);
+            bookmarkGroups.append(g);
+        }
+    }
+    settings->endGroup();
+    if (bookmarkGroups.isEmpty()) {
+        BookmarkGroupInfo def;
+        def.id = QStringLiteral("default");
+        def.iconName = QStringLiteral("folder");
+        bookmarkGroups.append(def);
+    }
+}
+
+void MainWindow::writeBookmarkGroups()
+{
+    settings->remove("bookmarkGroups");
+    settings->beginGroup("bookmarkGroups");
+    for (int i = 0; i < bookmarkGroups.size(); ++i) {
+        const BookmarkGroupInfo &g = bookmarkGroups.at(i);
+        const QString key = QString("%1").arg(i, 4, 10, QChar('0'));
+        settings->setValue(key, QStringList() << g.id << g.iconName);
+    }
+    settings->endGroup();
+}
+
+void MainWindow::refreshBookmarkGroupBar()
+{
+    if (!bookmarkGroupBar) { return; }
+    bookmarkGroupBar->setGroups(bookmarkGroups, currentBookmarkGroupId);
+}
+
+void MainWindow::selectBookmarkGroup(const QString &groupId)
+{
+    if (groupId.isEmpty()) { return; }
+    currentBookmarkGroupId = groupId;
+    modelBookmarks->setActiveGroupId(groupId);
+    if (bookmarkListProxy) {
+        bookmarkListProxy->setGroupId(groupId);
+    }
+}
+
+void MainWindow::addBookmarkGroup()
+{
+    BookmarkGroupInfo g;
+    g.id = QStringLiteral("group_%1").arg(QDateTime::currentMSecsSinceEpoch());
+    g.iconName = QStringLiteral("folder");
+    bookmarkGroups.append(g);
+    currentBookmarkGroupId = g.id;
+    refreshBookmarkGroupBar();
+    selectBookmarkGroup(g.id);
+    writeBookmarkGroups();
+}
+
+void MainWindow::changeBookmarkGroupIcon(const QString &groupId)
+{
+    icondlg *themeIcons = new icondlg;
+    if (themeIcons->exec() != QDialog::Accepted) {
+        delete themeIcons;
+        return;
+    }
+    const QString iconName = themeIcons->result;
+    delete themeIcons;
+
+    for (BookmarkGroupInfo &g : bookmarkGroups) {
+        if (g.id == groupId) {
+            g.iconName = iconName;
+            break;
+        }
+    }
+    refreshBookmarkGroupBar();
+    writeBookmarkGroups();
 }
 
 void MainWindow::handleBookmarksChanged()
@@ -1398,7 +1536,7 @@ void MainWindow::writeSettings() {
   settings->setValue("windowMax", isMaximized());
   settings->setValue("header", detailTree->header()->saveState());
   QHeaderView *listHeader = detailTree->header();
-  for (int col = 0; col < 5; ++col) {
+  for (int col = 0; col < LIST_COLUMN_COUNT; ++col) {
       settings->setValue(QStringLiteral("listColumnWidth%1").arg(col),
                          listHeader->sectionSize(col));
   }
@@ -1623,11 +1761,12 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
       listSelectionModel->clearSelection();
       if (bookmarksList->indexAt(bookmarksList->mapFromGlobal(event->globalPos())).isValid()) {
         const QString bookmarkPath = bookmarksList->currentIndex().data(BOOKMARK_PATH).toString();
-        popup->addAction(delBookmarkAct);
         if (!bookmarkPath.isEmpty()) {
             popup->addAction(renameBookmarkAct);
             popup->addAction(editBookmarkAct);	//icon
         }
+        popup->addSeparator();
+        popup->addAction(delBookmarkAct);
       } else {
         bookmarksList->clearSelection();
         popup->addAction(addSeparatorAct);	//separator
@@ -1980,10 +2119,7 @@ void MainWindow::populateMedia()
         QString subtitle = d->name;
         if (subtitle.isEmpty()) { subtitle = tr("Storage"); }
         const QString rowTitle = QStringLiteral("%1 — %2").arg(d->dev, subtitle);
-        const QString icon = d->isOptical ? QStringLiteral("drive-optical")
-                              : (d->isRemovable ? QStringLiteral("drive-removable-media")
-                                                : QStringLiteral("drive-harddisk"));
-        modelDisks->upsertDisk(d->path, rowTitle, mp, icon, d->isOptical);
+        modelDisks->upsertDisk(d->path, rowTitle, mp, QString(), d->isOptical);
         listed.insert(d->path);
     }
     for (const QString &path : modelDisks->allDevicePaths()) {

@@ -38,6 +38,10 @@ class bookmarkmodel : public QStandardItemModel
 
 public:
     bookmarkmodel(/*QHash<QString, QIcon> **/);
+
+    void setActiveGroupId(const QString &groupId);
+    QString activeGroupId() const;
+
     QStringList mimeTypes() const;
     bool dropMimeData(const QMimeData *data,
                       Qt::DropAction action,
@@ -50,7 +54,8 @@ public:
                      QString icon,
                      QString mediaPath = QString(),
                      bool isMedia = false,
-                     bool changed = true);
+                     bool changed = true,
+                     const QString &groupId = QString());
     bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
 signals:
@@ -59,6 +64,9 @@ signals:
                        QStringList cutList,
                        bool link = false);
     void bookmarksChanged();
+
+private:
+    QString m_activeGroupId;
 
 //private:
     //QHash<QString, QIcon> *folderIcons;

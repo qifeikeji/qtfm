@@ -21,7 +21,9 @@ HEADERS += \
     src/openwithsettingswidget.h \
     src/customactionsettingswidget.h \
     src/settingsuistyles.h \
-    src/sidebaritemdelegate.h
+    src/sidebaritemdelegate.h \
+    src/bookmarkgroupbar.h \
+    src/bookmarkgroupproxy.h
 
 SOURCES += \
     src/main.cpp \
@@ -34,7 +36,9 @@ SOURCES += \
     src/settingsuistyles.cpp \
     src/actiondefs.cpp \
     src/actiontriggers.cpp \
-    src/sidebaritemdelegate.cpp
+    src/sidebaritemdelegate.cpp \
+    src/bookmarkgroupbar.cpp \
+    src/bookmarkgroupproxy.cpp
 
 RESOURCES += $${top_srcdir}/share/$${TARGET}.qrc \
               $${top_srcdir}/share/mimes.qrc

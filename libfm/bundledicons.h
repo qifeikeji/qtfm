@@ -22,6 +22,8 @@ public:
     /** Default sidebar bookmark icon from path (uses share/icons/mimes). */
     static QIcon iconForBookmarkPath(const QString &path);
     static QIcon iconForExecutable();
+    /** List view column: folder / image / video / archive / other only. */
+    static QIcon iconForListCategory(const QFileInfo &info, const QString &mime = QString());
     /** Guaranteed non-null when empty.svg is available; scales to requested size. */
     static QIcon emptyIcon();
     static QPixmap iconPixmap(const QIcon &icon, int size);

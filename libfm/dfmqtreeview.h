@@ -3,8 +3,7 @@
 
 #include <QTreeView>
 
-// First column, index 0, is the Name column
-#define COLUMN_NAME 0
+#include "dfmqstyleditemdelegate.h"
 
 class DfmQStyledItemDelegate;
 

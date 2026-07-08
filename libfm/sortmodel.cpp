@@ -1,5 +1,6 @@
 #include "sortmodel.h"
 #include "mymodel.h"
+#include "dfmqstyleditemdelegate.h"
 
 #include <QCollator>
 #include <QDateTime>
@@ -127,19 +128,19 @@ bool viewsSortProxyModel::lessThan(const QModelIndex &left, const QModelIndex &r
     }
 
     const int column = sortColumn();
-    if (column == 1) {
+    if (column == COLUMN_SIZE) {
         const qint64 ls = fsModel->size(left);
         const qint64 rs = fsModel->size(right);
         if (ls != rs) {
             return ls < rs;
         }
-    } else if (column == 2) {
+    } else if (column == COLUMN_DATE) {
         const QDateTime ld = fsModel->fileInfo(left).lastModified();
         const QDateTime rd = fsModel->fileInfo(right).lastModified();
         if (ld != rd) {
             return ld < rd;
         }
-    } else if (column == 3) {
+    } else if (column == COLUMN_FORMAT) {
         const QString lf = fsModel->getMimeType(left);
         const QString rf = fsModel->getMimeType(right);
         static QCollator collator;
@@ -148,7 +149,7 @@ bool viewsSortProxyModel::lessThan(const QModelIndex &left, const QModelIndex &r
         if (cmp != 0) {
             return cmp < 0;
         }
-    } else if (column == 4) {
+    } else if (column == COLUMN_FOLDER) {
         const int l = leftDir ? 1 : 0;
         const int r = rightDir ? 1 : 0;
         if (l != r) {

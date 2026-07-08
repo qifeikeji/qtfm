@@ -671,11 +671,11 @@ void SettingsDialog::readSettings() {
   spinIconViewSize->setValue(settingsPtr->value("zoom", 48).toInt());
   spinListRowHeight->setValue(settingsPtr->value("zoomDetail", 24).toInt());
   checkFoldersAlwaysFirst->setChecked(settingsPtr->value("foldersAlwaysFirst", true).toBool());
-  spinListColName->setValue(settingsPtr->value("listColumnWidth0", 220).toInt());
-  spinListColSize->setValue(settingsPtr->value("listColumnWidth1", 90).toInt());
-  spinListColDate->setValue(settingsPtr->value("listColumnWidth2", 130).toInt());
-  spinListColFormat->setValue(settingsPtr->value("listColumnWidth3", 120).toInt());
-  spinListColFolder->setValue(settingsPtr->value("listColumnWidth4", 80).toInt());
+  spinListColName->setValue(settingsPtr->value("listColumnWidth1", 220).toInt());
+  spinListColSize->setValue(settingsPtr->value("listColumnWidth2", 90).toInt());
+  spinListColDate->setValue(settingsPtr->value("listColumnWidth3", 130).toInt());
+  spinListColFormat->setValue(settingsPtr->value("listColumnWidth4", 120).toInt());
+  spinListColFolder->setValue(settingsPtr->value("listColumnWidth5", 80).toInt());
   OpenWithConfig::load(settingsPtr);
   if (openWithSettingsWidget) {
       openWithSettingsWidget->loadFromConfig();
@@ -897,11 +897,11 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("zoom", spinIconViewSize->value());
   settingsPtr->setValue("zoomDetail", spinListRowHeight->value());
   settingsPtr->setValue("foldersAlwaysFirst", checkFoldersAlwaysFirst->isChecked());
-  settingsPtr->setValue("listColumnWidth0", spinListColName->value());
-  settingsPtr->setValue("listColumnWidth1", spinListColSize->value());
-  settingsPtr->setValue("listColumnWidth2", spinListColDate->value());
-  settingsPtr->setValue("listColumnWidth3", spinListColFormat->value());
-  settingsPtr->setValue("listColumnWidth4", spinListColFolder->value());
+  settingsPtr->setValue("listColumnWidth1", spinListColName->value());
+  settingsPtr->setValue("listColumnWidth2", spinListColSize->value());
+  settingsPtr->setValue("listColumnWidth3", spinListColDate->value());
+  settingsPtr->setValue("listColumnWidth4", spinListColFormat->value());
+  settingsPtr->setValue("listColumnWidth5", spinListColFolder->value());
   settingsPtr->setValue("windowTitlePath", checkWindowTitlePath->isChecked());
 
 #ifndef Q_OS_MAC

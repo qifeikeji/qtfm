@@ -5,6 +5,7 @@
  */
 
 #include "disksmodel.h"
+#include "bundledicons.h"
 #include "common.h"
 
 #include <QIcon>
@@ -29,7 +30,7 @@ QVariant disksModel::data(const QModelIndex &index, int role) const
     case Qt::DisplayRole:
         return d.name;
     case Qt::DecorationRole:
-        return QIcon::fromTheme(d.iconName);
+        return BundledIcons::iconByName(QStringLiteral("drive-harddisk"));
     case Qt::ToolTipRole:
         return d.mountpoint.isEmpty() ? d.name : d.mountpoint;
     case DISK_DEVICE_PATH:

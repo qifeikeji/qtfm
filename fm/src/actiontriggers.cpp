@@ -667,16 +667,20 @@ void MainWindow::setupFileListHeader()
     header->setSectionsClickable(true);
     header->setSectionsMovable(false);
     header->setHighlightSections(true);
-    for (int col = 0; col < 4; ++col) {
+    header->setSectionResizeMode(COLUMN_ICON, QHeaderView::Fixed);
+    for (int col = COLUMN_NAME; col < COLUMN_FOLDER; ++col) {
         header->setSectionResizeMode(col, QHeaderView::Interactive);
     }
-    header->setSectionResizeMode(4, QHeaderView::Stretch);
+    header->setSectionResizeMode(COLUMN_FOLDER, QHeaderView::Stretch);
     connect(header, SIGNAL(sectionClicked(int)), this, SLOT(listHeaderClicked(int)));
 }
 
 void MainWindow::listHeaderClicked(int logicalIndex)
 {
-    if (logicalIndex == 4) {
+    if (logicalIndex == COLUMN_ICON) {
+        return;
+    }
+    if (logicalIndex == COLUMN_FOLDER) {
         modelView->toggleDirectorySortOverride();
         modelView->sort(currentSortColumn, currentSortOrder);
         return;
@@ -687,9 +691,9 @@ void MainWindow::listHeaderClicked(int logicalIndex)
     } else {
         currentSortColumn = logicalIndex;
         switch (logicalIndex) {
-        case 0: sortNameAct->setChecked(true); break;
-        case 1: sortSizeAct->setChecked(true); break;
-        case 2: sortDateAct->setChecked(true); break;
+        case COLUMN_NAME: sortNameAct->setChecked(true); break;
+        case COLUMN_SIZE: sortSizeAct->setChecked(true); break;
+        case COLUMN_DATE: sortDateAct->setChecked(true); break;
         default: break;
         }
         settings->setValue(QStringLiteral("sortBy"), currentSortColumn);
@@ -700,19 +704,29 @@ void MainWindow::listHeaderClicked(int logicalIndex)
 void MainWindow::applyListRowHeight()
 {
     const int h = qMax(18, zoomDetail);
-    detailTree->setIconSize(QSize(0, 0));
+    const int iconSz = qMax(16, h - 4);
+    detailTree->setIconSize(QSize(iconSz, iconSz));
     detailTree->setIndentation(0);
     detailTree->setStyleSheet(QStringLiteral("QTreeView::item { height: %1px; }").arg(h));
+    QHeaderView *header = detailTree->header();
+    const int iconCol = settings->value(QStringLiteral("listColumnWidth0"), 0).toInt();
+    header->resizeSection(COLUMN_ICON, iconCol > 0 ? iconCol : iconSz + 8);
 }
 
 void MainWindow::applyListColumnWidths()
 {
     QHeaderView *header = detailTree->header();
-    const int defaults[] = {220, 90, 130, 120, 80};
-    for (int col = 0; col < 5; ++col) {
+    const int defaults[] = {0, 220, 90, 130, 120, 80};
+    for (int col = 0; col < LIST_COLUMN_COUNT; ++col) {
         const QString key = QStringLiteral("listColumnWidth%1").arg(col);
         const int w = settings->value(key, defaults[col]).toInt();
-        if (col < 4) {
+        if (col == COLUMN_ICON) {
+            if (w > 0) {
+                header->resizeSection(col, w);
+            }
+            continue;
+        }
+        if (col < COLUMN_FOLDER) {
             header->resizeSection(col, w);
         }
     }
@@ -733,11 +747,11 @@ void MainWindow::setSortColumn(QAction *columnAct) {
   columnAct->setChecked(true);
 
   if (columnAct == sortNameAct) {
-    currentSortColumn =  0;
+    currentSortColumn =  COLUMN_NAME;
   } else if (columnAct == sortDateAct) {
-    currentSortColumn =  2;
+    currentSortColumn =  COLUMN_DATE;
   } else if (columnAct == sortSizeAct) {
-    currentSortColumn = 1;
+    currentSortColumn = COLUMN_SIZE;
   }
   settings->setValue("sortBy", currentSortColumn);
 }

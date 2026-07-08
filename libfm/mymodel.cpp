@@ -21,6 +21,7 @@
 
 #include "mymodel.h"
 #include "bundledicons.h"
+#include "dfmqstyleditemdelegate.h"
 #include <sys/inotify.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
@@ -200,7 +201,7 @@ void myModel::setShowListDecorations(bool show)
     if (rows <= 0) {
         return;
     }
-    emit dataChanged(index(0, 0, root), index(rows - 1, 0, root));
+    emit dataChanged(index(0, 0, root), index(rows - 1, COLUMN_NAME, root));
 }
 
 bool myModel::showListDecorations() const
@@ -510,7 +511,7 @@ void myModel::populateItem(myModelItem *item)
 //---------------------------------------------------------------------------------
 int myModel::columnCount(const QModelIndex &parent) const
 {
-    return (parent.column() > 0) ? 0 : 5;
+    return (parent.column() > 0) ? 0 : LIST_COLUMN_COUNT;
 }
 
 //---------------------------------------------------------------------------------------
@@ -575,7 +576,7 @@ QModelIndex myModel::insertFolder(QModelIndex parent)
     new myModelItem(QFileInfo(currentRootPath + "/" + name),item);
     endInsertRows();
 
-    return index(item->childCount() - 1,0,parent);
+    return index(item->childCount() - 1, COLUMN_NAME, parent);
 }
 
 //---------------------------------------------------------------------------------
@@ -601,7 +602,7 @@ QModelIndex myModel::insertFile(QModelIndex parent)
     new myModelItem(QFileInfo(temp),item);
     endInsertRows();
 
-    return index(item->childCount()-1,0,parent);
+    return index(item->childCount() - 1, COLUMN_NAME, parent);
 }
 
 //---------------------------------------------------------------------------------
@@ -931,7 +932,7 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
   }
   // Alignment of filename
   else if (role == Qt::TextAlignmentRole) {
-    if (index.column() == 1) {
+    if (index.column() == COLUMN_SIZE) {
       return Qt::AlignRight + Qt::AlignVCenter;
     }
   }
@@ -939,18 +940,21 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
   else if (role == Qt::DisplayRole) {
     QVariant data;
     switch (index.column()) {
-      case 0 :
+      case COLUMN_ICON :
+        data = QString();
+        break;
+      case COLUMN_NAME :
         data = item->fileName();
         break;
-      case 1 :
+      case COLUMN_SIZE :
         data = item->fileInfo().isDir() ? "" : Common::formatSize(
                item->fileInfo().size());
         break;
-      case 2 :
+      case COLUMN_DATE :
         data = QLocale::system().toString(item->fileInfo().lastModified(),
                                           QLocale::FormatType::ShortFormat);
         break;
-      case 3 :
+      case COLUMN_FORMAT :
         if (item->mMimeType.isNull()) {
           if (realMimeTypes) {
             item->mMimeType = mimeUtilsPtr->getMimeType(item->absoluteFilePath());
@@ -962,7 +966,7 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
         }
         data = item->mMimeType;
         break;
-      case 4 :
+      case COLUMN_FOLDER :
         data = item->fileInfo().isDir() ? QObject::tr("Folder") : QObject::tr("File");
         break;
       default :
@@ -973,10 +977,24 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
   }
   // Display file icon
   else if (role == Qt::DecorationRole) {
-    if (!m_showListDecorations || index.column() != 0) {
-      return QVariant();
+    if (index.column() == COLUMN_ICON && !m_showListDecorations) {
+      QString mime;
+      if (!item->fileInfo().isDir()) {
+        if (realMimeTypes) {
+          if (item->mMimeType.isNull()) {
+            item->mMimeType = mimeUtilsPtr->getMimeType(item->absoluteFilePath());
+          }
+          mime = item->mMimeType;
+        } else {
+          mime = item->fileInfo().suffix();
+        }
+      }
+      return BundledIcons::iconForListCategory(item->fileInfo(), mime);
     }
-    return findIcon(item);
+    if (index.column() == COLUMN_NAME && m_showListDecorations) {
+      return findIcon(item);
+    }
+    return QVariant();
   }
   // Display file name
   else if(role == Qt::EditRole) {
@@ -1260,11 +1278,12 @@ QVariant myModel::headerData(int section, Qt::Orientation orientation, int role)
 
     if(role == Qt::DisplayRole) {
         switch(section) {
-        case 0: return tr("Name");
-        case 1: return tr("Size");
-        case 2: return tr("Date Modified");
-        case 3: return tr("Format");
-        case 4: return tr("Folder");
+        case COLUMN_ICON: return QString();
+        case COLUMN_NAME: return tr("Name");
+        case COLUMN_SIZE: return tr("Size");
+        case COLUMN_DATE: return tr("Date Modified");
+        case COLUMN_FORMAT: return tr("Format");
+        case COLUMN_FOLDER: return tr("Folder");
         default: return QVariant();
         }
     }

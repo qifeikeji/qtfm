@@ -48,14 +48,25 @@ void MainWindow::addSeparatorAction()
 
 void MainWindow::delBookmark()
 {
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this,
+        tr("Remove bookmark"),
+        tr("Remove the selected bookmark(s)?"),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+    if (answer != QMessageBox::Yes) {
+        return;
+    }
+
     QModelIndexList list = bookmarksList->selectionModel()->selectedIndexes();
     while (!list.isEmpty()) {
-        if (list.first().data(BOOKMARKS_AUTO).toString() == "1") { //automount, add to dontShowList
+        const QModelIndex src = bookmarkListProxy->mapToSource(list.first());
+        if (src.data(BOOKMARKS_AUTO).toString() == "1") { //automount, add to dontShowList
             QStringList temp = settings->value("hideBookmarks", 0).toStringList();
-            temp.append(list.first().data(BOOKMARK_PATH).toString());
+            temp.append(src.data(BOOKMARK_PATH).toString());
             settings->setValue("hideBookmarks", temp);
         }
-        modelBookmarks->removeRow(list.first().row());
+        modelBookmarks->removeRow(src.row());
         list = bookmarksList->selectionModel()->selectedIndexes();
     }
     handleBookmarksChanged();
@@ -63,7 +74,7 @@ void MainWindow::delBookmark()
 
 void MainWindow::renameBookmark()
 {
-    const QModelIndex idx = bookmarksList->currentIndex();
+    const QModelIndex idx = bookmarkListProxy->mapToSource(bookmarksList->currentIndex());
     if (!idx.isValid()) { return; }
     if (idx.data(BOOKMARK_PATH).toString().isEmpty()) { return; }
 
@@ -72,15 +83,16 @@ void MainWindow::renameBookmark()
 
     item->setFlags(item->flags() | Qt::ItemIsEditable);
     bookmarksList->setFocus(Qt::OtherFocusReason);
-    bookmarksList->setCurrentIndex(idx);
-    bookmarksList->edit(idx);
+    bookmarksList->setCurrentIndex(bookmarkListProxy->mapFromSource(idx));
+    bookmarksList->edit(bookmarkListProxy->mapFromSource(idx));
 }
 
 void MainWindow::editBookmark()
 {
     icondlg * themeIcons = new icondlg;
     if (themeIcons->exec() == QDialog::Accepted) {
-        QStandardItem * item = modelBookmarks->itemFromIndex(bookmarksList->currentIndex());
+        QStandardItem * item = modelBookmarks->itemFromIndex(
+            bookmarkListProxy->mapToSource(bookmarksList->currentIndex()));
         item->setData(themeIcons->result,
                       BOOKMARK_ICON);
         item->setIcon(BundledIcons::iconByName(themeIcons->result));

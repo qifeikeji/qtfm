@@ -246,12 +246,13 @@ void MainWindow::createActions() {
   delBookmarkAct = new QAction(tr("Remove bookmark"),this);
   delBookmarkAct->setStatusTip(tr("Remove this bookmark"));
   connect(delBookmarkAct, SIGNAL(triggered()),this,SLOT(delBookmark()));
-  delBookmarkAct->setIcon(actionIcons->at(13));
+  delBookmarkAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/window-close.svg")));
   actionList->append(delBookmarkAct);
 
   renameBookmarkAct = new QAction(tr("Rename bookmark"), this);
   renameBookmarkAct->setStatusTip(tr("Rename this bookmark"));
   connect(renameBookmarkAct, SIGNAL(triggered()), this, SLOT(renameBookmark()));
+  renameBookmarkAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/rename.svg")));
   actionList->append(renameBookmarkAct);
 
   editBookmarkAct = new QAction(tr("Edit icon"),this);
@@ -285,7 +286,7 @@ void MainWindow::createActions() {
 
   renameAct = new QAction(tr("Rename"), this);
   renameAct->setStatusTip(tr("Rename file"));
-  renameAct->setIcon(QIcon::fromTheme("format-text-italic"));
+  renameAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/rename.svg")));
   connect(renameAct, SIGNAL(triggered()),this, SLOT(renameFile()));
   actionList->append(renameAct);
 
@@ -518,8 +519,8 @@ void MainWindow::bookmarkShortcutTrigger() {
   QAction* sc = qobject_cast<QAction*>(sender());
   QModelIndex index = modelBookmarks->findItems(sc->text()).first()->index();
   bookmarksList->clearSelection();
-  bookmarksList->setCurrentIndex(index);
-  bookmarkClicked(index);
+  bookmarksList->setCurrentIndex(bookmarkListProxy->mapFromSource(index));
+  bookmarkClicked(bookmarkListProxy->mapFromSource(index));
 }
 //---------------------------------------------------------------------------
 
@@ -639,6 +640,7 @@ void MainWindow::zoomInAction()
     } else if (focusWidget() == bookmarksList) {
         (zoomBook == 64) ? zoomBook=64 : zoomBook+= 8;
         bookmarksList->setIconSize(QSize(zoomBook,zoomBook));
+        bookmarkGroupBar->setTabIconSize(zoomBook);
         zoomLevel = zoomBook;
     } else {
         if (currentView == 1) {
@@ -676,6 +678,7 @@ void MainWindow::zoomOutAction()
     } else if(focusWidget() == bookmarksList) {
         (zoomBook == 16) ? zoomBook=16 : zoomBook-= 8;
         bookmarksList->setIconSize(QSize(zoomBook,zoomBook));
+        bookmarkGroupBar->setTabIconSize(zoomBook);
         zoomLevel = zoomBook;
     } else {
         if (currentView == 1) {

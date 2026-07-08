@@ -56,6 +56,8 @@
 #include "completer.h"
 #include "sortmodel.h"
 #include "dfmqtreeview.h"
+#include "bookmarkgroupbar.h"
+#include "bookmarkgroupproxy.h"
 
 // libdisks
 #ifndef NO_UDISKS
@@ -164,6 +166,12 @@ public slots:
     void firstRunBookmarks(bool isFirstRun);
     void loadBookmarks();
     void writeBookmarks();
+    void loadBookmarkGroups();
+    void writeBookmarkGroups();
+    void selectBookmarkGroup(const QString &groupId);
+    void addBookmarkGroup();
+    void changeBookmarkGroupIcon(const QString &groupId);
+    void refreshBookmarkGroupBar();
     void handleBookmarksChanged();
     void firstRunCustomActions(bool isFirstRun);
     void showAboutBox();
@@ -217,7 +225,7 @@ private:
     int zoomBook;
     int iconViewGap = 4;
     int currentView;        // 0=list, 1=icons, 2=details
-    int currentSortColumn;  // 0=name, 1=size, 2=date, 3=format, 4=folder
+    int currentSortColumn;  // COLUMN_NAME, COLUMN_SIZE, COLUMN_DATE, ...
     Qt::SortOrder currentSortOrder;
 
     QCompleter *customComplete;
@@ -236,6 +244,11 @@ private:
     QListView *list;
     QListView *bookmarksList;
     QListView *disksList;
+    QWidget *bookmarkPage = nullptr;
+    BookmarkGroupBar *bookmarkGroupBar = nullptr;
+    BookmarkGroupProxy *bookmarkListProxy = nullptr;
+    QVector<BookmarkGroupInfo> bookmarkGroups;
+    QString currentBookmarkGroupId;
     QComboBox *pathEdit;
 
     QString term;

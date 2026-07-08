@@ -1,4 +1,5 @@
 #include "bundledicons.h"
+#include "fileutils.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -416,6 +417,78 @@ QIcon BundledIcons::iconForMimeType(const QString &mime)
         return iconForFileSuffix(base);
     }
     return loadIconFromBaseName(QStringLiteral("empty"));
+}
+
+static bool suffixIsArchive(const QString &base)
+{
+    static const QSet<QString> archiveExt = {
+        QStringLiteral("zip"), QStringLiteral("rar"), QStringLiteral("7z"),
+        QStringLiteral("tar"), QStringLiteral("gz"), QStringLiteral("xz"),
+        QStringLiteral("bz2"), QStringLiteral("tgz"), QStringLiteral("tbz2"),
+    };
+    return archiveExt.contains(base);
+}
+
+static bool suffixIsImage(const QString &base)
+{
+    static const QSet<QString> imageExt = {
+        QStringLiteral("jpg"), QStringLiteral("jpeg"), QStringLiteral("png"),
+        QStringLiteral("svg"), QStringLiteral("gif"), QStringLiteral("webp"),
+        QStringLiteral("bmp"), QStringLiteral("tiff"), QStringLiteral("tif"),
+        QStringLiteral("heic"), QStringLiteral("heif"), QStringLiteral("ico"),
+        QStringLiteral("icns"),
+    };
+    return imageExt.contains(base);
+}
+
+static bool suffixIsVideo(const QString &base)
+{
+    static const QSet<QString> videoExt = {
+        QStringLiteral("mp4"), QStringLiteral("avi"), QStringLiteral("mov"),
+        QStringLiteral("mkv"), QStringLiteral("webm"), QStringLiteral("m4v"),
+        QStringLiteral("mpeg"), QStringLiteral("mpg"), QStringLiteral("wmv"),
+    };
+    return videoExt.contains(base);
+}
+
+static bool mimeIsArchive(const QString &mime)
+{
+    const QString m = mime.toLower();
+    return m.contains(QLatin1String("zip")) || m.contains(QLatin1String("compressed"))
+           || m.contains(QLatin1String("x-7z")) || m.contains(QLatin1String("x-rar"))
+           || m.contains(QLatin1String("x-tar")) || m.contains(QLatin1String("x-gzip"))
+           || m.contains(QLatin1String("x-bzip"));
+}
+
+QIcon BundledIcons::iconForListCategory(const QFileInfo &info, const QString &mime)
+{
+    if (info.isDir()) {
+        return iconForFolder(info);
+    }
+
+    const QString m = mime.toLower();
+    if (m.startsWith(QLatin1String("image/")) || m == QLatin1String("image")) {
+        return iconWithFallbacks({QStringLiteral("image"), QStringLiteral("empty")});
+    }
+    if (m.startsWith(QLatin1String("video/")) || m == QLatin1String("video")) {
+        return iconWithFallbacks({QStringLiteral("video"), QStringLiteral("empty")});
+    }
+    if (mimeIsArchive(m)) {
+        return iconWithFallbacks({QStringLiteral("archive"), QStringLiteral("empty")});
+    }
+
+    const QString base = baseNameForSuffix(FileUtils::getRealSuffix(info.fileName()));
+    if (suffixIsImage(base)) {
+        return iconWithFallbacks({QStringLiteral("image"), QStringLiteral("empty")});
+    }
+    if (suffixIsVideo(base)) {
+        return iconWithFallbacks({QStringLiteral("video"), QStringLiteral("empty")});
+    }
+    if (suffixIsArchive(base)) {
+        return iconWithFallbacks({QStringLiteral("archive"), QStringLiteral("empty")});
+    }
+
+    return emptyIcon();
 }
 
 QIcon BundledIcons::iconForFolder(const QFileInfo &info)
