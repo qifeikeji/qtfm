@@ -26,8 +26,10 @@
 #include <QPainter>
 #include <QUrl>
 #include <QStandardPaths>
-#include <QPainter>
 #include <QBuffer>
+#include <QProcess>
+#include <QTemporaryFile>
+#include <QImageReader>
 #include <QImage>
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
@@ -611,6 +613,56 @@ QString Common::writeThumbnailForFile(const QString &absoluteFilePath,
         return QString();
     }
     return outPath;
+}
+
+QImage Common::pdfFirstPageImage(const QString &pdfPath)
+{
+    if (pdfPath.isEmpty() || !QFileInfo::exists(pdfPath)) {
+        return QImage();
+    }
+    const QString pdftoppm = QStandardPaths::findExecutable(QStringLiteral("pdftoppm"));
+    if (pdftoppm.isEmpty()) {
+        return QImage();
+    }
+
+    QTemporaryFile tmp(QDir::tempPath() + QStringLiteral("/qtfm-pdf-XXXXXX"));
+    tmp.setAutoRemove(false);
+    if (!tmp.open()) {
+        return QImage();
+    }
+    const QString prefix = tmp.fileName();
+    tmp.close();
+
+    QProcess proc;
+    proc.setProgram(pdftoppm);
+    proc.setArguments({
+        QStringLiteral("-png"),
+        QStringLiteral("-singlefile"),
+        QStringLiteral("-f"), QStringLiteral("1"),
+        QStringLiteral("-l"), QStringLiteral("1"),
+        QStringLiteral("-scale-to"), QString::number(thumbnailPixelSize),
+        pdfPath,
+        prefix,
+    });
+    proc.start();
+    if (!proc.waitForFinished(120000)) {
+        proc.kill();
+        QFile::remove(prefix + QStringLiteral(".png"));
+        return QImage();
+    }
+    if (proc.exitStatus() != QProcess::NormalExit || proc.exitCode() != 0) {
+        QFile::remove(prefix + QStringLiteral(".png"));
+        return QImage();
+    }
+
+    const QString pngPath = prefix + QStringLiteral(".png");
+    QImage img;
+    if (!img.load(pngPath)) {
+        QFile::remove(pngPath);
+        return QImage();
+    }
+    QFile::remove(pngPath);
+    return img;
 }
 
 QString Common::hasThumbnail(const QString &filename)

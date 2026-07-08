@@ -35,11 +35,6 @@
 #include <QtConcurrent/QtConcurrent>
 #include "fileutils.h"
 
-#ifdef WITH_MAGICK
-#include <Magick++.h>
-#include <string>
-#endif
-
 #ifdef WITH_FFMPEG
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -58,9 +53,6 @@ extern "C" {
 myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
     : QAbstractItemModel(parent) {
 
-#ifdef WITH_MAGICK
-    Magick::InitializeMagick(nullptr);
-#endif
 #ifdef WITH_FFMPEG
 #if (LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(58,9,100))
     av_register_all();
@@ -756,11 +748,9 @@ bool myModel::fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils)
       || mime.startsWith(QLatin1String("video/"))) {
     return true;
   }
-#ifdef WITH_MAGICK
   if (mime == QLatin1String("application/pdf")) {
     return true;
   }
-#endif
 #ifdef WITH_FFMPEG
   if (mime.startsWith(QLatin1String("audio/"))) {
     return true;
@@ -816,42 +806,30 @@ QString myModel::generateThumbnailToCache(const QString &item, MimeUtils *mimeUt
   }
 #endif
 
-#ifdef WITH_MAGICK
-  if (itemMime == QLatin1String("application/pdf")) {
-    try {
-      Magick::Image thumb;
-#ifndef OLDMAGICK
-      thumb.quiet(true);
-#endif
-      const QByteArray pathUtf8 = item.toUtf8();
-      std::string spec(pathUtf8.constData(), static_cast<size_t>(pathUtf8.size()));
-      spec += "[0]";
-      thumb.read(spec);
-      thumb.scale(Magick::Geometry(Common::thumbnailPixelSize,
-                                   Common::thumbnailPixelSize));
-      if (thumb.depth() > 8) {
-        thumb.depth(8);
-      }
-      Magick::Blob buffer;
-      thumb.magick("PNG");
-      thumb.write(&buffer);
-      const size_t len = buffer.length();
-      if (len > 0 && buffer.data() != nullptr) {
-        QImage img;
-        if (img.loadFromData(static_cast<const uchar *>(buffer.data()),
-                             static_cast<int>(len), "PNG")
-            && !img.isNull()) {
-          return Common::writeThumbnailForFile(item, img);
-        }
-      }
-    } catch (Magick::Error &error_) {
-      qWarning() << error_.what();
-    } catch (Magick::Warning &warn_) {
-      qWarning() << warn_.what();
+  if (itemMime == QLatin1String("application/pdf")
+      || item.endsWith(QLatin1String(".pdf"), Qt::CaseInsensitive)) {
+    const QImage pdfImg = Common::pdfFirstPageImage(item);
+    if (!pdfImg.isNull()) {
+      return Common::writeThumbnailForFile(item, pdfImg);
     }
     return QString();
   }
-#endif
+
+  if (itemMime.startsWith(QLatin1String("image/"))
+      || item.endsWith(QLatin1String(".svg"), Qt::CaseInsensitive)) {
+    // fall through to QImageReader below
+  } else if (!itemMime.startsWith(QLatin1String("image/"))) {
+    const QString ext = FileUtils::getRealSuffix(item).toLower();
+    static const QSet<QString> kImageExt = {
+        QStringLiteral("jpg"), QStringLiteral("jpeg"), QStringLiteral("png"),
+        QStringLiteral("gif"), QStringLiteral("webp"), QStringLiteral("bmp"),
+        QStringLiteral("tif"), QStringLiteral("tiff"), QStringLiteral("heic"),
+        QStringLiteral("heif"), QStringLiteral("avif"), QStringLiteral("svg"),
+    };
+    if (!kImageExt.contains(ext)) {
+      return QString();
+    }
+  }
 
   QImageReader pic(item);
   pic.setAutoTransform(true);

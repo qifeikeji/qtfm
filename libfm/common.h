@@ -109,6 +109,8 @@ public:
     /** Write 200px PNG thumb; returns cache path or empty. */
     static QString writeThumbnailForFile(const QString &absoluteFilePath,
                                        const QImage &source);
+    /** First page of PDF via pdftoppm (poppler); empty image on failure. */
+    static QImage pdfFirstPageImage(const QString &pdfPath);
     static QString getThumbnailHash(const QString &filename);
     static QString hasThumbnail(const QString &filename);
     static QString getTempPath();
