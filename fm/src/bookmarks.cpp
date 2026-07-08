@@ -28,6 +28,7 @@
 #include <QApplication>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QStandardItem>
 
 void MainWindow::addBookmarkAction()
 {
@@ -58,6 +59,21 @@ void MainWindow::delBookmark()
         list = bookmarksList->selectionModel()->selectedIndexes();
     }
     handleBookmarksChanged();
+}
+
+void MainWindow::renameBookmark()
+{
+    const QModelIndex idx = bookmarksList->currentIndex();
+    if (!idx.isValid()) { return; }
+    if (idx.data(BOOKMARK_PATH).toString().isEmpty()) { return; }
+
+    QStandardItem *item = modelBookmarks->itemFromIndex(idx);
+    if (!item) { return; }
+
+    item->setFlags(item->flags() | Qt::ItemIsEditable);
+    bookmarksList->setFocus(Qt::OtherFocusReason);
+    bookmarksList->setCurrentIndex(idx);
+    bookmarksList->edit(idx);
 }
 
 void MainWindow::editBookmark()

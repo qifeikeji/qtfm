@@ -491,8 +491,6 @@ void MainWindow::copyFile() {
 void MainWindow::renameFile() {
   if (focusWidget() == tree) {
     tree->edit(treeSelectionModel->currentIndex());
-  } else if(focusWidget() == bookmarksList) {
-    bookmarksList->edit(bookmarksList->currentIndex());
   } else if(focusWidget() == list) {
     list->edit(listSelectionModel->currentIndex());
   } else if(focusWidget() == detailTree) {
@@ -618,6 +616,7 @@ void MainWindow::applyIconView() {
   list->setIconSize(QSize(zoom, zoom));
   list->setFlow(QListView::LeftToRight);
 
+  modelList->setShowListDecorations(true);
   modelList->setMode(thumbsAct->isChecked());
   stackWidget->setCurrentIndex(0);
   detailTree->setMouseTracking(false);

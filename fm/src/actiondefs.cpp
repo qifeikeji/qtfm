@@ -249,6 +249,11 @@ void MainWindow::createActions() {
   delBookmarkAct->setIcon(actionIcons->at(13));
   actionList->append(delBookmarkAct);
 
+  renameBookmarkAct = new QAction(tr("Rename bookmark"), this);
+  renameBookmarkAct->setStatusTip(tr("Rename this bookmark"));
+  connect(renameBookmarkAct, SIGNAL(triggered()), this, SLOT(renameBookmark()));
+  actionList->append(renameBookmarkAct);
+
   editBookmarkAct = new QAction(tr("Edit icon"),this);
   editBookmarkAct->setStatusTip(tr("Change bookmark icon"));
   connect(editBookmarkAct, SIGNAL(triggered()),this,SLOT(editBookmark()));
@@ -390,12 +395,6 @@ void MainWindow::createActions() {
 #endif
 
 #ifndef NO_UDISKS
-  toggleDisksPanelAct = new QAction(tr("External disks"), this);
-  toggleDisksPanelAct->setCheckable(true);
-  toggleDisksPanelAct->setStatusTip(tr("Show or hide externally attached block devices (sda, nvme0n1, …)"));
-  toggleDisksPanelAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/external-disks.svg")));
-  connect(toggleDisksPanelAct, SIGNAL(triggered()), this, SLOT(toggleDisksPanel()));
-
   mediaUnmountAct = new QAction(tr("Safely Remove"), this);
   mediaUnmountAct->setIcon(QIcon::fromTheme("media-eject"));
   connect(mediaUnmountAct, SIGNAL(triggered(bool)), this, SLOT(handleMediaUnmount()));
@@ -610,16 +609,6 @@ void MainWindow::createToolBars() {
 
   navToolBar = addToolBar(tr("Navigate"));
   navToolBar->setObjectName("Navigate");
-#ifndef NO_UDISKS
-  navToolBar->addAction(toggleDisksPanelAct);
-#endif
-  sortToolButton = new QToolButton(this);
-  sortToolButton->setText(tr("Sort"));
-  sortToolButton->setIcon(QIcon(QStringLiteral(":/icons/toolbar/sort.svg")));
-  sortToolButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-  sortToolButton->setPopupMode(QToolButton::InstantPopup);
-  sortToolButton->setMenu(sortMenu);
-  navToolBar->addWidget(sortToolButton);
 
   auto *navSpacer = new QWidget(this);
   navSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);

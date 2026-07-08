@@ -51,6 +51,7 @@ public:
                      QString mediaPath = QString(),
                      bool isMedia = false,
                      bool changed = true);
+    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
 signals:
     void bookmarkPaste(const QMimeData *data,

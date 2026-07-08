@@ -28,6 +28,7 @@
 #include <QSplitter>
 #include <QTreeView>
 #include <QListView>
+#include <QTabWidget>
 #include <QLabel>
 #include <QStackedWidget>
 #include <QSortFilterProxyModel>
@@ -121,6 +122,7 @@ public slots:
     void addSeparatorAction();
     void delBookmark();
     void editBookmark();
+    void renameBookmark();
     void toggleWrapBookmarks();
     void showEditDialog();
     void renameFile();
@@ -193,7 +195,6 @@ private slots:
     void handleMediaUnmount();
     void handleMediaEject();
     void handleMediaError(QString path, QString error);
-    void toggleDisksPanel();
 #endif
     void clearCache();
     void handlePathRequested(QString path);
@@ -227,7 +228,7 @@ private:
     QSettings *settings;
     QDockWidget *dockTree;
     QDockWidget *dockBookmarks;
-    QDockWidget *dockDisks;
+    QTabWidget *sidebarTabs = nullptr;
     QVBoxLayout *mainLayout;
     QStackedWidget *stackWidget;
     QTreeView *tree;
@@ -280,13 +281,13 @@ private:
     QAction *addBookmarkAct;
     QAction *addSeparatorAct;
     QAction *delBookmarkAct;
+    QAction *renameBookmarkAct;
     QAction *editBookmarkAct;
     QAction *wrapBookmarksAct;
     QAction *deleteAct;
     QAction *iconAct;
     QAction *listViewAct;
     QActionGroup *viewModeActGrp;
-    QToolButton *sortToolButton;
     QMenu *sortMenu = nullptr;
     QActionGroup *sortByActGrp;
     QAction *sortNameAct;
@@ -327,7 +328,6 @@ private:
     QAction *macOpenWithHelpAct;
 #endif
 #ifndef NO_UDISKS
-    QAction *toggleDisksPanelAct;
     QAction *mediaUnmountAct;
     QAction *mediaEjectAct;
 #endif

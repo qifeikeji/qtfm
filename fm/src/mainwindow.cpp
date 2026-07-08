@@ -23,6 +23,7 @@
 #include <QDockWidget>
 #include <QHeaderView>
 #include <QMessageBox>
+#include <QTabWidget>
 #include <QInputDialog>
 #include <QPushButton>
 #include <QApplication>
@@ -117,8 +118,7 @@ bool shouldListWholeDisk(Device *whole, const QMap<QString, Device *> &devices)
     if (whole->isRemovable) {
         return whole->hasMedia;
     }
-    const QString mp = effectiveMountpointForWholeDisk(whole, devices);
-    return uDisks2::isExternalUserMountPoint(mp);
+    return true;
 }
 
 } // namespace
@@ -204,27 +204,28 @@ MainWindow::MainWindow()
     dockTree->setWidget(tree);
     addDockWidget(Qt::LeftDockWidgetArea, dockTree);
 
-    dockBookmarks = new QDockWidget(tr("Bookmarks"),this,Qt::SubWindow);
+    dockBookmarks = new QDockWidget(tr("Places"), this, Qt::SubWindow);
     dockBookmarks->setObjectName("bookmarksDock");
-    dockBookmarks->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
-    bookmarksList = new QListView(dockBookmarks);
-    bookmarksList->setMinimumHeight(24); // Docks get the minimum size from their content widget
-    bookmarksList->setFocusPolicy(Qt::ClickFocus); // Avoid hijacking focus when Tab on Edit Path
-    dockBookmarks->setWidget(bookmarksList);
-    addDockWidget(Qt::LeftDockWidgetArea, dockBookmarks);
+    dockBookmarks->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
-    // Separate area below bookmarks for removable/external disks, stacked in
-    // the same left column.
-    dockDisks = new QDockWidget(tr("Disks"),this,Qt::SubWindow);
-    dockDisks->setObjectName("disksDock");
-    dockDisks->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
-    disksList = new QListView(dockDisks);
+    sidebarTabs = new QTabWidget(dockBookmarks);
+    sidebarTabs->setTabPosition(QTabWidget::North);
+    sidebarTabs->setDocumentMode(true);
+
+    bookmarksList = new QListView(sidebarTabs);
+    bookmarksList->setMinimumHeight(24);
+    bookmarksList->setFocusPolicy(Qt::ClickFocus);
+    sidebarTabs->addTab(bookmarksList, tr("Bookmarks"));
+
+#ifndef NO_UDISKS
+    disksList = new QListView(sidebarTabs);
     disksList->setMinimumHeight(24);
     disksList->setFocusPolicy(Qt::ClickFocus);
-    dockDisks->setWidget(disksList);
-    addDockWidget(Qt::LeftDockWidgetArea, dockDisks);
-    splitDockWidget(dockBookmarks, dockDisks, Qt::Vertical);
-    dockDisks->hide();
+    sidebarTabs->addTab(disksList, tr("Disks"));
+#endif
+
+    dockBookmarks->setWidget(sidebarTabs);
+    addDockWidget(Qt::LeftDockWidgetArea, dockBookmarks);
 
     QWidget *main = new QWidget(this);
     mainLayout = new QVBoxLayout(main);
@@ -325,12 +326,13 @@ MainWindow::MainWindow()
     modelBookmarks = new bookmarkmodel(/*modelList->folderIcons*/);
     connect(modelBookmarks, SIGNAL(bookmarksChanged()), this, SLOT(handleBookmarksChanged()));
 
-    // Create disks model (removable/external media only, kept separate from
-    // user bookmarks)
+    // Create disks model
+#ifndef NO_UDISKS
     modelDisks = new disksModel(this);
     disksList->setModel(modelDisks);
     connect(disksList, SIGNAL(activated(QModelIndex)), this, SLOT(diskActivated(QModelIndex)));
     connect(disksList, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(diskActivated(QModelIndex)));
+#endif
 
     // Load settings before showing window
     loadSettings();
@@ -360,6 +362,7 @@ void MainWindow::lateStart() {
   bookmarksList->setDropIndicatorShown(true);
   bookmarksList->setDefaultDropAction(Qt::MoveAction);
   bookmarksList->setSelectionMode(QAbstractItemView::ExtendedSelection);
+  bookmarksList->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
   // Configure tree view
   tree->setDragDropMode(QAbstractItemView::DragDrop);
@@ -533,13 +536,6 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   firstRunBookmarks(isFirstRun);
 #ifndef NO_UDISKS
   populateMedia();
-  const bool disksVisible = settings->value("disksPanelVisible", false).toBool();
-  toggleDisksPanelAct->setChecked(disksVisible);
-  if (disksVisible) {
-      dockDisks->show();
-  } else {
-      dockDisks->hide();
-  }
 #endif
   bookmarksList->setModel(modelBookmarks);
   bookmarksList->setResizeMode(QListView::Adjust);
@@ -547,10 +543,12 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   bookmarksList->setIconSize(QSize(24,24));
   bookmarksList->setItemDelegate(new BookmarkItemDelegate(bookmarksList));
 
+#ifndef NO_UDISKS
   disksList->setResizeMode(QListView::Adjust);
   disksList->setFlow(QListView::TopToBottom);
   disksList->setIconSize(QSize(24,24));
   disksList->setItemDelegate(new DiskItemDelegate(disksList));
+#endif
 
   // Load information whether bookmarks are displayed
   wrapBookmarksAct->setChecked(settings->value("wrapBookmarks", 0).toBool());
@@ -1407,9 +1405,6 @@ void MainWindow::writeSettings() {
 
   // Write bookmarks
   writeBookmarks();
-#ifndef NO_UDISKS
-  settings->setValue("disksPanelVisible", toggleDisksPanelAct->isChecked());
-#endif
 }
 //---------------------------------------------------------------------------
 
@@ -1628,7 +1623,8 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
       if (bookmarksList->indexAt(bookmarksList->mapFromGlobal(event->globalPos())).isValid()) {
         curIndex = bookmarksList->currentIndex().data(BOOKMARK_PATH).toString();
         popup->addAction(delBookmarkAct);
-        if (!curIndex.path().isEmpty()) {
+        if (!curIndex.isEmpty()) {
+            popup->addAction(renameBookmarkAct);
             popup->addAction(editBookmarkAct);	//icon
         }
       } else {
@@ -1970,18 +1966,6 @@ void MainWindow::updateGrid()
  * @brief media support
  */
 #ifndef NO_UDISKS
-void MainWindow::toggleDisksPanel()
-{
-    const bool show = toggleDisksPanelAct->isChecked();
-    if (show) {
-        dockDisks->show();
-        populateMedia();
-    } else {
-        dockDisks->hide();
-    }
-    settings->setValue("disksPanelVisible", show);
-}
-
 void MainWindow::populateMedia()
 {
     QSet<QString> listed;
@@ -1996,7 +1980,8 @@ void MainWindow::populateMedia()
         if (subtitle.isEmpty()) { subtitle = tr("Storage"); }
         const QString rowTitle = QStringLiteral("%1 — %2").arg(d->dev, subtitle);
         const QString icon = d->isOptical ? QStringLiteral("drive-optical")
-                                          : QStringLiteral("drive-removable-media");
+                              : (d->isRemovable ? QStringLiteral("drive-removable-media")
+                                                : QStringLiteral("drive-harddisk"));
         modelDisks->upsertDisk(d->path, rowTitle, mp, icon, d->isOptical);
         listed.insert(d->path);
     }

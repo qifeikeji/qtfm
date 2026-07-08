@@ -30,6 +30,7 @@
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QAbstractButton>
+#include <QModelIndex>
 
 bookmarkmodel::bookmarkmodel(/*QHash<QString,
                              QIcon> *icons*/)
@@ -73,9 +74,22 @@ void bookmarkmodel::addBookmark(QString name,
     item->setData(isAuto, BOOKMARKS_AUTO);
     item->setData(isMedia, MEDIA_MODEL);
     item->setToolTip(path);
+    item->setFlags(item->flags() & ~Qt::ItemIsEditable);
     if (isMedia) { item->setData(mediaPath, MEDIA_PATH); }
     this->appendRow(item);
     if (changed) { emit bookmarksChanged(); }
+}
+
+bool bookmarkmodel::setData(const QModelIndex &index, const QVariant &value, int role)
+{
+    const bool ok = QStandardItemModel::setData(index, value, role);
+    if (ok && role == Qt::EditRole) {
+        if (QStandardItem *item = itemFromIndex(index)) {
+            item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+        }
+        emit bookmarksChanged();
+    }
+    return ok;
 }
 
 QStringList bookmarkmodel::mimeTypes() const
