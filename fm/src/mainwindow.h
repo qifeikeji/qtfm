@@ -243,7 +243,7 @@ private:
     QSettings *settings;
     QDockWidget *dockTree;
     QDockWidget *dockBookmarks;
-    QTabWidget *sidebarTabs = nullptr;
+    QWidget *sidebarPanel = nullptr;
     QVBoxLayout *mainLayout;
     QStackedWidget *stackWidget;
     QTreeView *tree;

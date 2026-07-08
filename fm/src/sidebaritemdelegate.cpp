@@ -78,7 +78,6 @@ void BookmarkItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
 
     const int textLeft = iconRect.right() + kIconTextGap;
     const int textWidth = rect.right() - textLeft - kHPad;
-    const QString path = index.data(BOOKMARK_PATH).toString();
 
     QFont nameFont = opt.font;
     QFont pathFont = opt.font;
