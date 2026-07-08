@@ -276,7 +276,7 @@ private:
     QItemSelectionModel *listSelectionModel;
     QStringList mounts;
 
-    QList<QIcon> *actionIcons;
+    QList<QIcon> *actionIcons = nullptr;
     QList<QAction*> *actionList;
     QList<QAction*> bookmarkActionList;
     CustomActionsManager* customActManager;

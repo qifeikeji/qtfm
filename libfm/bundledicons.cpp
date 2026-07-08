@@ -608,12 +608,46 @@ QString BundledIcons::bundledUiSvgResource(const QString &folder, const QString 
 
 QIcon BundledIcons::toolbarIcon(const QString &baseName)
 {
-    return QIcon(bundledUiSvgResource(QStringLiteral("toolbar"), baseName));
+    const QString path = bundledUiSvgResource(QStringLiteral("toolbar"), baseName);
+    if (!QFile::exists(path)) {
+        return QIcon();
+    }
+    QSvgRenderer renderer(path);
+    if (!renderer.isValid()) {
+        return QIcon(path);
+    }
+    QIcon icon;
+    const int sizes[] = {16, 24, 32, 48, 64};
+    for (int size : sizes) {
+        QPixmap pm(size, size);
+        pm.fill(Qt::transparent);
+        QPainter painter(&pm);
+        renderer.render(&painter);
+        icon.addPixmap(pm);
+    }
+    return icon;
 }
 
 QIcon BundledIcons::settingsIcon(const QString &baseName)
 {
-    return QIcon(bundledUiSvgResource(QStringLiteral("settings"), baseName));
+    const QString path = bundledUiSvgResource(QStringLiteral("settings"), baseName);
+    if (!QFile::exists(path)) {
+        return QIcon();
+    }
+    QSvgRenderer renderer(path);
+    if (!renderer.isValid()) {
+        return QIcon(path);
+    }
+    QIcon icon;
+    const int sizes[] = {16, 24, 32, 48, 64};
+    for (int size : sizes) {
+        QPixmap pm(size, size);
+        pm.fill(Qt::transparent);
+        QPainter painter(&pm);
+        renderer.render(&painter);
+        icon.addPixmap(pm);
+    }
+    return icon;
 }
 
 QStringList BundledIcons::availableIconBaseNames()
