@@ -55,7 +55,9 @@ void tabBar::mousePressEvent(QMouseEvent * event)
         {
             this->setCurrentIndex(tab);
             QMenu menu(this);
-            QAction *newWinAction = menu.addAction(tr("Open in new window"));
+            QAction *newWinAction = menu.addAction(
+                BundledIcons::toolbarIcon(QStringLiteral("window-new")),
+                tr("Open in new window"));
             if (menu.exec(event->globalPos()) == newWinAction) {
                 emit openInNewWindowRequested(tab);
             }

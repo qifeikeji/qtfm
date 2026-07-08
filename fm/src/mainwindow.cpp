@@ -221,6 +221,7 @@ MainWindow::MainWindow()
     dockBookmarks->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Expanding);
 
     sidebarTabs = new QTabWidget(dockBookmarks);
+    sidebarTabs->setObjectName(QStringLiteral("sidebarPlacesTabs"));
     sidebarTabs->setTabPosition(QTabWidget::North);
     sidebarTabs->setDocumentMode(true);
     sidebarTabs->tabBar()->setExpanding(true);
@@ -1291,6 +1292,8 @@ void MainWindow::applyViewChromeStyles()
         selected.setAlpha(100);
     }
 
+    const QColor chromeLine = pal.color(QPalette::Mid);
+
     const QString tabQss = QStringLiteral(
         "QTabBar::tab { min-height: 32px; max-height: 32px; padding: 6px 14px;"
         " border: none; border-radius: 0px; margin: 0px; background: transparent; }"
@@ -1305,7 +1308,19 @@ void MainWindow::applyViewChromeStyles()
     tabs->setExpanding(true);
     tabs->setDocumentMode(true);
     if (sidebarTabs) {
-        sidebarTabs->tabBar()->setStyleSheet(tabQss);
+        const QString sidebarTabQss = QStringLiteral(
+            "QTabWidget#sidebarPlacesTabs::pane {"
+            " border: none; border-top: 1px solid %3; top: -1px; margin: 0; padding: 0; }"
+            "QTabWidget#sidebarPlacesTabs QTabBar::tab { min-height: 30px; max-height: 30px;"
+            " padding: 4px 12px; border: none; border-radius: 0px; margin: 0px;"
+            " background: transparent; }"
+            "QTabWidget#sidebarPlacesTabs QTabBar::tab:selected { background: %1; }"
+            "QTabWidget#sidebarPlacesTabs QTabBar::tab:hover:!selected { background: %2; }"
+            "QTabWidget#sidebarPlacesTabs QTabBar::tab:!selected { min-height: 30px; max-height: 30px; }"
+            "QTabWidget#sidebarPlacesTabs QTabBar::tab:selected:!hover {"
+            " min-height: 30px; max-height: 30px; }"
+        ).arg(selected.name(QColor::HexArgb), hover.name(QColor::HexArgb), chromeLine.name());
+        sidebarTabs->setStyleSheet(sidebarTabQss);
     }
 
     const int rowH = qMax(18, zoomDetail);

@@ -135,14 +135,7 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
  */
 void SettingsDialog::previewDarkTheme(bool dark)
 {
-#if QT_VERSION >= 0x050000
-    settingsPtr->setValue(QStringLiteral("darkTheme"), dark);
-    if (auto *mw = qobject_cast<MainWindow *>(parentWidget())) {
-        mw->applyThemeFromSettings();
-    }
-#else
     Q_UNUSED(dark);
-#endif
 }
 
 QWidget *SettingsDialog::createGeneralSettings() {
@@ -222,7 +215,6 @@ QWidget *SettingsDialog::createAppearanceSettings()
     QFormLayout* layoutAppear = new QFormLayout(grpAppear);
 #if QT_VERSION >= 0x050000
     checkDarkTheme = new QCheckBox(grpAppear);
-    connect(checkDarkTheme, &QCheckBox::toggled, this, &SettingsDialog::previewDarkTheme);
 #endif
     checkWindowTitlePath = new QCheckBox(grpAppear);
     checkFileColor = new QCheckBox(grpAppear);

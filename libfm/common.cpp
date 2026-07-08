@@ -461,6 +461,9 @@ QPalette Common::darkTheme()
     palette.setColor(QPalette::ToolTipText, Qt::black);
     palette.setColor(QPalette::Text, Qt::white);
     palette.setColor(QPalette::Button, QColor(64,66,68));
+    palette.setColor(QPalette::Mid, QColor(64,66,68));
+    palette.setColor(QPalette::Dark, QColor(46,47,48));
+    palette.setColor(QPalette::Shadow, QColor(28,28,29));
     palette.setColor(QPalette::ButtonText, Qt::white);
     palette.setColor(QPalette::BrightText, Qt::red);
     palette.setColor(QPalette::Highlight, QColor(28,28,29));

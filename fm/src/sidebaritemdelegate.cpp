@@ -65,9 +65,18 @@ void BookmarkItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
     QStyleOptionViewItem opt(option);
     initStyleOption(&opt, index);
     QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
-    style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
 
     const QRect rect = opt.rect;
+    if (opt.state & QStyle::State_Selected) {
+        style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
+    } else if (opt.state & QStyle::State_MouseOver) {
+        QColor hoverBg = opt.palette.highlight().color();
+        hoverBg.setAlpha(72);
+        painter->fillRect(rect, hoverBg);
+    } else {
+        style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
+    }
+
     const QIcon icon = index.data(Qt::DecorationRole).value<QIcon>();
     QRect iconRect(rect.left() + kHPad, rect.top() + (rect.height() - kIconSize) / 2,
                   kIconSize, kIconSize);

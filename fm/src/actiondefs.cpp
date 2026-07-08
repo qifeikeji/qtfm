@@ -67,6 +67,7 @@ void MainWindow::createActionIcons() {
   actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("folder-new")));
   actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("user-trash")));
   actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("file-new")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("window-new")));
 }
 
 void MainWindow::applyBundledToolbarIcons()
@@ -79,7 +80,7 @@ void MainWindow::applyBundledToolbarIcons()
   newFileAct->setIcon(actionIcons->at(1));
   newMdFileAct->setIcon(actionIcons->at(1));
   newTxtFileAct->setIcon(actionIcons->at(1));
-  newWinAct->setIcon(actionIcons->at(28));
+  newWinAct->setIcon(actionIcons->at(29));
   openTabAct->setIcon(actionIcons->at(26));
   openInTabAct->setIcon(actionIcons->at(26));
   closeTabAct->setIcon(actionIcons->at(25));
@@ -123,6 +124,9 @@ void MainWindow::applyBundledToolbarIcons()
   if (clearCacheAct) {
     clearCacheAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("clear-cache")));
   }
+  if (openInNewWindowAct) {
+    openInNewWindowAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("window-new")));
+  }
   if (bookmarkGroupBar) {
     bookmarkGroupBar->refreshToolbarIcons();
   }
@@ -164,7 +168,7 @@ void MainWindow::createActions() {
 
   newWinAct = new QAction(tr("New window"), this);
   connect(newWinAct, SIGNAL(triggered()), this, SLOT(newWindow()));
-  newWinAct->setIcon(actionIcons->at(28));
+  newWinAct->setIcon(actionIcons->at(29));
   actionList->append(newWinAct);
 
   openTabAct = new QAction(tr("New tab"), this);
@@ -178,6 +182,7 @@ void MainWindow::createActions() {
   openInTabAct->setIcon(actionIcons->at(26));
 
   openInNewWindowAct = new QAction(tr("Open in new window"), this);
+  openInNewWindowAct->setIcon(actionIcons->at(29));
   connect(openInNewWindowAct, SIGNAL(triggered()), this, SLOT(openNewWindowFromSelection()));
 
   closeTabAct = new QAction(tr("Close tab"), this);

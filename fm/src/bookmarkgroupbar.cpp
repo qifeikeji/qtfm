@@ -65,7 +65,9 @@ void BookmarkGroupBar::applyButtonSizes()
     setMinimumWidth(m_tabButtonSize + 8);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
 
-    const QColor border = palette().color(QPalette::Mid);
+    const QColor border = palette().color(QPalette::Dark).lightness() < 128
+                              ? palette().color(QPalette::Window)
+                              : palette().color(QPalette::Mid);
     QColor hoverBg = palette().color(QPalette::Highlight);
     hoverBg.setAlpha(80);
     const QString btnStyle = QStringLiteral(

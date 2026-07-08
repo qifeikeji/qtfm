@@ -31,6 +31,7 @@
         <file>icons/toolbar/up.svg</file>
         <file>icons/toolbar/user-trash.svg</file>
         <file>icons/toolbar/window-close.svg</file>
+        <file>icons/toolbar/window-new.svg</file>
         <file>icons/toolbar/zoom-in.svg</file>
         <file>icons/toolbar/zoom-out.svg</file>
         <file>icons/settings/general.svg</file>
@@ -71,6 +72,7 @@
         <file>icons/toolbar/white/view-icon-mode.svg</file>
         <file>icons/toolbar/white/view-list-mode.svg</file>
         <file>icons/toolbar/white/window-close.svg</file>
+        <file>icons/toolbar/white/window-new.svg</file>
         <file>icons/toolbar/white/zoom-in.svg</file>
         <file>icons/toolbar/white/zoom-out.svg</file>
         <file>icons/settings/white/advanced.svg</file>
