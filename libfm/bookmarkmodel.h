@@ -42,12 +42,12 @@ public:
     void setActiveGroupId(const QString &groupId);
     QString activeGroupId() const;
 
-    QStringList mimeTypes() const;
+    QStringList mimeTypes() const override;
     bool dropMimeData(const QMimeData *data,
                       Qt::DropAction action,
                       int row,
                       int column,
-                      const QModelIndex &parent);
+                      const QModelIndex &parent) override;
     void addBookmark(QString name,
                      QString path,
                      QString isAuto,
