@@ -65,12 +65,15 @@ jobs:
           make -j"$(nproc)" 2>&1 | tee build.log
           make_rc=${PIPESTATUS[0]}
           if [ "$make_rc" -ne 0 ]; then
-            echo "::group::Compiler / linker errors (first 60 lines)"
-            grep -E ':( error:|fatal error:|undefined reference)' build.log | head -60 || true
+            echo "::group::Compiler / linker errors (first 80 lines)"
+            grep -E ':( error:|fatal error:|undefined reference)' build.log | head -80 || true
             echo "::endgroup::"
-            echo "Full log: build/build.log in the job artifact (see step output above)."
+            echo "::group::Last 40 lines of build.log"
+            tail -40 build.log || true
+            echo "::endgroup::"
             exit "$make_rc"
           fi
+          test -x bin/qtfm || { echo "bin/qtfm missing after successful make"; exit 1; }
 
       - name: Upload build log on failure
         if: failure()

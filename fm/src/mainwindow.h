@@ -234,8 +234,8 @@ private:
     QFileInfo curIndex;
     QModelIndex backIndex;
 
-    QSortFilterProxyModel *modelTree;
-    QSortFilterProxyModel *modelView;
+    viewsSortProxyModel *modelTree;
+    viewsSortProxyModel *modelView;
 
     bookmarkmodel *modelBookmarks;
     disksModel *modelDisks;

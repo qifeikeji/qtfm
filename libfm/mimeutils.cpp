@@ -44,6 +44,7 @@ QString substituteSingleFileTokens(QString line, const QFileInfo &file)
 bool startDetachedCommand(const QString &commandLine, const QString &termCmd,
                           const QFileInfo &contextFile = QFileInfo())
 {
+    Q_UNUSED(contextFile);
     const QString line = commandLine.trimmed();
     if (line.isEmpty()) {
         return false;
