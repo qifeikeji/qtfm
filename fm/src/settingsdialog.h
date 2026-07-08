@@ -63,6 +63,7 @@ protected:
   QList<QAction*> *actionListPtr;
   QListWidget* selector;
   QStackedWidget* stack;
+  QComboBox* comboUiLanguage = nullptr;
   QCheckBox* checkDelete;
   QComboBox* comboDAD;
   QComboBox* comboDADctl;
@@ -74,7 +75,8 @@ protected:
   QCheckBox* showTerminalButton;
   QCheckBox* showHomeButton;
   QCheckBox* showNewTabButton;
-  QSpinBox* spinIconViewGap;
+  QSpinBox* spinIconViewGapH;
+  QSpinBox* spinIconViewGapV;
   QSpinBox* spinIconViewSize;
   QSpinBox* spinListRowHeight;
   QSpinBox* spinBookmarkGroupTabSize;

@@ -23,6 +23,7 @@ public:
 
     void setGroups(const QVector<BookmarkGroupInfo> &groups, const QString &currentGroupId);
     /** Side length of group tab and “+” buttons (default 40 px). */
+    void refreshToolbarIcons();
     void setTabButtonSize(int size);
     int tabButtonSize() const { return m_tabButtonSize; }
     QString currentGroupId() const { return m_currentGroupId; }

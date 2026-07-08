@@ -51,10 +51,16 @@ jobs:
             poppler-utils \
             libfuse2 \
             file \
-            wget
+            wget \
+            qttools5-dev-tools
 
       - name: Regenerate mimes.qrc
         run: ./share/icons/mimes/update_qrc.sh
+
+      - name: Build UI translations
+        run: |
+          python3 share/translations/build_qtfm_ts.py
+          lrelease share/translations/qtfm_zh_CN.ts -qm share/translations/qtfm_zh_CN.qm
 
       - name: Build (qmake release)
         run: |

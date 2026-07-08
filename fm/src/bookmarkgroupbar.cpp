@@ -30,11 +30,7 @@ BookmarkGroupBar::BookmarkGroupBar(QWidget *parent)
     m_addButton->setToolButtonStyle(Qt::ToolButtonIconOnly);
     m_addButton->setAutoRaise(false);
     m_addButton->setToolTip(tr("New bookmark group"));
-    QIcon addIcon(QStringLiteral(":/icons/toolbar/tab-add.svg"));
-    if (addIcon.isNull()) {
-        addIcon = style()->standardIcon(QStyle::SP_FileDialogNewFolder);
-    }
-    m_addButton->setIcon(addIcon);
+    refreshToolbarIcons();
     connect(m_addButton, &QToolButton::clicked, this, &BookmarkGroupBar::addGroupRequested);
     m_layout->addWidget(m_addButton, 0, Qt::AlignHCenter | Qt::AlignTop);
 
@@ -47,6 +43,18 @@ BookmarkGroupBar::BookmarkGroupBar(QWidget *parent)
     m_layout->addStretch(1);
 
     applyButtonSizes();
+}
+
+void BookmarkGroupBar::refreshToolbarIcons()
+{
+    if (!m_addButton) {
+        return;
+    }
+    QIcon addIcon = BundledIcons::toolbarIcon(QStringLiteral("tab-add"));
+    if (addIcon.isNull()) {
+        addIcon = style()->standardIcon(QStyle::SP_FileDialogNewFolder);
+    }
+    m_addButton->setIcon(addIcon);
 }
 
 void BookmarkGroupBar::applyButtonSizes()

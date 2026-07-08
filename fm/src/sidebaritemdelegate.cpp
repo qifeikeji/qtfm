@@ -8,6 +8,7 @@
 
 namespace {
 const int kMinItemHeight = 54;
+const int kSeparatorHeight = 20;
 const int kIconSize = 24;
 const int kHPad = 8;
 const int kVPad = 6;
@@ -26,11 +27,12 @@ BookmarkItemDelegate::BookmarkItemDelegate(QObject *parent)
 QSize BookmarkItemDelegate::sizeHint(const QStyleOptionViewItem &option,
                                      const QModelIndex &index) const
 {
-    QSize size = QStyledItemDelegate::sizeHint(option, index);
     const QString name = index.data(Qt::DisplayRole).toString();
-    if (name.isEmpty()) {
-        return size; // separator row, keep the compact default height
+    const QString path = index.data(BOOKMARK_PATH).toString();
+    if (name.isEmpty() && path.isEmpty()) {
+        return QSize(option.rect.width() > 0 ? option.rect.width() : 100, kSeparatorHeight);
     }
+    QSize size = QStyledItemDelegate::sizeHint(option, index);
     size.setHeight(qMax(size.height(), kMinItemHeight));
     return size;
 }
@@ -39,9 +41,22 @@ void BookmarkItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &
                                  const QModelIndex &index) const
 {
     const QString name = index.data(Qt::DisplayRole).toString();
-    if (name.isEmpty()) {
-        // Separator row: keep default rendering (background tile etc).
-        QStyledItemDelegate::paint(painter, option, index);
+    const QString path = index.data(BOOKMARK_PATH).toString();
+    if (name.isEmpty() && path.isEmpty()) {
+        painter->save();
+        QStyleOptionViewItem opt(option);
+        initStyleOption(&opt, index);
+        QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
+        style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
+
+        const QRect rect = opt.rect;
+        QColor lineColor = opt.palette.text().color();
+        lineColor.setAlpha(90);
+        const int y = rect.center().y();
+        const int margin = kHPad;
+        painter->setPen(QPen(lineColor, 1));
+        painter->drawLine(rect.left() + margin, y, rect.right() - margin, y);
+        painter->restore();
         return;
     }
 

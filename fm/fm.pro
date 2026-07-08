@@ -41,7 +41,12 @@ SOURCES += \
     src/bookmarkgroupproxy.cpp
 
 RESOURCES += $${top_srcdir}/share/$${TARGET}.qrc \
-              $${top_srcdir}/share/mimes.qrc
+              $${top_srcdir}/share/mimes.qrc \
+              $${top_srcdir}/share/translations/translations.qrc
+
+TRANSLATIONS += $${top_srcdir}/share/translations/qtfm_zh_CN.ts
+
+# qtfm_zh_CN.qm is generated before build (see share/translations/build_qtfm_ts.py + lrelease)
 
 macx {
     LIBS += -L$${top_builddir}/libfm -lQtFM
@@ -61,6 +66,13 @@ unix:!macx {
     RCC_DIR = $${DESTDIR}/.qrc_fm
     LIBS += -L$${top_builddir}/lib$${LIBSUFFIX} -lQtFM
 
+    qtfm_qm.target = $${top_srcdir}/share/translations/qtfm_zh_CN.qm
+    qtfm_qm.commands = cd $${top_srcdir}/share/translations && python3 build_qtfm_ts.py && lrelease qtfm_zh_CN.ts -qm qtfm_zh_CN.qm
+    qtfm_qm.depends = $${top_srcdir}/share/translations/qtfm_strings.json \
+                      $${top_srcdir}/share/translations/build_qtfm_ts.py
+    QMAKE_EXTRA_TARGETS += qtfm_qm
+    PRE_TARGETDEPS += $${top_srcdir}/share/translations/qtfm_zh_CN.qm
+
     target.path = $${PREFIX}/bin
     desktop.files += $${TARGET}.desktop
     desktop.path += $${PREFIX}/share/applications
@@ -75,6 +87,10 @@ unix:!macx {
     qtfm_mimes.files = $${top_srcdir}/share/icons/mimes
     qtfm_mimes.path = $${PREFIX}/share/qtfm
     INSTALLS += qtfm_mimes
+
+    qtfm_translations.files = $${top_srcdir}/share/translations/qtfm_zh_CN.qm
+    qtfm_translations.path = $${PREFIX}/share/qtfm/translations
+    INSTALLS += qtfm_translations
 
     CONFIG(no_dbus) {
         DEFINES += NO_DBUS

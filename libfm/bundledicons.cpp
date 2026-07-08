@@ -3,6 +3,7 @@
 
 #include <QCoreApplication>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QHash>
 #include <QPainter>
@@ -13,6 +14,17 @@
 #include <QtEndian>
 
 namespace {
+
+bool g_uiDarkMode = false;
+
+QString normalizeSvgBaseName(const QString &baseName)
+{
+    QString name = baseName.trimmed();
+    if (name.endsWith(QLatin1String(".svg"), Qt::CaseInsensitive)) {
+        name.chop(4);
+    }
+    return name;
+}
 
 /** Load Apple .icns (PNG/JPEG chunks); works on Linux without Qt icns plugin. */
 QIcon iconFromIcnsFile(const QString &path)
@@ -570,6 +582,38 @@ QIcon BundledIcons::iconByName(const QString &name)
         return icon;
     }
     return loadIconFromBaseName(QStringLiteral("empty"));
+}
+
+void BundledIcons::setUiDarkMode(bool dark)
+{
+    g_uiDarkMode = dark;
+}
+
+bool BundledIcons::uiDarkMode()
+{
+    return g_uiDarkMode;
+}
+
+QString BundledIcons::bundledUiSvgResource(const QString &folder, const QString &baseName)
+{
+    const QString file = normalizeSvgBaseName(baseName) + QStringLiteral(".svg");
+    if (g_uiDarkMode) {
+        const QString white = QStringLiteral(":/icons/%1/white/%2").arg(folder, file);
+        if (QFile::exists(white)) {
+            return white;
+        }
+    }
+    return QStringLiteral(":/icons/%1/%2").arg(folder, file);
+}
+
+QIcon BundledIcons::toolbarIcon(const QString &baseName)
+{
+    return QIcon(bundledUiSvgResource(QStringLiteral("toolbar"), baseName));
+}
+
+QIcon BundledIcons::settingsIcon(const QString &baseName)
+{
+    return QIcon(bundledUiSvgResource(QStringLiteral("settings"), baseName));
 }
 
 QStringList BundledIcons::availableIconBaseNames()

@@ -72,7 +72,7 @@ void icondlg::applyGridLayout()
 {
     iconDelegate->setCellGap(kCellGap);
     const QSize grid = IconViewDelegate::iconGridSize(
-        kPickerZoom, kCellGap, iconView->fontMetrics());
+        kPickerZoom, kCellGap, kCellGap, iconView->fontMetrics());
     iconView->setIconSize(QSize(kPickerZoom, kPickerZoom));
     iconView->setGridSize(grid);
 }

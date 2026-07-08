@@ -17,11 +17,12 @@ class IconViewDelegate : public QStyledItemDelegate
 public:
     static constexpr int iconZoomMin = 16;
     static constexpr int iconZoomMax = 256;
-    static QSize iconGridSize(int zoom, int cellGap, const QFontMetrics &fm);
-    static QRect textLabelRect(const QRect &itemRect, int zoom, int cellGap,
+    static QSize iconGridSize(int zoom, int cellGapH, int cellGapV, const QFontMetrics &fm);
+    static QRect textLabelRect(const QRect &itemRect, int zoom, int cellGapH,
                                const QFontMetrics &fm);
 
     void setCellGap(int gap);
+    void setCellGaps(int horizontal, int vertical);
 
     QSize sizeHint(const QStyleOptionViewItem &option,
                    const QModelIndex &index) const override;
@@ -43,7 +44,8 @@ public:
 private: // workaround for QTBUG
     mutable bool _isEditing;
     mutable QModelIndex _index;
-    int _cellGap = 4;
+    int _cellGapH = 4;
+    int _cellGapV = 4;
 protected: // workaround for QTBUG
     bool eventFilter(QObject * object,
                      QEvent * event) override;

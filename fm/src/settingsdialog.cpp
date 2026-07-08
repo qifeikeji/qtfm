@@ -16,6 +16,20 @@
 #include "openwithconfig.h"
 #include "common.h"
 #include "bundledicons.h"
+#include "apptranslator.h"
+
+namespace {
+
+QIcon settingsPageIcon(const char *resourceName)
+{
+    const QIcon bundled = BundledIcons::settingsIcon(QLatin1String(resourceName));
+    if (!bundled.isNull()) {
+        return bundled;
+    }
+    return QIcon::fromTheme(QStringLiteral("preferences-system"));
+}
+
+} // namespace
 
 /**
  * @brief Creates settings dialog
@@ -60,27 +74,30 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
   layoutRight->addItem(new QSpacerItem(0, 10));
   layoutRight->addWidget(btns);
 
-  // Icons
-  QIcon icon1 = QIcon::fromTheme("system-file-manager");
-  QIcon icon2 = QIcon::fromTheme("applications-system");
-  QIcon icon3 = QIcon::fromTheme("accessories-character-map");
-  QIcon icon4 = QIcon::fromTheme("preferences-desktop");
-  QIcon icon5 = QIcon::fromTheme("applications-graphics");
+  // Icons (bundled SVGs in share/icons/settings/)
+  const QIcon iconGeneral = settingsPageIcon("general");
+  const QIcon iconAppearance = settingsPageIcon("appearance");
+  const QIcon iconCustomActions = settingsPageIcon("custom-actions");
+  const QIcon iconShortcuts = settingsPageIcon("shortcuts");
+  const QIcon iconOpenWith = settingsPageIcon("open-with");
+  const QIcon iconMimeTypes = settingsPageIcon("mime-types");
+  const QIcon iconSystray = settingsPageIcon("systray");
+  const QIcon iconAdvanced = settingsPageIcon("advanced");
 
   // Add widget with configurations
   selector->setMinimumWidth(160);
   selector->setViewMode(QListView::ListMode);
   selector->setIconSize(QSize(32, 32));
-  selector->addItem(new QListWidgetItem(icon1, tr("General"), selector));
-  selector->addItem(new QListWidgetItem(icon5, tr("Appearance"), selector));
-  selector->addItem(new QListWidgetItem(icon2, tr("Custom Actions"), selector));
-  selector->addItem(new QListWidgetItem(icon3, tr("Shortcuts"), selector));
-  selector->addItem(new QListWidgetItem(icon4, tr("Open with"), selector));
+  selector->addItem(new QListWidgetItem(iconGeneral, tr("General"), selector));
+  selector->addItem(new QListWidgetItem(iconAppearance, tr("Appearance"), selector));
+  selector->addItem(new QListWidgetItem(iconCustomActions, tr("Custom Actions"), selector));
+  selector->addItem(new QListWidgetItem(iconShortcuts, tr("Shortcuts"), selector));
+  selector->addItem(new QListWidgetItem(iconOpenWith, tr("Open with"), selector));
 #ifndef Q_OS_MAC
-  selector->addItem(new QListWidgetItem(icon4, tr("Mime Types"), selector));
-  selector->addItem(new QListWidgetItem(icon4, tr("System Tray"), selector));
+  selector->addItem(new QListWidgetItem(iconMimeTypes, tr("Mime Types"), selector));
+  selector->addItem(new QListWidgetItem(iconSystray, tr("System Tray"), selector));
 #endif
-  selector->addItem(new QListWidgetItem(icon4, tr("Advanced"), selector));
+  selector->addItem(new QListWidgetItem(iconAdvanced, tr("Advanced"), selector));
 
   stack->addWidget(createGeneralSettings());
   stack->addWidget(createAppearanceSettings());
@@ -153,6 +170,12 @@ QWidget *SettingsDialog::createGeneralSettings() {
   checkPathHistory = new QCheckBox(grpBehav);
   layoutBehav->addRow(tr("Enable path history"), checkPathHistory);
 
+  comboUiLanguage = new QComboBox(grpBehav);
+  for (const QString &code : AppTranslator::availableLanguageCodes()) {
+      comboUiLanguage->addItem(AppTranslator::languageDisplayName(code), code);
+  }
+  layoutBehav->addRow(tr("Language"), comboUiLanguage);
+
   // Confirmation
   QGroupBox* grpConfirm = new QGroupBox(tr("Confirmation"), widget);
   QFormLayout* layoutConfirm = new QFormLayout(grpConfirm);
@@ -193,9 +216,12 @@ QWidget *SettingsDialog::createAppearanceSettings()
     showHomeButton = new QCheckBox(grpAppear);
     showNewTabButton = new QCheckBox(grpAppear);
     showTerminalButton = new QCheckBox(grpAppear);
-  spinIconViewGap = new QSpinBox(grpAppear);
-  spinIconViewGap->setRange(0, 48);
-  spinIconViewGap->setSuffix(tr(" px"));
+  spinIconViewGapH = new QSpinBox(grpAppear);
+  spinIconViewGapH->setRange(0, 48);
+  spinIconViewGapH->setSuffix(tr(" px"));
+  spinIconViewGapV = new QSpinBox(grpAppear);
+  spinIconViewGapV->setRange(0, 48);
+  spinIconViewGapV->setSuffix(tr(" px"));
   spinIconViewSize = new QSpinBox(grpAppear);
   spinIconViewSize->setRange(16, 256);
   spinIconViewSize->setSuffix(tr(" px"));
@@ -225,7 +251,8 @@ QWidget *SettingsDialog::createAppearanceSettings()
     layoutAppear->addRow(tr("Show Home button"), showHomeButton);
     layoutAppear->addRow(tr("Show \"new tab\" button"), showNewTabButton);
     layoutAppear->addRow(tr("Show Terminal button"), showTerminalButton);
-    layoutAppear->addRow(tr("Icon view spacing"), spinIconViewGap);
+    layoutAppear->addRow(tr("Icon view horizontal gap"), spinIconViewGapH);
+    layoutAppear->addRow(tr("Icon view vertical gap"), spinIconViewGapV);
     layoutAppear->addRow(tr("Icon view size"), spinIconViewSize);
     layoutAppear->addRow(tr("List row height"), spinListRowHeight);
     layoutAppear->addRow(tr("Bookmark group tab size"), spinBookmarkGroupTabSize);
@@ -671,7 +698,9 @@ void SettingsDialog::readSettings() {
   showHomeButton->setChecked(settingsPtr->value("home_button", true).toBool());
   showNewTabButton->setChecked(settingsPtr->value("newtab_button", false).toBool());
   showTerminalButton->setChecked(settingsPtr->value("terminal_button", true).toBool());
-  spinIconViewGap->setValue(settingsPtr->value("iconViewGap", 4).toInt());
+  const int legacyGap = settingsPtr->value("iconViewGap", 4).toInt();
+  spinIconViewGapH->setValue(settingsPtr->value("iconViewGapH", legacyGap).toInt());
+  spinIconViewGapV->setValue(settingsPtr->value("iconViewGapV", legacyGap).toInt());
   spinIconViewSize->setValue(settingsPtr->value("zoom", 48).toInt());
   spinListRowHeight->setValue(settingsPtr->value("zoomDetail", 24).toInt());
   spinBookmarkGroupTabSize->setValue(settingsPtr->value("bookmarkGroupTabSize", 40).toInt());
@@ -694,6 +723,10 @@ void SettingsDialog::readSettings() {
 #endif
   checkFileColor->setChecked(settingsPtr->value("fileColor", false).toBool());
   checkPathHistory->setChecked(settingsPtr->value("pathHistory", true).toBool());
+  const QString uiLang = AppTranslator::normalizedLanguageCode(
+      settingsPtr->value(QStringLiteral("uiLanguage"), QStringLiteral("system")).toString());
+  const int langIdx = comboUiLanguage->findData(uiLang);
+  comboUiLanguage->setCurrentIndex(langIdx >= 0 ? langIdx : 0);
   checkWindowTitlePath->setChecked(settingsPtr->value("windowTitlePath", true).toBool());
 
 #ifndef Q_OS_MAC
@@ -895,10 +928,20 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("dad_shift", comboDADshift->currentIndex());
 
   settingsPtr->setValue("singleClick", comboSingleClick->currentIndex());
+  const QString newUiLang = comboUiLanguage->currentData().toString();
+  if (AppTranslator::normalizedLanguageCode(newUiLang)
+      != AppTranslator::normalizedLanguageCode(
+          settingsPtr->value(QStringLiteral("uiLanguage"), QStringLiteral("system")).toString())) {
+      QMessageBox::warning(this, tr("Restart to apply settings"),
+                           tr("You must restart application to apply language settings."));
+  }
+  settingsPtr->setValue(QStringLiteral("uiLanguage"), newUiLang);
   settingsPtr->setValue("home_button", showHomeButton->isChecked());
   settingsPtr->setValue("newtab_button", showNewTabButton->isChecked());
   settingsPtr->setValue("terminal_button", showTerminalButton->isChecked());
-  settingsPtr->setValue("iconViewGap", spinIconViewGap->value());
+  settingsPtr->setValue("iconViewGapH", spinIconViewGapH->value());
+  settingsPtr->setValue("iconViewGapV", spinIconViewGapV->value());
+  settingsPtr->setValue("iconViewGap", spinIconViewGapH->value());
   settingsPtr->setValue("zoom", spinIconViewSize->value());
   settingsPtr->setValue("zoomDetail", spinListRowHeight->value());
   settingsPtr->setValue("bookmarkGroupTabSize", spinBookmarkGroupTabSize->value());

@@ -122,7 +122,7 @@ void FM::dirLoaded()
 void FM::updateGrid()
 {
     if (list->viewMode() != QListView::IconMode) { return; }
-    const QSize grid = IconViewDelegate::iconGridSize(zoom, 4, fontMetrics());
+    const QSize grid = IconViewDelegate::iconGridSize(zoom, 4, 4, fontMetrics());
     list->setIconSize(QSize(zoom, zoom));
     if (list->gridSize() != grid) {
         list->setGridSize(grid);

@@ -33,6 +33,54 @@
         <file>icons/toolbar/window-close.svg</file>
         <file>icons/toolbar/zoom-in.svg</file>
         <file>icons/toolbar/zoom-out.svg</file>
+        <file>icons/settings/general.svg</file>
+        <file>icons/settings/appearance.svg</file>
+        <file>icons/settings/custom-actions.svg</file>
+        <file>icons/settings/shortcuts.svg</file>
+        <file>icons/settings/open-with.svg</file>
+        <file>icons/settings/mime-types.svg</file>
+        <file>icons/settings/systray.svg</file>
+        <file>icons/settings/advanced.svg</file>
+        <file>icons/toolbar/white/back.svg</file>
+        <file>icons/toolbar/white/bookmark.svg</file>
+        <file>icons/toolbar/white/clear.svg</file>
+        <file>icons/toolbar/white/copy.svg</file>
+        <file>icons/toolbar/white/cut.svg</file>
+        <file>icons/toolbar/white/delete.svg</file>
+        <file>icons/toolbar/white/details.svg</file>
+        <file>icons/toolbar/white/document-open.svg</file>
+        <file>icons/toolbar/white/exit.svg</file>
+        <file>icons/toolbar/white/external-disks.svg</file>
+        <file>icons/toolbar/white/file-new.svg</file>
+        <file>icons/toolbar/white/folder-new.svg</file>
+        <file>icons/toolbar/white/hidden.svg</file>
+        <file>icons/toolbar/white/home.svg</file>
+        <file>icons/toolbar/white/icons.svg</file>
+        <file>icons/toolbar/white/key-bindings.svg</file>
+        <file>icons/toolbar/white/lock.svg</file>
+        <file>icons/toolbar/white/paste.svg</file>
+        <file>icons/toolbar/white/preferences.svg</file>
+        <file>icons/toolbar/white/properties.svg</file>
+        <file>icons/toolbar/white/refresh.svg</file>
+        <file>icons/toolbar/white/rename.svg</file>
+        <file>icons/toolbar/white/sort.svg</file>
+        <file>icons/toolbar/white/tab-add.svg</file>
+        <file>icons/toolbar/white/terminal.svg</file>
+        <file>icons/toolbar/white/up.svg</file>
+        <file>icons/toolbar/white/user-trash.svg</file>
+        <file>icons/toolbar/white/view-icon-mode.svg</file>
+        <file>icons/toolbar/white/view-list-mode.svg</file>
+        <file>icons/toolbar/white/window-close.svg</file>
+        <file>icons/toolbar/white/zoom-in.svg</file>
+        <file>icons/toolbar/white/zoom-out.svg</file>
+        <file>icons/settings/white/advanced.svg</file>
+        <file>icons/settings/white/appearance.svg</file>
+        <file>icons/settings/white/custom-actions.svg</file>
+        <file>icons/settings/white/general.svg</file>
+        <file>icons/settings/white/mime-types.svg</file>
+        <file>icons/settings/white/open-with.svg</file>
+        <file>icons/settings/white/shortcuts.svg</file>
+        <file>icons/settings/white/systray.svg</file>
         <file>../AUTHORS</file>
     </qresource>
 </RCC>

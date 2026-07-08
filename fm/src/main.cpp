@@ -22,6 +22,9 @@
 
 #include <QApplication>
 #include "mainwindow.h"
+#include "common.h"
+#include "apptranslator.h"
+#include <QSettings>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -69,17 +72,11 @@ int main(int argc, char *argv[]) {
   QApplication::setApplicationName(APP);
   QApplication::setOrganizationDomain("eu");
 
-  // Initialize resources
-  //Q_INIT_RESOURCE(resources);
-
-  // Translate application
-  /*QTranslator qtTranslator;
-  qtTranslator.load("qt_" + QLocale::system().name(),
-                    QLibraryInfo::location(QLibraryInfo::TranslationsPath));
-  app.installTranslator(&qtTranslator);
-  QTranslator qtfmTranslator;
-  qtfmTranslator.load("/usr/share/qtfm/qtfm_" + QLocale::system().name());
-  app.installTranslator(&qtfmTranslator);*/
+  {
+    QSettings settings(Common::configFile(), QSettings::IniFormat);
+    AppTranslator::installForApplication(
+        &app, settings.value(QStringLiteral("uiLanguage"), QStringLiteral("system")).toString());
+  }
 
   // Create main window and execute application
   MainWindow mainWin;

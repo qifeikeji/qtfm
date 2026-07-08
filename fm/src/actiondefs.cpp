@@ -20,6 +20,7 @@
 ****************************************************************************/
 
 #include "mainwindow.h"
+#include "bundledicons.h"
 #include <QMenu>
 #include <QMenuBar>
 #include <QToolBar>
@@ -32,49 +33,92 @@
 
 void MainWindow::createActionIcons() {
 
-  actionIcons = new QList<QIcon>;
-
-  /*QFile icons(QDir::homePath() + QString("/.config/%16/icon.cache").arg(APP));
-  icons.open(QIODevice::ReadOnly);
-  QDataStream out(&icons);
-  out >> *actionIcons;
-  icons.close();*/
-
-  if (actionIcons->count() < 29) {
-    actionIcons->append(QIcon(":/icons/toolbar/folder-new.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/file-new.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/cut.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/copy.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/paste.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/up.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/back.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/home.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/details.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/icons.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/hidden.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/bookmark.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/bookmark.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/clear.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/delete.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/preferences.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/properties.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/terminal.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/document-open.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/refresh.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/exit.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/lock.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/key-bindings.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/zoom-in.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/zoom-out.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/window-close.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/folder-new.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/user-trash.svg"));
-    actionIcons->append(QIcon(":/icons/toolbar/file-new.svg"));
-    /*icons.open(QIODevice::WriteOnly);
-    QDataStream out(&icons);
-    out << *actionIcons;
-    icons.close();*/
+  if (!actionIcons) {
+    actionIcons = new QList<QIcon>;
   }
+  actionIcons->clear();
+
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("folder-new")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("file-new")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("cut")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("copy")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("paste")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("up")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("back")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("home")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("details")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("icons")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("hidden")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("bookmark")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("bookmark")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("clear")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("delete")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("preferences")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("properties")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("terminal")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("document-open")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("refresh")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("exit")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("lock")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("key-bindings")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("zoom-in")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("zoom-out")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("window-close")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("folder-new")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("user-trash")));
+  actionIcons->append(BundledIcons::toolbarIcon(QStringLiteral("file-new")));
+}
+
+void MainWindow::applyBundledToolbarIcons()
+{
+  if (!newDirAct) {
+    return;
+  }
+  createActionIcons();
+  newDirAct->setIcon(actionIcons->at(0));
+  newFileAct->setIcon(actionIcons->at(1));
+  newMdFileAct->setIcon(actionIcons->at(1));
+  newTxtFileAct->setIcon(actionIcons->at(1));
+  newWinAct->setIcon(actionIcons->at(28));
+  openTabAct->setIcon(actionIcons->at(26));
+  openInTabAct->setIcon(actionIcons->at(26));
+  closeTabAct->setIcon(actionIcons->at(25));
+  cutAct->setIcon(actionIcons->at(2));
+  copyAct->setIcon(actionIcons->at(3));
+  pasteAct->setIcon(actionIcons->at(4));
+  upAct->setIcon(actionIcons->at(5));
+  backAct->setIcon(actionIcons->at(6));
+  homeAct->setIcon(actionIcons->at(7));
+  newTabAct->setIcon(actionIcons->at(26));
+  listViewAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("view-list-mode")));
+  iconAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("view-icon-mode")));
+  hiddenAct->setIcon(actionIcons->at(10));
+  addBookmarkAct->setIcon(actionIcons->at(12));
+  delBookmarkAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("window-close")));
+  renameBookmarkAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("rename")));
+  editBookmarkAct->setIcon(actionIcons->at(15));
+  trashAct->setIcon(actionIcons->at(27));
+  deleteAct->setIcon(actionIcons->at(14));
+  settingsAct->setIcon(actionIcons->at(15));
+  renameAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("rename")));
+  terminalAct->setIcon(actionIcons->at(17));
+  openAct->setIcon(actionIcons->at(18));
+  runAct->setIcon(actionIcons->at(19));
+  exitAct->setIcon(actionIcons->at(20));
+  closeAct->setIcon(actionIcons->at(25));
+  folderPropertiesAct->setIcon(actionIcons->at(16));
+  lockLayoutAct->setIcon(actionIcons->at(21));
+  refreshAct->setIcon(actionIcons->at(19));
+  zoomInAct->setIcon(actionIcons->at(23));
+  zoomOutAct->setIcon(actionIcons->at(24));
+  if (bookmarkGroupBar) {
+    bookmarkGroupBar->refreshToolbarIcons();
+  }
+}
+
+void MainWindow::refreshBundledUiIcons()
+{
+  applyBundledToolbarIcons();
 }
 //---------------------------------------------------------------------------
 
@@ -184,14 +228,14 @@ void MainWindow::createActions() {
   listViewAct = new QAction(tr("List view"), this);
   listViewAct->setStatusTip(tr("List view with columns (no icons)"));
   listViewAct->setCheckable(true);
-  listViewAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/view-list-mode.svg")));
+  listViewAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("view-list-mode")));
   actionList->append(listViewAct);
 
   iconAct = new QAction(tr("Icon view"), this);
   iconAct->setStatusTip(tr("Icon view"));
   iconAct->setCheckable(true);
   connect(iconAct, SIGNAL(triggered()), this, SLOT(applyIconView()));
-  iconAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/view-icon-mode.svg")));
+  iconAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("view-icon-mode")));
   actionList->append(iconAct);
 
   viewModeActGrp = new QActionGroup(this);
@@ -258,13 +302,13 @@ void MainWindow::createActions() {
   delBookmarkAct = new QAction(tr("Remove bookmark"),this);
   delBookmarkAct->setStatusTip(tr("Remove this bookmark"));
   connect(delBookmarkAct, SIGNAL(triggered()),this,SLOT(delBookmark()));
-  delBookmarkAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/window-close.svg")));
+  delBookmarkAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("window-close")));
   actionList->append(delBookmarkAct);
 
   renameBookmarkAct = new QAction(tr("Rename bookmark"), this);
   renameBookmarkAct->setStatusTip(tr("Rename this bookmark"));
   connect(renameBookmarkAct, SIGNAL(triggered()), this, SLOT(renameBookmark()));
-  renameBookmarkAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/rename.svg")));
+  renameBookmarkAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("rename")));
   actionList->append(renameBookmarkAct);
 
   editBookmarkAct = new QAction(tr("Edit icon"),this);
@@ -298,7 +342,7 @@ void MainWindow::createActions() {
 
   renameAct = new QAction(tr("Rename"), this);
   renameAct->setStatusTip(tr("Rename file"));
-  renameAct->setIcon(QIcon(QStringLiteral(":/icons/toolbar/rename.svg")));
+  renameAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("rename")));
   connect(renameAct, SIGNAL(triggered()),this, SLOT(renameFile()));
   actionList->append(renameAct);
 
@@ -629,6 +673,7 @@ void MainWindow::createToolBars() {
 
   navToolBar->addAction(backAct);
   navToolBar->addAction(upAct);
+  navToolBar->addAction(refreshAct);
   navToolBar->addAction(homeAct);
   navToolBar->addAction(iconAct);
   navToolBar->addAction(listViewAct);

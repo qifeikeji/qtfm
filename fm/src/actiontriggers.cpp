@@ -664,6 +664,8 @@ void MainWindow::applyIconView() {
 
   if (tabs->count()) { tabs->setType(1); }
   updateGrid();
+  modelView->invalidate();
+  list->viewport()->update();
 
   list->setDragDropMode(QAbstractItemView::DragDrop);
   list->setDefaultDropAction(Qt::MoveAction);

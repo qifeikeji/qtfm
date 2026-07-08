@@ -1,0 +1,1418 @@
+[
+  {
+    "context": "ApplicationDialog",
+    "source": "Application"
+  },
+  {
+    "context": "ApplicationDialog",
+    "source": "Launcher: "
+  },
+  {
+    "context": "ApplicationDialog",
+    "source": "Select application"
+  },
+  {
+    "context": "BookmarkGroupBar",
+    "source": "Delete group…"
+  },
+  {
+    "context": "BookmarkGroupBar",
+    "source": "New bookmark group"
+  },
+  {
+    "context": "BookmarkGroupBar",
+    "source": "Set group icon…"
+  },
+  {
+    "context": "Common",
+    "source": "%1 Files, %2 folders"
+  },
+  {
+    "context": "Common",
+    "source": "Source and destination is on a different storage."
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Action"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Action name"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Add action module"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Capture output"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Choose bundled icon"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Command"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Delete module"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "File type"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "File type(s), comma-separated"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Icon path"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Icon…"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "No custom actions yet. Click “Add action module”."
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Paste"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Paste icon file path (overrides bundled icon)"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Shell command"
+  },
+  {
+    "context": "CustomActionSettingsWidget",
+    "source": "Use 'folder' to match all folders.<br>"
+  },
+  {
+    "context": "FileUtils",
+    "source": "Filetype:"
+  },
+  {
+    "context": "MainWindow",
+    "source": "<p>打开 <b>设置 (Settings) → Open with</b>。这里的规则优先于系统默认关联。</p>"
+  },
+  {
+    "context": "MainWindow",
+    "source": "About %1"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Add bookmark"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Add separator"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Add separator to bookmarks list"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Add this folder to bookmarks"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Address"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Applications"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Are you sure you want to delete <p><b>\""
+  },
+  {
+    "context": "MainWindow",
+    "source": "Ascending"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Back"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Bookmarks"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Cancel"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Careful"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Change bookmark icon"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Close"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Close %1"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Close tab"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Computer"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Confirm all delete operations?"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Copy the current file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Create a new Markdown (.md) file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Create a new file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Create a new folder"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Create a new text (.txt) file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Date"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Delete"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Delete confirmation"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Delete selected"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Disks"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Edit"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Edit custom actions"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Edit icon"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Enter folder"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Failed"
+  },
+  {
+    "context": "MainWindow",
+    "source": "File"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Filter current directory"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Filter..."
+  },
+  {
+    "context": "MainWindow",
+    "source": "Focus address"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Focus bookmarks"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Focus list"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Focus tree"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Go back one directory"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Go to home directory"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Go up one directory"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Help"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Hidden files"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Home"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Icon view"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Layout"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Link here"
+  },
+  {
+    "context": "MainWindow",
+    "source": "List view"
+  },
+  {
+    "context": "MainWindow",
+    "source": "List view with columns (no icons)"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Lock layout"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Menu"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Middle-click tabs to close"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Middle-click things to open tab"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Move selected to trash"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Move to Trash"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Name"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Navigate"
+  },
+  {
+    "context": "MainWindow",
+    "source": "New Markdown file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "New file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "New folder"
+  },
+  {
+    "context": "MainWindow",
+    "source": "New tab"
+  },
+  {
+    "context": "MainWindow",
+    "source": "New text file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "New window"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Open"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Open in new tab"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Open in new window"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Open new tab"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Open the file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Open virtual terminal"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Open with"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Paste"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Paste the file here"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Places"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Quit"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Quit %1"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Refresh"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Remove bookmark"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Remove this bookmark"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Rename"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Rename bookmark"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Rename file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Rename this bookmark"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Run"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Run this program"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Safely Remove"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Select application for opening the file"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Select file action"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Select..."
+  },
+  {
+    "context": "MainWindow",
+    "source": "Set default terminal:"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Setting"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Settings..."
+  },
+  {
+    "context": "MainWindow",
+    "source": "Show thumbs"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Size"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Some files where not moved. You may not have the proper permissions or maybe the file system is read-only."
+  },
+  {
+    "context": "MainWindow",
+    "source": "Sort By"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Sort icons by date"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Sort icons by name"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Sort icons by size"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Sort icons in ascending order"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Storage"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Tabs on top"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Terminal"
+  },
+  {
+    "context": "MainWindow",
+    "source": "The current directory is not writable, unable to create new file."
+  },
+  {
+    "context": "MainWindow",
+    "source": "The current directory is not writable, unable to create new folder."
+  },
+  {
+    "context": "MainWindow",
+    "source": "Toggle hidden files"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Tree"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Unlock layout"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Up"
+  },
+  {
+    "context": "MainWindow",
+    "source": "View"
+  },
+  {
+    "context": "MainWindow",
+    "source": "View thumbnails for image files"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Wrap bookmarks"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Zoom in"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Zoom out"
+  },
+  {
+    "context": "MainWindow",
+    "source": "Zoom: %1"
+  },
+  {
+    "context": "MainWindow",
+    "source": "macOS 打开方式设置"
+  },
+  {
+    "context": "MainWindow",
+    "source": "在 QtFM 中配置默认打开与「Open with」"
+  },
+  {
+    "context": "MimeUtils",
+    "source": "No default application"
+  },
+  {
+    "context": "MimeUtils",
+    "source": "No default application for mime: %1!"
+  },
+  {
+    "context": "MyClass",
+    "source": "Done"
+  },
+  {
+    "context": "OpenWithConfig",
+    "source": "Add application module"
+  },
+  {
+    "context": "OpenWithConfig",
+    "source": "Default for double-click (first module)"
+  },
+  {
+    "context": "OpenWithConfig",
+    "source": "Delete module"
+  },
+  {
+    "context": "OpenWithConfig",
+    "source": "Extensions"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Add extension module"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Archive"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Category: %1"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Delete module"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Each module applies to listed extensions (comma-separated), "
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Image"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Paste icon path"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Specific extensions"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Text and code"
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "These handlers override system defaults when set. "
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "These handlers override the \"Mime Types\" tab. "
+  },
+  {
+    "context": "OpenWithSettingsWidget",
+    "source": "Unified categories (first module = double-click default)"
+  },
+  {
+    "context": "ProcessDialog",
+    "source": "<h2>Custom action '%1' is running ...</h2>"
+  },
+  {
+    "context": "ProcessDialog",
+    "source": "Abort"
+  },
+  {
+    "context": "ProcessDialog",
+    "source": "Custom Action"
+  },
+  {
+    "context": "ProcessDialog",
+    "source": "Output:"
+  },
+  {
+    "context": "PropertiesDialog",
+    "source": "Properties"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "<b>%1 files"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "<b>%1 files, %2 folders"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "<b>%1 folders"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "Execute"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "Group (%1)"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "Modified:"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "Numeric"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "Other"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "Owner (%1)"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "Read"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "Size:"
+  },
+  {
+    "context": "PropertiesDlg",
+    "source": "Write"
+  },
+  {
+    "context": "QDBusConnection",
+    "source": "Failed D-Bus connection."
+  },
+  {
+    "context": "QDir",
+    "source": "Desktop"
+  },
+  {
+    "context": "QDir",
+    "source": "Documents"
+  },
+  {
+    "context": "QDir",
+    "source": "Downloads"
+  },
+  {
+    "context": "QDir",
+    "source": "Music"
+  },
+  {
+    "context": "QDir",
+    "source": "Pictures"
+  },
+  {
+    "context": "QDir",
+    "source": "Trash"
+  },
+  {
+    "context": "QDir",
+    "source": "Videos"
+  },
+  {
+    "context": "QFile",
+    "source": "Failed"
+  },
+  {
+    "context": "QFile",
+    "source": "Some files where not deleted. You may not have the proper permissions or maybe the file system is read-only."
+  },
+  {
+    "context": "QIcon",
+    "source": "<h3>What do you want to do?</h3>"
+  },
+  {
+    "context": "QIcon",
+    "source": "About Qt"
+  },
+  {
+    "context": "QIcon",
+    "source": "Appearance"
+  },
+  {
+    "context": "QIcon",
+    "source": "Clear"
+  },
+  {
+    "context": "QIcon",
+    "source": "Clear cache"
+  },
+  {
+    "context": "QIcon",
+    "source": "Contains:"
+  },
+  {
+    "context": "QIcon",
+    "source": "Copy"
+  },
+  {
+    "context": "QIcon",
+    "source": "Copy here"
+  },
+  {
+    "context": "QIcon",
+    "source": "Custom Actions"
+  },
+  {
+    "context": "QIcon",
+    "source": "Cut"
+  },
+  {
+    "context": "QIcon",
+    "source": "Eject"
+  },
+  {
+    "context": "QIcon",
+    "source": "General"
+  },
+  {
+    "context": "QIcon",
+    "source": "Hide"
+  },
+  {
+    "context": "QIcon",
+    "source": "Move here"
+  },
+  {
+    "context": "QIcon",
+    "source": "Move the current file"
+  },
+  {
+    "context": "QIcon",
+    "source": "Properties"
+  },
+  {
+    "context": "QIcon",
+    "source": "Total:"
+  },
+  {
+    "context": "QIcon",
+    "source": "View properties of selected items"
+  },
+  {
+    "context": "QIcon",
+    "source": "macOS 打开方式设置…"
+  },
+  {
+    "context": "QIcon",
+    "source": "如何在设置里配置 Open with"
+  },
+  {
+    "context": "QInputDialog",
+    "source": "Input"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "At least one bookmark group must remain."
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Close window"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Delete bookmark group"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Delete group \"%1\" and all bookmarks in it?"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Directory requested does not exists."
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Error - Custom action"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Folder not writable"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "No such directory"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Output - Custom action"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Please close window to apply action."
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Remove bookmark"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Remove the selected bookmark(s)?"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Restart to apply settings"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Settings information"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "The destination folder (%1) is not writable"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "Usage"
+  },
+  {
+    "context": "QMessageBox",
+    "source": "You must re-start the application to apply this setting."
+  },
+  {
+    "context": "QMessageBox",
+    "source": "You must restart application to apply theme settings"
+  },
+  {
+    "context": "QObject",
+    "source": "Application name"
+  },
+  {
+    "context": "QObject",
+    "source": "Command (line 1)"
+  },
+  {
+    "context": "QObject",
+    "source": "Command (line 2)"
+  },
+  {
+    "context": "QObject",
+    "source": "Extensions"
+  },
+  {
+    "context": "QObject",
+    "source": "Failed D-Bus connection."
+  },
+  {
+    "context": "QObject",
+    "source": "Failed to eject %1"
+  },
+  {
+    "context": "QObject",
+    "source": "Failed to umount %1"
+  },
+  {
+    "context": "QObject",
+    "source": "File"
+  },
+  {
+    "context": "QObject",
+    "source": "Folder"
+  },
+  {
+    "context": "QObject",
+    "source": "Icon path"
+  },
+  {
+    "context": "QObject",
+    "source": "Paste icon path"
+  },
+  {
+    "context": "QObject",
+    "source": "Storage"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "%1 B"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "%1 GB"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "%1 MB"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "%1 kB"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "%1% of %2 (%3)"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "%1/s ( %2 remaining )"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "0 B"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "100% of %1 (Done)"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Cannot create destination directory."
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Cannot create symbolic link targeting to source."
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Cannot open destination file. Please check permissions."
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Cannot open source file. Please check permissions."
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Cannot read source file."
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Cannot remove source."
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Cannot write destination file."
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Copy Warning"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Copying..."
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Done"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Error code: %1"
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Force: Cannot remove destination file."
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Path to destination does not exist."
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Source directory is a file. Omitting source file."
+  },
+  {
+    "context": "QtCopyDialog",
+    "source": "Source file is a directory. Omitting source directory."
+  },
+  {
+    "context": "QtCopyDialogPrivate",
+    "source": "%1 / %2 dirs"
+  },
+  {
+    "context": "QtCopyDialogPrivate",
+    "source": "%1 / %2 files"
+  },
+  {
+    "context": "QtCopyDialogPrivate",
+    "source": "%1 of %2 completed"
+  },
+  {
+    "context": "QtCopyDialogPrivate",
+    "source": "Copy Warning"
+  },
+  {
+    "context": "QtCopyDialogPrivate",
+    "source": "Source doesn't exist."
+  },
+  {
+    "context": "SettingsDialog",
+    "source": " px"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Action"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Add.."
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Advanced"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Appearance"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Application"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Applications"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Ask"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Ask before file is deleted: "
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Auto mount removable devices"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Auto play audio CD's"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Auto play audio/video DVD's"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Behaviour"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Bookmark group tab size"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Colors on file names"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Command: "
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Configuration file: "
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Configure shortcuts"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Confirmation"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Copy"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Custom Copy of ..."
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Custom actions"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Default mime applications"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Destination"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Directories only"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Drag and Drop ALT action: "
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Drag and Drop CTRL action: "
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Drag and Drop Default action: "
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Drag and Drop SHIFT action: "
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Duplicate shortcuts detected:<p>%1"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Enable Single Click"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Enable path history"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Everything"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Filter ..."
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Folders always first (list)"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Icon view size"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Icon view spacing"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Link"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "List column: Date"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "List column: Folder"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "List column: Format"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "List column: Name"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "List column: Size"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "List row height"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Mime"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Mime Types"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Mime types"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Move"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Move down"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Move up"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "No"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Open with"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Options"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Remove"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Set a custom file name for 'Copy of ...'\n\n"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Set a custom timestamp to use as %3.\n\n"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Settings"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Shortcut"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Shortcuts"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Show \"new tab\" button"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Show Home button"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Show Terminal button"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Show dialog with action's output:"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Show notifications"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Show path in window title"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "System Tray"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Terminal emulator"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Timestamp"
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Use \"Dark Mode\""
+  },
+  {
+    "context": "SettingsDialog",
+    "source": "Warning"
+  },
+  {
+    "context": "SettingsUiStyles",
+    "source": "Each module is one custom context-menu action. "
+  },
+  {
+    "context": "SettingsUiStyles",
+    "source": "Restore defaults"
+  },
+  {
+    "context": "SettingsUiStyles",
+    "source": "Usage…"
+  },
+  {
+    "context": "enWithSettingsWidget",
+    "source": "Video"
+  },
+  {
+    "context": "icondlg",
+    "source": "Select icon"
+  },
+  {
+    "context": "myModel",
+    "source": "Date Modified"
+  },
+  {
+    "context": "myModel",
+    "source": "Folder"
+  },
+  {
+    "context": "myModel",
+    "source": "Format"
+  },
+  {
+    "context": "myModel",
+    "source": "Name"
+  },
+  {
+    "context": "myModel",
+    "source": "Size"
+  },
+  {
+    "context": "tabBar",
+    "source": "Open in new window"
+  },
+  {
+    "context": "uDisks2",
+    "source": "Failed to eject %1"
+  },
+  {
+    "context": "uDisks2",
+    "source": "Failed to umount %1"
+  },
+  {
+    "context": "uDisks2",
+    "source": "Storage"
+  }
+]

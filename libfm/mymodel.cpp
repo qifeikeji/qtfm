@@ -198,10 +198,11 @@ void myModel::setShowListDecorations(bool show)
     m_showListDecorations = show;
     const QModelIndex root;
     const int rows = rowCount(root);
-    if (rows <= 0) {
+    const int cols = columnCount(root);
+    if (rows <= 0 || cols <= 0) {
         return;
     }
-    emit dataChanged(index(0, 0, root), index(rows - 1, COLUMN_NAME, root));
+    emit dataChanged(index(0, 0, root), index(rows - 1, cols - 1, root));
 }
 
 bool myModel::showListDecorations() const
@@ -974,7 +975,7 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
     QVariant data;
     switch (index.column()) {
       case COLUMN_ICON :
-        data = QString();
+        data = m_showListDecorations ? item->fileName() : QString();
         break;
       case COLUMN_NAME :
         data = item->fileName();
@@ -1010,7 +1011,7 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
   }
   // Display file icon
   else if (role == Qt::DecorationRole) {
-    if (index.column() == COLUMN_ICON && !m_showListDecorations) {
+    if (!m_showListDecorations && index.column() == COLUMN_ICON) {
       QString mime;
       if (!item->fileInfo().isDir()) {
         if (realMimeTypes) {
@@ -1024,7 +1025,8 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
       }
       return BundledIcons::iconForListCategory(item->fileInfo(), mime);
     }
-    if (index.column() == COLUMN_NAME && m_showListDecorations) {
+    if (m_showListDecorations
+        && (index.column() == COLUMN_ICON || index.column() == COLUMN_NAME)) {
       return findIcon(item);
     }
     return QVariant();

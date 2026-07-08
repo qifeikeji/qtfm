@@ -29,6 +29,13 @@ public:
     static QPixmap iconPixmap(const QIcon &icon, int size);
     static QString baseNameForSuffix(const QString &suffix);
     static QString baseNameForMime(const QString &mime);
+
+    /** Toolbar/settings SVGs: use icons/.../white/ when dark UI mode is on. */
+    static void setUiDarkMode(bool dark);
+    static bool uiDarkMode();
+    static QString bundledUiSvgResource(const QString &folder, const QString &baseName);
+    static QIcon toolbarIcon(const QString &baseName);
+    static QIcon settingsIcon(const QString &baseName);
 };
 
 #endif

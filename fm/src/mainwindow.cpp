@@ -51,6 +51,7 @@
 
 #include "common.h"
 #include "openwithconfig.h"
+#include "bundledicons.h"
 
 #include "qtcopydialog.h"
 #include "qtfilecopier.h"
@@ -184,9 +185,16 @@ MainWindow::MainWindow()
     }
 
     // Dark theme?
+#if QT_VERSION >= 0x050000
+    BundledIcons::setUiDarkMode(settings->value("darkTheme").toBool());
     if (settings->value("darkTheme").toBool()) {
         qApp->setPalette(Common::darkTheme());
     }
+#else
+    if (settings->value("darkTheme").toBool()) {
+        qApp->setPalette(Common::darkTheme());
+    }
+#endif
 
     // set icon theme — file list uses bundled icons in share/icons/mimes/
 
@@ -603,8 +611,10 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   bookmarkGroupTabSize = settings->value("bookmarkGroupTabSize", 40).toInt();
   zoomList = settings->value("zoomList", 24).toInt();
   zoomDetail = settings->value("zoomDetail", 32).toInt();
-  iconViewGap = settings->value("iconViewGap", 4).toInt();
-  ivdelegate->setCellGap(iconViewGap);
+  const int legacyGap = settings->value("iconViewGap", 4).toInt();
+  iconViewGapH = settings->value("iconViewGapH", legacyGap).toInt();
+  iconViewGapV = settings->value("iconViewGapV", legacyGap).toInt();
+  ivdelegate->setCellGaps(iconViewGapH, iconViewGapV);
   updateGrid();
   detailTree->setIconSize(QSize(zoomDetail, zoomDetail));
   tree->setIconSize(QSize(zoomTree, zoomTree));
@@ -700,6 +710,17 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   // 'copy of' filename
   copyXof = settings->value("copyXof", COPY_X_OF).toString();
   copyXofTS = settings->value("copyXofTS", COPY_X_TS).toString();
+
+#if QT_VERSION >= 0x050000
+  const bool darkUi = settings->value("darkTheme").toBool();
+  BundledIcons::setUiDarkMode(darkUi);
+  if (darkUi) {
+    qApp->setPalette(Common::darkTheme());
+  } else {
+    qApp->setPalette(qApp->style()->standardPalette());
+  }
+  refreshBundledUiIcons();
+#endif
 }
 
 void MainWindow::firstRunBookmarks(bool isFirstRun)
@@ -1579,7 +1600,9 @@ void MainWindow::writeSettings() {
                      bookmarkGroupBar ? bookmarkGroupBar->tabButtonSize() : bookmarkGroupTabSize);
   settings->setValue("zoomList", zoomList);
   settings->setValue("zoomDetail", zoomDetail);
-  settings->setValue("iconViewGap", iconViewGap);
+  settings->setValue("iconViewGapH", iconViewGapH);
+  settings->setValue("iconViewGapV", iconViewGapV);
+  settings->setValue("iconViewGap", iconViewGapH);
   settings->setValue("sortBy", currentSortColumn);
   settings->setValue("sortOrder", currentSortOrder);
   settings->setValue("showThumbs", thumbsAct->isChecked());
@@ -1866,6 +1889,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
       popup->addAction(backAct);
       popup->addAction(upAct);
       popup->addAction(homeAct);
+      popup->addAction(refreshAct);
       popup->addSeparator();
       popup->addAction(newDirAct);
       popup->addAction(newFileAct);
@@ -2196,8 +2220,9 @@ void MainWindow::openInApp()
 void MainWindow::updateGrid()
 {
     if (list->viewMode() != QListView::IconMode) { return; }
-    ivdelegate->setCellGap(iconViewGap);
-    const QSize grid = IconViewDelegate::iconGridSize(zoom, iconViewGap, fontMetrics());
+    ivdelegate->setCellGaps(iconViewGapH, iconViewGapV);
+    const QSize grid = IconViewDelegate::iconGridSize(
+        zoom, iconViewGapH, iconViewGapV, fontMetrics());
     list->setIconSize(QSize(zoom, zoom));
     if (list->gridSize() != grid) {
         list->setGridSize(grid);

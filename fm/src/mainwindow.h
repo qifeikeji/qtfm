@@ -215,6 +215,8 @@ private slots:
 private:
     void createActions();
     void createActionIcons();
+    void applyBundledToolbarIcons();
+    void refreshBundledUiIcons();
     void createMenus();
     void createToolBars();
     void writeSettings();
@@ -227,7 +229,8 @@ private:
     int zoomDetail;
     int zoomBook;
     int bookmarkGroupTabSize;
-    int iconViewGap = 4;
+    int iconViewGapH = 4;
+    int iconViewGapV = 4;
     int currentView;        // 0=list, 1=icons, 2=details
     int currentSortColumn;  // COLUMN_NAME, COLUMN_SIZE, COLUMN_DATE, ...
     Qt::SortOrder currentSortOrder;

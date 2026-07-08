@@ -56,12 +56,11 @@ void bookmarkmodel::addBookmark(QString name,
                                 const QString &groupId)
 {
     if (path.isEmpty() && !isMedia) { //add separator
-        QStandardItem *item = new QStandardItem(BundledIcons::emptyIcon(), "");
-        item->setData(QBrush(QColor(0, 0, 0, 40)), Qt::BackgroundRole);
+        QStandardItem *item = new QStandardItem(QString());
+        item->setIcon(QIcon());
         QFlags<Qt::ItemFlag> flags = item->flags();
         flags ^= Qt::ItemIsEditable; //not editable
         item->setFlags(flags);
-        item->setFont(QFont("sans", 8)); //force size to prevent 2 rows of background tiling
         item->setData(m_activeGroupId, BOOKMARK_GROUP);
         this->appendRow(item);
         return;
