@@ -26,7 +26,7 @@
 #else
 #endif
 
-#include "common.h"
+#include "bundledicons.h"
 
 //---------------------------------------------------------------------------
 icondlg::icondlg()
@@ -47,15 +47,7 @@ icondlg::icondlg()
     layout->addWidget(buttons);
     setLayout(layout);
 
-    QStringList icons = Common::iconLocations(qApp->applicationFilePath());
-    for (int i=0;i<icons.size();++i) {
-        QSettings inherits(icons.at(i) + "/" + QIcon::themeName() + "/index.theme",QSettings::IniFormat,this);
-        foreach(QString theme, inherits.value("Icon Theme/Inherits").toStringList()) {
-            themes.prepend(theme);
-            themes.append(QIcon::themeName());
-        }
-    }
-
+    fileNames = BundledIcons::availableIconBaseNames();
     thread.setFuture(QtConcurrent::run(this,&icondlg::scanTheme));
     connect(&thread,SIGNAL(finished()),this,SLOT(loadIcons()));
 }
@@ -63,20 +55,7 @@ icondlg::icondlg()
 //---------------------------------------------------------------------------
 void icondlg::scanTheme()
 {
-    foreach(QString theme, themes) {
-        //qDebug() << theme;
-        QStringList icons = Common::iconLocations(qApp->applicationFilePath());
-        for (int i=0;i<icons.size();++i) {
-            QDirIterator it(icons.at(i) + "/" + theme, QStringList("*.png"), QDir::Files | QDir::NoDotAndDotDot | QDir::NoSymLinks, QDirIterator::Subdirectories);
-            while (it.hasNext()) {
-                it.next();
-                fileNames.append(QFileInfo(it.fileName()).baseName());
-            }
-        }
-    }
-
-    fileNames.removeDuplicates();
-    fileNames.sort();
+    // Names already collected in constructor; keep hook for async UI batching.
 }
 
 //---------------------------------------------------------------------------
@@ -86,7 +65,7 @@ void icondlg::loadIcons()
 
     foreach(QString name, fileNames)
     {
-        new QListWidgetItem(QIcon::fromTheme(name),name,iconList);
+        new QListWidgetItem(BundledIcons::iconByName(name), name, iconList);
         fileNames.removeOne(name);
         counter++;
         if(counter == 20)

@@ -27,6 +27,7 @@
 #include <QMessageBox>
 #include <QImage>
 #include "fileutils.h"
+#include "bundledicons.h"
 
 #ifdef WITH_MAGICK
 #include <Magick++.h>
@@ -1207,7 +1208,7 @@ QVariant myModel::findIcon(myModelItem *item) const {
     if (mimeIcons->contains(suffix)) {
       theIcon = mimeIcons->value(suffix);
     } else {
-      theIcon = QIcon::fromTheme("application-x-executable", theIcon);
+      theIcon = BundledIcons::iconForExecutable();
     }
   }
   // If file has unknown suffix (icon hasn't been assigned)
@@ -1224,8 +1225,8 @@ QVariant myModel::findIcon(myModelItem *item) const {
       mimeGlob->insert(suffix.toLower(), mimeType);
     }
 
-    // Load the icon
-    theIcon = FileUtils::searchMimeIcon(mimeType);
+    // Load icon by extension (built-in set under share/icons/mimes/)
+    theIcon = BundledIcons::iconForFileSuffix(suffix);
   }
 
   // Insert icon to the list of icons

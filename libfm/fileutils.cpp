@@ -2,7 +2,6 @@
 #include <QDirIterator>
 #include <QUrl>
 #include <QApplication>
-#include <QDebug>
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
@@ -11,6 +10,7 @@
 #endif
 
 #include "common.h"
+#include "bundledicons.h"
 
 /**
  * @brief Recursive removes file or directory
@@ -170,126 +170,14 @@ QString FileUtils::getRealSuffix(const QString &name) {
  * @return icon
  */
 QIcon FileUtils::searchMimeIcon(QString mime, const QIcon &defaultIcon) {
-  QIcon icon = QIcon::fromTheme(mime.replace("/", "-"));
-  if (icon.isNull()) {
-      if (mime.startsWith("image")) {
-          icon = QIcon::fromTheme("image-x-generic");
-      } else if(mime.startsWith("audio")) {
-          icon = QIcon::fromTheme("audio-x-generic");
-      } else if(mime.startsWith("video")) {
-          icon = QIcon::fromTheme("video-x-generic");
-      } else if (mime.contains("-tar") ||
-                 mime.contains("compressed") ||
-                 mime.contains("xz") ||
-                 mime.contains("bz2") ||
-                 mime.contains("gz") ||
-                 mime.contains("rar") ||
-                 mime.contains("zip") ||
-                 mime.contains("rpm") ||
-                 mime.contains("deb")) {
-          icon = QIcon::fromTheme("package-x-generic");
-      } else if (mime.endsWith("cd-image") ||
-                 mime.endsWith("apple-diskimage") ||
-                 mime.endsWith("disk-image") ||
-                 mime.endsWith("saturn-rom") ||
-                 mime.endsWith("wii-rom") ||
-                 mime.endsWith("gamecube-rom") ||
-                 mime.endsWith("appimage")) {
-          icon = QIcon::fromTheme("media-optical");
-      } else if (mime.contains("office")) {
-          if (mime.contains("document")) {
-              icon = QIcon::fromTheme("x-office-document");
-          }
-          else if (mime.contains("drawing")) {
-              icon = QIcon::fromTheme("x-office-drawing");
-          }
-          else if (mime.contains("presentation")) {
-              icon = QIcon::fromTheme("x-office-presentation");
-          }
-          else if (mime.contains("spreadsheet")) {
-              icon = QIcon::fromTheme("x-office-spreadsheet");
-          }
-      } else if (mime.startsWith("text")) {
-          if (mime.contains("python") ||
-              mime.contains("perl") ||
-              mime.contains("php") ||
-              mime.contains("ruby") ||
-              mime.contains("script") ||
-              mime.contains("shell"))
-          {
-              icon = QIcon::fromTheme("text-x-script");
-          } else if (mime.contains("html")) {
-              icon = QIcon::fromTheme("text-html");
-          } else {
-              icon = QIcon::fromTheme("text-x-generic");
-          }
-      } else if (mime.endsWith("-executable")) {
-          icon = QIcon::fromTheme("application-x-executable");
-      } else {
-          icon = QIcon::fromTheme("text-x-generic");
-      }
-  }
+  const QIcon icon = BundledIcons::iconForMimeType(mime);
   return icon.isNull() ? defaultIcon : icon;
 }
 //---------------------------------------------------------------------------
 
-static QString directoryThemeIconName(const QFileInfo &info)
-{
-    const QString name = info.fileName();
-    if (name.isEmpty()) {
-        return QStringLiteral("folder");
-    }
-    if (name == QLatin1String("home")) {
-        return QStringLiteral("folder-home");
-    }
-    if (name == QLatin1String("Desktop") || name == QLatin1String("desktop")) {
-        return QStringLiteral("folder-desktop");
-    }
-    if (name == QLatin1String("Documents")) {
-        return QStringLiteral("folder-documents");
-    }
-    if (name == QLatin1String("Downloads") || name == QLatin1String("Download")) {
-        return QStringLiteral("folder-download");
-    }
-    if (name == QLatin1String("Music")) {
-        return QStringLiteral("folder-music");
-    }
-    if (name == QLatin1String("Pictures")) {
-        return QStringLiteral("folder-pictures");
-    }
-    if (name == QLatin1String("Videos")) {
-        return QStringLiteral("folder-videos");
-    }
-    if (name == QLatin1String("Templates")) {
-        return QStringLiteral("folder-templates");
-    }
-    if (name == QLatin1String("Public")) {
-        return QStringLiteral("folder-publicshare");
-    }
-    if (name == QLatin1String("root")) {
-        return QStringLiteral("folder-red");
-    }
-    if (info.isSymLink()) {
-        return QStringLiteral("folder-visiting");
-    }
-    return QStringLiteral("folder");
-}
-
 QIcon FileUtils::searchFolderIcon(const QFileInfo &info, const QIcon &defaultIcon)
 {
-    const QString primary = directoryThemeIconName(info);
-    QIcon icon = QIcon::fromTheme(primary);
-    if (icon.isNull() && primary != QLatin1String("folder")) {
-        icon = QIcon::fromTheme(QStringLiteral("folder"));
-    }
-    static bool loggedOnce = false;
-    if (!loggedOnce) {
-        loggedOnce = true;
-        qWarning() << "[icon-theme] first folder lookup, theme=" << QIcon::themeName()
-                   << "wanted" << primary
-                   << "found theme icon?" << !icon.isNull()
-                   << "availableSizes" << icon.availableSizes();
-    }
+    const QIcon icon = BundledIcons::iconForFolder(info);
     return icon.isNull() ? defaultIcon : icon;
 }
 //---------------------------------------------------------------------------
@@ -301,11 +189,11 @@ QIcon FileUtils::searchFolderIcon(const QFileInfo &info, const QIcon &defaultIco
  */
 QIcon FileUtils::searchGenericIcon(const QString &category,
                                    const QIcon &defaultIcon) {
-  QIcon icon = QIcon::fromTheme(category + "-generic");
+  QIcon icon = BundledIcons::iconByName(category + "-generic");
   if (!icon.isNull()) {
     return icon;
   }
-  icon = QIcon::fromTheme(category + "-x-generic");
+  icon = BundledIcons::iconByName(category + "-x-generic");
   return icon.isNull() ? defaultIcon : icon;
 }
 //---------------------------------------------------------------------------
@@ -319,8 +207,10 @@ QIcon FileUtils::searchGenericIcon(const QString &category,
 QIcon FileUtils::searchAppIcon(const DesktopFile &app, const QIcon &defaultIcon)
 {
   if (QFile::exists(app.getIcon())) { return QIcon(app.getIcon()); }
-  QIcon icon(Common::findIcon(qApp->applicationFilePath(), QIcon::themeName(), app.getIcon()));
+  QIcon icon = BundledIcons::iconByName(app.getIcon());
   if (!icon.isNull()) { return icon; }
+  const QString path = Common::findIcon(qApp->applicationFilePath(), QString(), app.getIcon());
+  if (!path.isEmpty()) { return QIcon(path); }
   return defaultIcon;
 }
 //---------------------------------------------------------------------------

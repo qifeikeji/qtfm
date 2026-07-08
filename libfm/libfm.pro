@@ -11,6 +11,7 @@ SOURCES += \
     customactionsmanager.cpp \
     desktopfile.cpp \
     fileutils.cpp \
+    bundledicons.cpp \
     mimeutils.cpp \
     properties.cpp \
     icondlg.cpp \
@@ -33,6 +34,7 @@ HEADERS += \
     customactionsmanager.h \
     desktopfile.h \
     fileutils.h \
+    bundledicons.h \
     mimeutils.h \
     properties.h \
     common.h \

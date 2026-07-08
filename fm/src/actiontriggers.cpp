@@ -798,9 +798,6 @@ void MainWindow::showEditDialog() {
   // Deletes current list of custom actions
   customActManager->freeActions();
 
-  // Loads current icon theme
-  QString oldTheme = settings->value("fallbackTheme").toString();
-
   // save settings
   writeSettings();
 
@@ -814,14 +811,9 @@ void MainWindow::showEditDialog() {
                  false /* don't reload tabs state */,
                  false /* don't reload thumb state */);
 
-    QString newTheme = settings->value("fallbackTheme").toString();
-    if (oldTheme.compare(newTheme, Qt::CaseInsensitive) != 0) {
-      Common::applyIconThemeName(newTheme, qApp->applicationFilePath());
-      settings->setValue("fallbackTheme", QIcon::themeName());
-      modelList->clearIconCache();
-      modelList->refreshItems();
-      customActManager->readActions();
-    }
+    modelList->clearIconCache();
+    modelList->refreshItems();
+    customActManager->readActions();
   }
 
   // Reads custom actions

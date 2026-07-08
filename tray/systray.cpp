@@ -20,6 +20,7 @@
  */
 
 #include "systray.h"
+#include "bundledicons.h"
 #include "common.h"
 #include "desktopfile.h"
 
@@ -41,14 +42,13 @@ SysTray::SysTray(QObject *parent)
     , mimeUtilsPtr(nullptr)
     , autoMount(false)
 {
-    // set icon theme
-    Common::setupIconTheme(qApp->applicationFilePath());
-
     menu = new QMenu();
 
-    disktray = new QSystemTrayIcon(QIcon::fromTheme("drive-removable-media",
-                                                    QIcon(":/icons/drive-removable-media.png")),
-                                   this);
+    QIcon trayIcon = BundledIcons::iconByName(QStringLiteral("drive-removable-media"));
+    if (trayIcon.isNull()) {
+        trayIcon = QIcon(QStringLiteral(":/icons/drive-removable-media.png"));
+    }
+    disktray = new QSystemTrayIcon(trayIcon, this);
     disktray->setToolTip(tr("Removable Devices"));
 
     connect(disktray,
@@ -143,15 +143,26 @@ void SysTray::generateContextMenu()
         menu->addAction(deviceAction);
 
         if (device.value()->mountpoint.isEmpty()) {
-            deviceAction->setIcon(QIcon::fromTheme(device.value()->isOptical?"drive-optical":"drive-removable-media",
-                                                   QIcon(device.value()->isOptical?":/icons/drive-optical.png":":/icons/drive-removable-media.png")));
+            QIcon devIcon = BundledIcons::iconByName(device.value()->isOptical
+                ? QStringLiteral("drive-optical") : QStringLiteral("drive-removable-media"));
+            if (devIcon.isNull()) {
+                devIcon = QIcon(device.value()->isOptical ? ":/icons/drive-optical.png"
+                                                          : ":/icons/drive-removable-media.png");
+            }
+            deviceAction->setIcon(devIcon);
             bool hasAudio = device.value()->opticalAudioTracks>0?true:false;
             bool hasData = device.value()->opticalDataTracks>0?true:false;
             if (device.value()->isBlankDisc ||
-                (hasAudio && !hasData)) { deviceAction->setIcon(QIcon::fromTheme("media-eject",
-                                                                                 QIcon(":/icons/media-eject.png"))); }
-        } else { deviceAction->setIcon(QIcon::fromTheme("media-eject",
-                                                        QIcon(":/icons/media-eject.png"))); }
+                (hasAudio && !hasData)) {
+                QIcon ejectIcon = BundledIcons::iconByName(QStringLiteral("media-eject"));
+                if (ejectIcon.isNull()) { ejectIcon = QIcon(":/icons/media-eject.png"); }
+                deviceAction->setIcon(ejectIcon);
+            }
+        } else {
+            QIcon ejectIcon = BundledIcons::iconByName(QStringLiteral("media-eject"));
+            if (ejectIcon.isNull()) { ejectIcon = QIcon(":/icons/media-eject.png"); }
+            deviceAction->setIcon(ejectIcon);
+        }
     }
 
     //qDebug() << menu->actions();

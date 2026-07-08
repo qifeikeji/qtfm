@@ -13,6 +13,7 @@
 #include <QApplication>
 
 #include "common.h"
+#include "bundledicons.h"
 
 /**
  * @brief Creates settings dialog
@@ -180,9 +181,6 @@ QWidget *SettingsDialog::createAppearanceSettings()
     // Appearance
     QGroupBox* grpAppear = new QGroupBox(tr("Appearance"), widget);
     QFormLayout* layoutAppear = new QFormLayout(grpAppear);
-#ifndef Q_OS_MAC
-    cmbIconTheme = new QComboBox(grpAppear);
-#endif
 #if QT_VERSION >= 0x050000
     checkDarkTheme = new QCheckBox(grpAppear);
 #endif
@@ -192,9 +190,6 @@ QWidget *SettingsDialog::createAppearanceSettings()
     showNewTabButton = new QCheckBox(grpAppear);
     showTerminalButton = new QCheckBox(grpAppear);
 
-#ifndef Q_OS_MAC
-    layoutAppear->addRow(tr("Fallback Icon theme:"), cmbIconTheme);
-#endif
 #if QT_VERSION >= 0x050000
     layoutAppear->addRow(tr("Use \"Dark Mode\""), checkDarkTheme);
 #endif
@@ -718,24 +713,6 @@ void SettingsDialog::readSettings() {
 #endif
   mimeUtilsPtr->setDefaultsFileName(cmbDefaultMimeApps->currentText());
 
-  // Load icon themes
-  QString currentTheme = settingsPtr->value("fallbackTheme").toString();
-  QStringList iconThemes;
-  iconThemes << Common::getIconThemes(qApp->applicationFilePath());
-  cmbIconTheme->addItems(iconThemes);
-  int themeIndex = iconThemes.indexOf(currentTheme);
-  if (themeIndex < 0) {
-    for (int i = 0; i < iconThemes.size(); ++i) {
-      if (iconThemes.at(i).compare(currentTheme, Qt::CaseInsensitive) == 0) {
-        themeIndex = i;
-        break;
-      }
-    }
-  }
-  if (themeIndex < 0 && !iconThemes.isEmpty()) {
-    themeIndex = 0;
-  }
-  cmbIconTheme->setCurrentIndex(themeIndex);
 #endif
 
   // Read custom actions
@@ -764,7 +741,7 @@ void SettingsDialog::readSettings() {
   for (int x = 0; x < actionsWidget->topLevelItemCount(); x++) {
     QApplication::processEvents();
     QString name = actionsWidget->topLevelItem(x)->text(2);
-    actionsWidget->topLevelItem(x)->setIcon(2, QIcon::fromTheme(name));
+    actionsWidget->topLevelItem(x)->setIcon(2, BundledIcons::iconByName(name));
   }
 
   connect(comboSingleClick, SIGNAL(currentIndexChanged(int)), this, SLOT(restartToApply(int)));
@@ -824,7 +801,7 @@ void SettingsDialog::readShortcuts() {
     list << srcItem->text(1) << text;
     QTreeWidgetItem *item = new QTreeWidgetItem(shortsWidget, list);
     item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled);
-    item->setIcon(0, QIcon::fromTheme(srcItem->text(2)));
+    item->setIcon(0, BundledIcons::iconByName(srcItem->text(2)));
     if (item->icon(0).isNull()) {
       item->setIcon(0, blank);
     }
@@ -860,7 +837,7 @@ void SettingsDialog::loadMimes(int section) {
   QStringList mimes = mimeUtilsPtr->getMimeTypes();
 
   // Default icon
-  QIcon defaultIcon = QIcon::fromTheme("text-x-generic");
+  QIcon defaultIcon = BundledIcons::iconByName(QStringLiteral("text"));
 
   // Mime categories and their icons
   QMap<QString, QTreeWidgetItem*> categories;
@@ -942,21 +919,6 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("trayAutoMount", checkAutoMount->isChecked());
   settingsPtr->setValue("autoPlayDVD", checkDVD->isChecked());
   settingsPtr->setValue("defMimeAppsFile", cmbDefaultMimeApps->currentText());
-
-  const QString oldTheme = settingsPtr->value("fallbackTheme").toString();
-  QString newTheme = cmbIconTheme->currentText();
-  const QString canonical = Common::resolveIconThemeDirectoryName(
-      newTheme, qApp->applicationFilePath());
-  if (!canonical.isEmpty()) {
-    newTheme = canonical;
-  }
-  settingsPtr->setValue("fallbackTheme", newTheme);
-  if (oldTheme != newTheme) {
-      settingsPtr->setValue("clearCache", true);
-      QMessageBox::warning(this, tr("Restart to apply settings"),
-                           tr("Icon theme changed. Restart QtFM to refresh all file icons, "
-                              "or use Clear cache from the Edit menu after restart."));
-  }
 #endif
 
 #if QT_VERSION >= 0x050000
@@ -1058,7 +1020,7 @@ void SettingsDialog::getIcon(QTreeWidgetItem* item, int column) {
     icondlg *icons = new icondlg;
     if (icons->exec() == 1) {
       item->setText(column, icons->result);
-      item->setIcon(column, QIcon::fromTheme(icons->result));
+      item->setIcon(column, BundledIcons::iconByName(icons->result));
     }
     delete icons;
   }
@@ -1135,7 +1097,7 @@ void SettingsDialog::clearCustomAction()
         item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEditable | Qt::ItemIsEnabled
                        | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable);
         item->setCheckState(3, Qt::Unchecked);
-        item->setIcon(2, QIcon::fromTheme(defActions.at(i).at(2)));
+        item->setIcon(2, BundledIcons::iconByName(defActions.at(i).at(2)));
     }
     readShortcuts();
 }

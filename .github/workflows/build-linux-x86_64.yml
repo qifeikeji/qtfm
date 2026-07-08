@@ -111,9 +111,6 @@ jobs:
             --plugin qt \
             "${EXTRA_LIBS[@]}"
 
-          # Use Qt's Freedesktop icon loader; GTK platform theme ignores QIcon::setThemeName.
-          find "${APPDIR}" -name 'libqgtk3.so' -print -delete || true
-
           # gzip squashfs: works with older squashfuse on Arch/Manjaro (zstd needs newer tools)
           ARCH=x86_64 ./appimagetool.AppImage --comp gzip --no-appstream \
             "${APPDIR}" "qtfm-${QTFM_VERSION}-x86_64.AppImage"

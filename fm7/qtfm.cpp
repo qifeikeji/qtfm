@@ -1,5 +1,6 @@
 #include "qtfm.h"
 #include "common.h"
+#include "bundledicons.h"
 
 #include <QMdiSubWindow>
 #include <QApplication>
@@ -27,14 +28,11 @@ QtFM::QtFM(QWidget *parent)
     , bookmarksList(Q_NULLPTR)
     , modelBookmarks(Q_NULLPTR)
 {
-    // setup icon theme
-    QIcon::setThemeSearchPaths(Common::iconPaths(qApp->applicationDirPath()));
-    Common::setupIconTheme(qApp->applicationFilePath());
-
-    // set window icon and title
-    setWindowIcon(QIcon::fromTheme("folder",
-                                   QIcon::fromTheme("qtfm",
-                                                    QIcon(":/icons/app.svg"))));
+    QIcon winIcon = BundledIcons::iconByName(QStringLiteral("folder"));
+    if (winIcon.isNull()) {
+        winIcon = QIcon(QStringLiteral(":/icons/app.svg"));
+    }
+    setWindowIcon(winIcon);
     setWindowTitle(tr("Qt File Manager"));
 
     // setup mime handler

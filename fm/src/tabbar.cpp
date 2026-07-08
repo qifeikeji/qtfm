@@ -19,8 +19,8 @@
 *
 ****************************************************************************/
 
-#include <QtGui>
 #include "tabbar.h"
+#include "bundledicons.h"
 
 //---------------------------------------------------------------------------
 tabBar::tabBar(QHash<QString,QIcon> * icons)
@@ -118,7 +118,7 @@ int tabBar::addNewTab(QString path, int type)
 void tabBar::setIcon(int index)
 {
     if(folderIcons->contains(tabText(index))) setTabIcon(index,folderIcons->value(tabText(index)));
-    else setTabIcon(index,QIcon::fromTheme("folder"));
+    else setTabIcon(index, BundledIcons::iconByName(QStringLiteral("folder")));
 }
 
 //---------------------------------------------------------------------------

@@ -27,12 +27,16 @@ SOURCES += \
     src/actiondefs.cpp \
     src/actiontriggers.cpp
 
-RESOURCES += $${top_srcdir}/share/$${TARGET}.qrc
+RESOURCES += $${top_srcdir}/share/$${TARGET}.qrc \
+              $${top_srcdir}/share/mimes.qrc
 
 macx {
     LIBS += -L$${top_builddir}/libfm -lQtFM
     DEFINES += NO_DBUS NO_UDISKS
     RESOURCES += bundle/adwaita.qrc
+    mimes_bundle.files = $$files($${top_srcdir}/share/icons/mimes/*.*)
+    mimes_bundle.path = Contents/Resources/mimes
+    QMAKE_BUNDLE_DATA += mimes_bundle
     ICON = $${top_srcdir}/share/images/QtFM.icns
     QMAKE_INFO_PLIST = $${top_srcdir}/share/Info.plist
 }
@@ -54,6 +58,11 @@ unix:!macx {
     hicolor.files = $${top_srcdir}/share/hicolor
     hicolor.path = $${PREFIX}/share/icons
     INSTALLS += hicolor
+
+    qtfm_mimes.files = $$files($${top_srcdir}/share/icons/mimes/*.svg) \
+                       $$files($${top_srcdir}/share/icons/mimes/*.png)
+    qtfm_mimes.path = $${PREFIX}/share/qtfm/mimes
+    INSTALLS += qtfm_mimes
 
     CONFIG(no_dbus) {
         DEFINES += NO_DBUS

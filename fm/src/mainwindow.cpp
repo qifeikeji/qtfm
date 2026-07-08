@@ -53,11 +53,6 @@
 
 MainWindow::MainWindow()
 {
-    // Icon theme search paths (host + AppImage bundle)
-    Common::installIconThemeSearchPaths(qApp->applicationDirPath());
-    qDebug() << "using icon theme search path" << QIcon::themeSearchPaths();
-
-    // libdisks
 #ifndef NO_UDISKS
     disks = new Disks(this);
     connect(disks, SIGNAL(updatedDevices()), this, SLOT(populateMedia()));
@@ -108,8 +103,7 @@ MainWindow::MainWindow()
         qApp->setPalette(Common::darkTheme());
     }
 
-    // set icon theme
-    Common::setupIconTheme(qApp->applicationFilePath());
+    // set icon theme — file list uses bundled icons in share/icons/mimes/
 
     // Create mime utils
     mimeUtils = new MimeUtils(this);

@@ -6,6 +6,7 @@
 */
 
 #include "common.h"
+#include "bundledicons.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -26,7 +27,6 @@
 #include <QPainter>
 #include <QBuffer>
 #include <QImage>
-#include <QSet>
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
@@ -37,257 +37,6 @@
 #ifdef __NetBSD__
 #include <sys/statvfs.h>
 #endif
-
-namespace {
-
-bool themeHasIconFiles(const QString &themePath)
-{
-    QDirIterator it(themePath,
-                     QStringList() << "*.png" << "*.svg" << "*.xpm",
-                     QDir::Files,
-                     QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        it.next();
-        if (it.fileName() == "index.theme") {
-            continue;
-        }
-        return true;
-    }
-    return false;
-}
-
-QStringList parseThemeIndexList(const QSettings &idx, const char *key)
-{
-    QString raw = idx.value(QString::fromLatin1(key)).toString();
-    if (raw.isEmpty()) {
-        return QStringList();
-    }
-    raw.replace(QLatin1Char(';'), QLatin1Char(','));
-    QStringList parts = raw.split(QLatin1Char(','), Qt::SkipEmptyParts);
-    for (QString &part : parts) {
-        part = part.trimmed();
-    }
-    return parts;
-}
-
-bool themeDirectoriesExist(const QString &themePath, const QStringList &directories)
-{
-    for (const QString &dirName : directories) {
-        if (QDir(themePath + QLatin1Char('/') + dirName).exists()) {
-            return true;
-        }
-    }
-    return false;
-}
-
-QString findThemeOnDisk(const QString &themeName, const QStringList &iconRoots)
-{
-    if (themeName.isEmpty()) {
-        return QString();
-    }
-    for (const QString &root : iconRoots) {
-        QDir rootDir(root);
-        if (!rootDir.exists()) {
-            continue;
-        }
-        const QStringList entries = rootDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-        for (const QString &entry : entries) {
-            if (entry.compare(themeName, Qt::CaseInsensitive) == 0) {
-                return entry;
-            }
-        }
-    }
-    return QString();
-}
-
-bool inheritedThemeProvidesIcons(const QString &inheritName,
-                                 const QStringList &iconRoots,
-                                 int depth)
-{
-    if (inheritName.isEmpty() || depth > 6) {
-        return false;
-    }
-    const QString resolved = findThemeOnDisk(inheritName, iconRoots);
-    if (resolved.isEmpty()) {
-        return false;
-    }
-    for (const QString &root : iconRoots) {
-        const QString path = root + QLatin1Char('/') + resolved;
-        if (!QDir(path).exists()) {
-            continue;
-        }
-        if (themeHasIconFiles(path)) {
-            return true;
-        }
-        QSettings idx(path + QStringLiteral("/index.theme"), QSettings::IniFormat);
-        idx.beginGroup(QStringLiteral("Icon Theme"));
-        const QStringList inherits = parseThemeIndexList(idx, "Inherits");
-        idx.endGroup();
-        for (const QString &parent : inherits) {
-            if (inheritedThemeProvidesIcons(parent, iconRoots, depth + 1)) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-QString resolveUsableThemeName(const QString &themeName, const QStringList &iconRoots)
-{
-    const QString resolved = findThemeOnDisk(themeName, iconRoots);
-    if (resolved.isEmpty()) {
-        return QString();
-    }
-    for (const QString &root : iconRoots) {
-        const QString path = root + QLatin1Char('/') + resolved;
-        if (QDir(path).exists() && Common::isValidIconTheme(path)) {
-            return resolved;
-        }
-    }
-    return QString();
-}
-
-QString findMacIconsTheme(const QStringList &iconRoots)
-{
-    static const QStringList preferred = {
-        QStringLiteral("MacIcons"),
-        QStringLiteral("macicons"),
-        QStringLiteral("MacOS"),
-        QStringLiteral("McMunki-macOS"),
-    };
-    for (const QString &candidate : preferred) {
-        for (const QString &root : iconRoots) {
-            const QString resolved = findThemeOnDisk(candidate, QStringList() << root);
-            if (resolved.isEmpty()) {
-                continue;
-            }
-            const QString path = root + QLatin1Char('/') + resolved;
-            if (Common::isValidIconTheme(path)) {
-                return resolved;
-            }
-        }
-    }
-    for (const QString &root : iconRoots) {
-        QDir rootDir(root);
-        if (!rootDir.exists()) {
-            continue;
-        }
-        const QStringList entries = rootDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
-        for (const QString &entry : entries) {
-            if (entry.contains(QStringLiteral("macicon"), Qt::CaseInsensitive)
-                || entry.contains(QStringLiteral("MacIcons"), Qt::CaseInsensitive)) {
-                const QString path = root + QLatin1Char('/') + entry;
-                if (Common::isValidIconTheme(path)) {
-                    return entry;
-                }
-            }
-        }
-    }
-    return QString();
-}
-
-} // namespace
-
-bool Common::isValidIconTheme(const QString &themeDirPath)
-{
-    const QString indexPath = themeDirPath + QStringLiteral("/index.theme");
-    if (!QFile::exists(indexPath)) {
-        return false;
-    }
-
-    QFile indexFile(indexPath);
-    if (!indexFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        return false;
-    }
-    const QString head = QString::fromUtf8(indexFile.read(4096));
-    indexFile.close();
-
-    if (head.contains(QStringLiteral("[Desktop Entry]"))
-        && !head.contains(QStringLiteral("[Icon Theme]"))) {
-        return false;
-    }
-    if (!head.contains(QStringLiteral("[Icon Theme]"))) {
-        return false;
-    }
-
-    QSettings idx(indexPath, QSettings::IniFormat);
-    idx.beginGroup(QStringLiteral("Icon Theme"));
-    if (idx.value(QStringLiteral("Hidden")).toBool()) {
-        return false;
-    }
-    const QStringList directories = parseThemeIndexList(idx, "Directories");
-    const QStringList inherits = parseThemeIndexList(idx, "Inherits");
-    idx.endGroup();
-
-    const bool hasDirs = themeDirectoriesExist(themeDirPath, directories);
-    const bool hasIcons = themeHasIconFiles(themeDirPath);
-
-    if (hasIcons) {
-        return true;
-    }
-
-    if (directories.isEmpty() && inherits.isEmpty()) {
-        return false;
-    }
-    if (!directories.isEmpty() && !hasDirs && inherits.isEmpty()) {
-        return false;
-    }
-    if (!hasIcons && inherits.isEmpty()) {
-        return false;
-    }
-    if (!hasIcons && !inherits.isEmpty()) {
-        const QStringList roots = Common::iconLocations(QString());
-        for (const QString &parent : inherits) {
-            if (inheritedThemeProvidesIcons(parent, roots, 0)) {
-                return true;
-            }
-        }
-        return false;
-    }
-    return true;
-}
-
-QString Common::resolveIconThemeDirectoryName(const QString &themeName,
-                                              const QString &appPath)
-{
-    installIconThemeSearchPaths(appPath);
-    return resolveUsableThemeName(themeName, iconLocations(appPath));
-}
-
-void Common::applyIconThemeName(const QString &themeName, const QString &appPath)
-{
-    installIconThemeSearchPaths(appPath);
-    const QStringList roots = iconLocations(appPath);
-    QString resolved = resolveUsableThemeName(themeName, roots);
-
-    if (resolved.isEmpty() && !themeName.isEmpty()) {
-        const QString onDisk = findThemeOnDisk(themeName, roots);
-        if (!onDisk.isEmpty()) {
-            for (const QString &root : roots) {
-                const QString path = root + QLatin1Char('/') + onDisk;
-                if (QDir(path).exists()) {
-                    qWarning() << "icon theme is not a usable icon set:" << onDisk << path;
-                    break;
-                }
-            }
-        } else {
-            qWarning() << "icon theme directory not found:" << themeName;
-        }
-        resolved = findMacIconsTheme(roots);
-    }
-
-    if (resolved.isEmpty()) {
-        resolved = QStringLiteral("hicolor");
-    }
-
-    QIcon::setThemeName(resolved);
-
-    qWarning() << "[icon-theme] requested" << themeName
-               << "resolved" << resolved
-               << "search paths" << QIcon::themeSearchPaths()
-               << "QIcon::themeName() now" << QIcon::themeName()
-               << "hasThemeIcon(folder)" << QIcon::hasThemeIcon(QStringLiteral("folder"));
-}
 
 QString Common::configDir()
 {
@@ -322,96 +71,8 @@ QString Common::trashDir()
 
 QStringList Common::iconLocations(QString appPath)
 {
-    QStringList result;
-    result << QStandardPaths::locateAll(QStandardPaths::GenericDataLocation,
-                                        "icons",
-                                        QStandardPaths::LocateDirectory);
-
-    const QByteArray xdgData = qgetenv("XDG_DATA_DIRS");
-    if (!xdgData.isEmpty()) {
-        const QList<QByteArray> parts = xdgData.split(':');
-        for (const QByteArray &part : parts) {
-            if (part.isEmpty()) {
-                continue;
-            }
-            const QString iconsDir = QString::fromLocal8Bit(part) + QStringLiteral("/icons");
-            if (QDir(iconsDir).exists()) {
-                const QString canonical = QDir(iconsDir).canonicalPath();
-                if (!canonical.isEmpty()) {
-                    result << canonical;
-                }
-            }
-        }
-    }
-
-#ifndef Q_OS_MAC
-    if (QDir("/usr/share/icons").exists()) {
-        result << QStringLiteral("/usr/share/icons");
-    }
-    if (QDir("/usr/local/share/icons").exists()) {
-        result << QStringLiteral("/usr/local/share/icons");
-    }
-#endif
-    const QString localIcons = QString("%1/.local/share/icons").arg(QDir::homePath());
-    const QString dotIcons = QString("%1/.icons").arg(QDir::homePath());
-    if (QDir(localIcons).exists()) {
-        result << localIcons;
-    }
-    if (QDir(dotIcons).exists()) {
-        result << dotIcons;
-    }
-    if (!appPath.isEmpty()) {
-        const QString appDir = QFileInfo(appPath).absoluteDir().absolutePath();
-        const QString bundledIcons = QDir(appDir).filePath(QStringLiteral("../share/icons"));
-        if (QDir(bundledIcons).exists()) {
-            const QString canonical = QDir(bundledIcons).canonicalPath();
-            if (!canonical.isEmpty()) {
-                result << canonical;
-            }
-        }
-        result << QString("%1/../share/icons").arg(appPath);
-    }
-    result.removeDuplicates();
-    return result;
-}
-
-void Common::prepareLinuxIconThemeEnvironment()
-{
-#ifndef Q_OS_LINUX
-    Q_UNUSED(0);
-#else
-    if (!qEnvironmentVariableIsSet("APPIMAGE")) {
-        return;
-    }
-
-    // linuxdeploy often sets XDG_DATA_DIRS to the AppDir only; merge host paths for icon discovery.
-    QByteArray xdg = qgetenv("XDG_DATA_DIRS");
-    if (!xdg.contains("/usr/share")) {
-        if (xdg.isEmpty()) {
-            qputenv("XDG_DATA_DIRS", "/usr/share:/usr/local/share");
-        } else {
-            xdg.append(":/usr/share:/usr/local/share");
-            qputenv("XDG_DATA_DIRS", xdg.constData());
-        }
-    }
-#endif
-}
-
-void Common::installIconThemeSearchPaths(const QString &appPath)
-{
-    const QStringList paths = iconLocations(appPath);
-    QIcon::setThemeSearchPaths(paths);
-    QIcon::setFallbackThemeName(QStringLiteral("hicolor"));
-
-    QStringList fallbackRoots;
-    for (const QString &root : paths) {
-        if (QDir(root + QStringLiteral("/hicolor")).exists()) {
-            fallbackRoots << root;
-        }
-    }
-    if (!fallbackRoots.isEmpty()) {
-        QIcon::setFallbackSearchPaths(fallbackRoots);
-    }
+    Q_UNUSED(appPath);
+    return BundledIcons::mimeIconDirectories();
 }
 
 QStringList Common::pixmapLocations(QString appPath)
@@ -488,78 +149,19 @@ QString Common::findIconInDir(QString appPath,
                               QString dir,
                               QString icon)
 {
-    QString result;
-    if (dir.isEmpty() || icon.isEmpty()) { return result; }
-
-    if (theme.isEmpty()) { theme = "hicolor"; }
-
-    QStringList iconSizes;
-    iconSizes << "128" << "64" << "48" << "32" << "22" << "16";
-
-    // theme
-    QDirIterator it(QString("%1/%2").arg(dir).arg(theme),
-                    QStringList() << "*.png" << "*.jpg" << "*.xpm",
-                    QDir::Files|QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-    while (it.hasNext()) {
-        QString found = it.next();
-        QString iconName = QFileInfo(found).completeBaseName();
-        if (iconName == icon) {
-            for (int i=0;i<iconSizes.size();++i) {
-                QString hasFile = found.replace(QRegularExpression("/\\d+x\\d+/"),
-                                                QString("/%1x%1/").arg(iconSizes.at(i)));
-                if (QFile::exists(hasFile)) { return hasFile; }
-            }
-            return found;
-        }
-    }
-    // hicolor
-    if (theme != "hicolor") {
-        QDirIterator hicolor(QString("%1/%2").arg(dir).arg("hicolor"),
-                             QStringList() << "*.png" << "*.jpg" << "*.xpm",
-                             QDir::Files|QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-        while (hicolor.hasNext()) {
-            QString found = hicolor.next();
-            QString iconName = QFileInfo(found).completeBaseName();
-            if (iconName == icon) {
-                for (int i=0;i<iconSizes.size();++i) {
-                    QString hasFile = found.replace(QRegularExpression("/\\d+x\\d+/"),
-                                                    QString("/%1x%1/").arg(iconSizes.at(i)));
-                    if (QFile::exists(hasFile)) { return hasFile; }
-                }
-                return found;
-            }
-        }
-    }
-    // pixmaps
-    QStringList pixs = pixmapLocations(appPath);
-    for (int i=0;i<pixs.size();++i) {
-        QDirIterator pixmaps(pixs.at(i),
-                             QStringList() << "*.png" << "*.jpg" << "*.xpm",
-                             QDir::Files|QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-        while (pixmaps.hasNext()) {
-            QString found = pixmaps.next();
-            QString iconName = QFileInfo(found).completeBaseName();
-            if (iconName == icon) { return found; }
-        }
-    }
-    return result;
+    Q_UNUSED(appPath);
+    Q_UNUSED(theme);
+    Q_UNUSED(dir);
+    return BundledIcons::iconFilePath(icon);
 }
 
 QString Common::findIcon(QString appPath,
                          QString theme,
                          QString fileIcon)
 {
-    QString result;
-    if (fileIcon.isEmpty()) { return result; }
-    QStringList icons = iconLocations(appPath);
-    for (int i=0;i<icons.size();++i) {
-        QString icon = findIconInDir(appPath,
-                                     theme,
-                                     icons.at(i),
-                                     fileIcon);
-        if (!icon.isEmpty()) { return icon; }
-    }
-    return result;
+    Q_UNUSED(appPath);
+    Q_UNUSED(theme);
+    return BundledIcons::iconFilePath(fileIcon);
 }
 
 QString Common::findApplication(QString appPath,
@@ -715,46 +317,6 @@ QStringList Common::getMimeTypes(QString appPath)
     return result;
 }
 
-QStringList Common::getIconThemes(QString appPath)
-{
-    QStringList result;
-    const QStringList icons = iconLocations(appPath);
-    QSet<QString> seen;
-    for (int i = 0; i < icons.size(); ++i) {
-        QDirIterator it(icons.at(i), QDir::Dirs | QDir::NoDotAndDotDot);
-        while (it.hasNext()) {
-            it.next();
-            const QString dirName = it.fileName();
-            if (dirName == QLatin1String("hicolor")
-                || dirName == QLatin1String("default")) {
-                continue;
-            }
-            const QString path = it.filePath();
-            if (!isValidIconTheme(path)) {
-                continue;
-            }
-            if (seen.contains(dirName)) {
-                continue;
-            }
-            seen.insert(dirName);
-            result.append(dirName);
-        }
-    }
-
-    qWarning() << "icon theme roots" << icons << "found" << result.size();
-    QStringList preferredFirst;
-    const QString macIcons = findMacIconsTheme(icons);
-    if (!macIcons.isEmpty()) {
-        preferredFirst << macIcons;
-    }
-    for (const QString &name : result) {
-        if (!preferredFirst.contains(name, Qt::CaseInsensitive)) {
-            preferredFirst.append(name);
-        }
-    }
-    return preferredFirst;
-}
-
 bool Common::removeFileCache()
 {
     QFile cache(QString("%1/file.cache").arg(Common::configDir()));
@@ -780,62 +342,6 @@ bool Common::removeThumbsCache()
         return cache.remove();
     }
     return false;
-}
-
-void Common::setupIconTheme(QString appFilePath)
-{
-    QSettings settings(Common::configFile(), QSettings::IniFormat);
-    installIconThemeSearchPaths(appFilePath);
-    const QStringList roots = iconLocations(appFilePath);
-
-    QString temp = resolveUsableThemeName(settings.value("fallbackTheme").toString(), roots);
-
-    if (temp.isEmpty() || temp == QLatin1String("hicolor")) {
-        if (QFile::exists(QDir::homePath() + "/" + ".gtkrc-2.0")) {
-            QSettings gtkFile(QDir::homePath() + "/.gtkrc-2.0", QSettings::IniFormat);
-            temp = resolveUsableThemeName(
-                gtkFile.value("gtk-icon-theme-name").toString().remove("\""), roots);
-        } else {
-            QSettings gtkFile(QDir::homePath() + "/.config/gtk-3.0/settings.ini",
-                              QSettings::IniFormat);
-            temp = resolveUsableThemeName(
-                gtkFile.value("Settings/gtk-icon-theme-name").toString().remove("\""), roots);
-            if (temp.isEmpty()) {
-                temp = resolveUsableThemeName(
-                    gtkFile.value("gtk-icon-theme-name").toString().remove("\""), roots);
-            }
-        }
-    }
-
-    if (temp.isEmpty() || temp == QLatin1String("hicolor")) {
-#ifndef Q_OS_MACX
-        temp = findMacIconsTheme(roots);
-#endif
-    }
-    if (temp.isEmpty() || temp == QLatin1String("hicolor")) {
-#ifndef Q_OS_MACX
-        static const char *fallbacks[] = {"Papirus", "Adwaita", "breeze", "Tango", "Humanity"};
-        for (const char *name : fallbacks) {
-            const QString resolved = resolveUsableThemeName(QString::fromUtf8(name), roots);
-            if (!resolved.isEmpty()) {
-                temp = resolved;
-                break;
-            }
-        }
-#endif
-#ifdef Q_OS_MACX
-        if (temp.isEmpty()) {
-            temp = resolveUsableThemeName(QStringLiteral("Adwaita"), roots);
-        }
-#endif
-    }
-
-    applyIconThemeName(temp, appFilePath);
-
-    const QString applied = QIcon::themeName();
-    if (!applied.isEmpty() && applied != QLatin1String("hicolor")) {
-        settings.setValue("fallbackTheme", applied);
-    }
 }
 
 Common::DragMode Common::int2dad(int value)
@@ -954,15 +460,7 @@ QPalette Common::darkTheme()
 
 QStringList Common::iconPaths(QString appPath)
 {
-    QStringList iconsPath = QIcon::themeSearchPaths();
-    iconsPath << iconLocations(appPath);
-    /*QString iconsHomeLocal = QString("%1/.local/share/icons").arg(QDir::homePath());
-    QString iconsHome = QString("%1/.icons").arg(QDir::homePath());
-    if (QFile::exists(iconsHomeLocal) && !iconsPath.contains(iconsHomeLocal)) { iconsPath.prepend(iconsHomeLocal); }
-    if (QFile::exists(iconsHome) && !iconsPath.contains(iconsHome)) { iconsPath.prepend(iconsHome); }
-    iconsPath << QString("%1/../share/icons").arg(appPath);*/
-    iconsPath.removeDuplicates();
-    return  iconsPath;
+    return BundledIcons::mimeIconDirectories();
 }
 
 QVector<QStringList> Common::getDefaultActions()

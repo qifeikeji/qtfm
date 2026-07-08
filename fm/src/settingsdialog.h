@@ -73,7 +73,6 @@ protected:
   QComboBox* comboDADshift;
   QComboBox* comboDADalt;
   QLineEdit* editTerm;
-  QComboBox* cmbIconTheme;
   QComboBox* cmbDefaultMimeApps;
   QComboBox* comboSingleClick;
   QCheckBox* showTerminalButton;

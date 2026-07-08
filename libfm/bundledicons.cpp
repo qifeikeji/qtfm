@@ -1,0 +1,342 @@
+#include "bundledicons.h"
+
+#include <QCoreApplication>
+#include <QDir>
+#include <QFileInfo>
+#include <QHash>
+#include <QSet>
+#include <QStandardPaths>
+
+namespace {
+
+QStringList bundledMimeIconDirectories()
+{
+    QStringList dirs;
+    const QString appDir = QCoreApplication::applicationDirPath();
+
+#if defined(Q_OS_MACOS) || defined(Q_OS_MAC)
+    dirs << appDir + QStringLiteral("/../Resources/mimes");
+#endif
+    dirs << appDir + QStringLiteral("/../share/qtfm/mimes");
+    dirs << appDir + QStringLiteral("/../share/icons/mimes");
+    const QString devTreeMimes = QDir(appDir).absoluteFilePath(
+        QStringLiteral("../../share/icons/mimes"));
+    if (QDir(devTreeMimes).exists()) {
+        dirs << devTreeMimes;
+    }
+
+    const QStringList dataDirs = QStandardPaths::standardLocations(
+        QStandardPaths::GenericDataLocation);
+    for (const QString &dataDir : dataDirs) {
+        const QString candidate = dataDir + QStringLiteral("/qtfm/mimes");
+        if (QDir(candidate).exists()) {
+            dirs << candidate;
+        }
+    }
+
+    dirs.removeDuplicates();
+    return dirs;
+}
+
+QString resolveBundledBaseName(const QString &name)
+{
+    const QString key = name.toLower();
+    static const QHash<QString, QString> aliases = {
+        {QStringLiteral("inode-directory"), QStringLiteral("folder")},
+        {QStringLiteral("folder-open"), QStringLiteral("default-folder-open")},
+        {QStringLiteral("folder-visiting"), QStringLiteral("inode-symlink")},
+        {QStringLiteral("text-x-generic"), QStringLiteral("text")},
+        {QStringLiteral("text-plain"), QStringLiteral("txt")},
+        {QStringLiteral("text-markdown"), QStringLiteral("md")},
+        {QStringLiteral("package-x-generic"), QStringLiteral("archive")},
+        {QStringLiteral("application-x-executable"), QStringLiteral("exec")},
+        {QStringLiteral("image-x-generic"), QStringLiteral("image")},
+        {QStringLiteral("video-x-generic"), QStringLiteral("video")},
+        {QStringLiteral("text-html"), QStringLiteral("html")},
+        {QStringLiteral("text-x-script"), QStringLiteral("sh")},
+    };
+    return aliases.value(key, key);
+}
+
+QIcon loadIconFromBaseName(const QString &baseName)
+{
+    static QHash<QString, QIcon> cache;
+    QString key = resolveBundledBaseName(baseName);
+    if (cache.contains(key)) {
+        return cache.value(key);
+    }
+
+    static const char *extensions[] = {".svg", ".png", ".SVG", ".PNG"};
+
+    for (const QString &dirPath : bundledMimeIconDirectories()) {
+        for (const char *ext : extensions) {
+            const QString path = dirPath + QLatin1Char('/') + key
+                                 + QString::fromLatin1(ext);
+            if (!QFileInfo::exists(path)) {
+                continue;
+            }
+            QIcon icon(path);
+            if (!icon.isNull()) {
+                cache.insert(key, icon);
+                return icon;
+            }
+        }
+    }
+
+    for (const char *ext : extensions) {
+        const QString resource = QStringLiteral(":/icons/mimes/") + key
+                                 + QString::fromLatin1(ext);
+        QIcon icon(resource);
+        if (!icon.isNull()) {
+            cache.insert(key, icon);
+            return icon;
+        }
+    }
+
+    cache.insert(key, QIcon());
+    return QIcon();
+}
+
+QString findIconFilePath(const QString &baseName)
+{
+    const QString key = resolveBundledBaseName(baseName);
+    static const char *extensions[] = {".svg", ".png", ".SVG", ".PNG"};
+    for (const QString &dirPath : bundledMimeIconDirectories()) {
+        for (const char *ext : extensions) {
+            const QString path = dirPath + QLatin1Char('/') + key + QString::fromLatin1(ext);
+            if (QFileInfo::exists(path)) {
+                return path;
+            }
+        }
+    }
+    for (const char *ext : extensions) {
+        const QString resource = QStringLiteral(":/icons/mimes/") + key + QString::fromLatin1(ext);
+        if (QFileInfo::exists(resource)) {
+            return resource;
+        }
+    }
+    return QString();
+}
+
+QIcon iconWithFallbacks(const QStringList &baseNames)
+{
+    for (const QString &name : baseNames) {
+        const QIcon icon = loadIconFromBaseName(name);
+        if (!icon.isNull()) {
+            return icon;
+        }
+    }
+    return loadIconFromBaseName(QStringLiteral("unknown"));
+}
+
+} // namespace
+
+QString BundledIcons::baseNameForSuffix(const QString &suffix)
+{
+    const QString s = suffix.toLower();
+    if (s.isEmpty()) {
+        return QString();
+    }
+    if (s == QLatin1String("jpeg")) {
+        return QStringLiteral("jpg");
+    }
+    if (s == QLatin1String("yml")) {
+        return QStringLiteral("yaml");
+    }
+    if (s == QLatin1String("htm")) {
+        return QStringLiteral("html");
+    }
+    if (s == QLatin1String("markdown")) {
+        return QStringLiteral("md");
+    }
+    if (s == QLatin1String("blend1")) {
+        return QStringLiteral("blend");
+    }
+    return s;
+}
+
+QString BundledIcons::baseNameForMime(const QString &mime)
+{
+    const QString m = mime.toLower();
+    if (m.startsWith(QLatin1String("video/"))) {
+        if (m.contains(QLatin1String("mp4")) || m.contains(QLatin1String("quicktime"))) {
+            return QStringLiteral("mp4");
+        }
+        if (m.contains(QLatin1String("x-msvideo")) || m.contains(QLatin1String("avi"))) {
+            return QStringLiteral("avi");
+        }
+        if (m.contains(QLatin1String("matroska")) || m.contains(QLatin1String("mkv"))) {
+            return QStringLiteral("mkv");
+        }
+        return QStringLiteral("video");
+    }
+    if (m.startsWith(QLatin1String("image/"))) {
+        if (m.contains(QLatin1String("jpeg"))) {
+            return QStringLiteral("jpg");
+        }
+        if (m.contains(QLatin1String("svg"))) {
+            return QStringLiteral("svg");
+        }
+        if (m.contains(QLatin1String("png"))) {
+            return QStringLiteral("png");
+        }
+        return QStringLiteral("image");
+    }
+    if (m.contains(QLatin1String("python"))) {
+        return QStringLiteral("py");
+    }
+    if (m.startsWith(QLatin1String("text/html"))) {
+        return QStringLiteral("html");
+    }
+    if (m.contains(QLatin1String("javascript"))) {
+        return QStringLiteral("js");
+    }
+    if (m.contains(QLatin1String("css"))) {
+        return QStringLiteral("css");
+    }
+    if (m.contains(QLatin1String("yaml"))) {
+        return QStringLiteral("yaml");
+    }
+    if (m.contains(QLatin1String("markdown"))) {
+        return QStringLiteral("md");
+    }
+    if (m.endsWith(QLatin1String("zip")) || m.contains(QLatin1String("compressed"))) {
+        if (m.contains(QLatin1String("rar"))) {
+            return QStringLiteral("rar");
+        }
+        return QStringLiteral("zip");
+    }
+    if (m.startsWith(QLatin1String("text/"))) {
+        return QStringLiteral("txt");
+    }
+    if (m.contains(QLatin1String("executable"))) {
+        return QStringLiteral("exec");
+    }
+    return QString();
+}
+
+QIcon BundledIcons::iconForFileSuffix(const QString &suffix)
+{
+    const QString base = baseNameForSuffix(suffix);
+    if (base.isEmpty()) {
+        return loadIconFromBaseName(QStringLiteral("unknown"));
+    }
+
+    QStringList tryNames;
+    tryNames << base;
+
+    static const QSet<QString> videoExt = {
+        QStringLiteral("mp4"), QStringLiteral("avi"), QStringLiteral("mov"),
+        QStringLiteral("mkv"), QStringLiteral("webm"), QStringLiteral("m4v"),
+        QStringLiteral("mpeg"), QStringLiteral("mpg"), QStringLiteral("wmv"),
+    };
+    static const QSet<QString> imageExt = {
+        QStringLiteral("jpg"), QStringLiteral("png"), QStringLiteral("svg"),
+        QStringLiteral("gif"), QStringLiteral("webp"), QStringLiteral("bmp"),
+        QStringLiteral("tiff"), QStringLiteral("tif"), QStringLiteral("heic"),
+        QStringLiteral("heif"), QStringLiteral("ico"), QStringLiteral("icns"),
+    };
+    static const QSet<QString> archiveExt = {
+        QStringLiteral("zip"), QStringLiteral("rar"), QStringLiteral("7z"),
+        QStringLiteral("tar"), QStringLiteral("gz"), QStringLiteral("xz"),
+        QStringLiteral("bz2"),
+    };
+    static const QSet<QString> modelExt = {
+        QStringLiteral("fbx"), QStringLiteral("obj"), QStringLiteral("blend"),
+        QStringLiteral("stl"), QStringLiteral("glb"), QStringLiteral("gltf"),
+    };
+    static const QSet<QString> codeExt = {
+        QStringLiteral("py"), QStringLiteral("js"), QStringLiteral("css"),
+        QStringLiteral("html"), QStringLiteral("yaml"), QStringLiteral("json"),
+        QStringLiteral("xml"), QStringLiteral("sh"),
+    };
+
+    if (videoExt.contains(base)) {
+        tryNames << QStringLiteral("video");
+    } else if (imageExt.contains(base)) {
+        tryNames << QStringLiteral("image");
+    } else if (archiveExt.contains(base)) {
+        tryNames << QStringLiteral("archive");
+    } else if (modelExt.contains(base)) {
+        tryNames << QStringLiteral("model3d");
+    } else if (codeExt.contains(base) || base == QLatin1String("md")
+               || base == QLatin1String("txt")) {
+        tryNames << QStringLiteral("text");
+    }
+
+    tryNames << QStringLiteral("unknown");
+    return iconWithFallbacks(tryNames);
+}
+
+QIcon BundledIcons::iconForMimeType(const QString &mime)
+{
+    const QString base = baseNameForMime(mime);
+    if (!base.isEmpty()) {
+        return iconForFileSuffix(base);
+    }
+    return loadIconFromBaseName(QStringLiteral("unknown"));
+}
+
+QIcon BundledIcons::iconForFolder(const QFileInfo &info)
+{
+    const QString name = info.fileName();
+    if (name == QLatin1String("home")) {
+        return iconWithFallbacks({QStringLiteral("folder-home"), QStringLiteral("folder")});
+    }
+    if (name == QLatin1String("Desktop") || name == QLatin1String("desktop")) {
+        return iconWithFallbacks({QStringLiteral("folder-desktop"), QStringLiteral("folder")});
+    }
+    return iconWithFallbacks({QStringLiteral("folder")});
+}
+
+QIcon BundledIcons::iconForExecutable()
+{
+    return iconWithFallbacks({QStringLiteral("exec"), QStringLiteral("unknown")});
+}
+
+QStringList BundledIcons::mimeIconDirectories()
+{
+    return bundledMimeIconDirectories();
+}
+
+QString BundledIcons::iconFilePath(const QString &baseName)
+{
+    return findIconFilePath(baseName);
+}
+
+QIcon BundledIcons::iconByName(const QString &name)
+{
+    if (name.isEmpty()) {
+        return loadIconFromBaseName(QStringLiteral("unknown"));
+    }
+    QIcon icon = loadIconFromBaseName(name);
+    if (!icon.isNull()) {
+        return icon;
+    }
+    return loadIconFromBaseName(QStringLiteral("unknown"));
+}
+
+QStringList BundledIcons::availableIconBaseNames()
+{
+    QStringList names;
+    static const char *extensions[] = {".svg", ".png"};
+    for (const QString &dirPath : bundledMimeIconDirectories()) {
+        QDir dir(dirPath);
+        for (const char *ext : extensions) {
+            for (const QFileInfo &fi : dir.entryInfoList({QStringLiteral("*") + ext}, QDir::Files)) {
+                names << fi.completeBaseName();
+            }
+        }
+    }
+    QDir resourceDir(QStringLiteral(":/icons/mimes"));
+    if (resourceDir.exists()) {
+        for (const char *ext : extensions) {
+            for (const QString &entry : resourceDir.entryList({QStringLiteral("*") + ext}, QDir::Files)) {
+                names << QFileInfo(entry).completeBaseName();
+            }
+        }
+    }
+    names.removeDuplicates();
+    names.sort(Qt::CaseInsensitive);
+    return names;
+}

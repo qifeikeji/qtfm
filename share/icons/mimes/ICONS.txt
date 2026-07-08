@@ -1,0 +1,94 @@
+# QtFM bundled file icons — place files in this directory (see list below).
+# After adding icons, run:  ./share/icons/mimes/update_qrc.sh
+# Current pack: 116 SVG files (+ folder.svg copied from default-folder.svg).
+#
+# Put each icon here as  <basename>.svg  or  <basename>.png
+# (basename = lowercase, no extension in the name below)
+#
+# Linux install:  PREFIX/share/qtfm/mimes/
+# AppImage:       usr/share/qtfm/mimes/
+# macOS app:      QtFM.app/Contents/Resources/mimes/
+# Optional qrc:   :/icons/mimes/<basename>.svg
+#
+# --- Folders ---
+folder.svg              # default directory
+folder-home.svg         # optional: folder named "home"
+folder-desktop.svg      # optional: Desktop
+folder-documents.svg
+folder-download.svg
+folder-music.svg
+folder-pictures.svg
+folder-videos.svg
+folder-templates.svg
+folder-publicshare.svg
+folder-red.svg          # optional: "root"
+folder-visiting.svg     # optional: symlink dir
+#
+# --- Fallbacks (recommended) ---
+unknown.svg             # anything unmatched
+video.svg               # video fallback if no per-ext icon
+image.svg               # image fallback
+text.svg                # text/code fallback
+archive.svg             # archive fallback
+model3d.svg             # 3D fallback
+exec.svg                # executable without extension
+#
+# --- Video (list view icon; mp4/mkv etc. still use video thumbnails when enabled) ---
+mp4.svg
+avi.svg
+mov.svg
+mkv.svg
+webm.svg
+m4v.svg
+mpeg.svg
+mpg.svg
+wmv.svg
+#
+# --- Scripts / code ---
+py.svg
+js.svg
+css.svg
+html.svg
+yaml.svg
+json.svg
+xml.svg
+sh.svg
+#
+# --- Text / docs ---
+txt.svg
+md.svg
+#
+# --- Images (incl. macOS-friendly types) ---
+jpg.svg                 # also used for .jpeg
+png.svg
+svg.svg
+gif.svg
+webp.svg
+bmp.svg
+tiff.svg
+tif.svg
+heic.svg
+heif.svg
+ico.svg
+icns.svg                # macOS icon document
+#
+# --- 3D / DCC ---
+blend.svg               # Blender
+fbx.svg
+obj.svg
+stl.svg
+glb.svg
+gltf.svg
+#
+# --- Archives ---
+zip.svg
+rar.svg
+7z.svg
+tar.svg
+gz.svg
+xz.svg
+bz2.svg
+#
+# --- Other (add as needed) ---
+pdf.svg
+appimage.svg

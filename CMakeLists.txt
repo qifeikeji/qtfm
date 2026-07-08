@@ -86,6 +86,7 @@ add_library(
     libfm/customactionsmanager.cpp
     libfm/desktopfile.cpp
     libfm/fileutils.cpp
+    libfm/bundledicons.cpp
     libfm/fm.cpp
     libfm/icondlg.cpp
     libfm/iconlist.cpp
@@ -163,6 +164,7 @@ add_executable(
     fm/src/actiondefs.cpp
     fm/src/actiontriggers.cpp
     share/${PROJECT_NAME}.qrc
+    share/mimes.qrc
 )
 target_link_libraries(
     ${PROJECT_NAME}
@@ -254,6 +256,15 @@ install(
     share/hicolor
     DESTINATION
     ${CMAKE_INSTALL_DATAROOTDIR}/icons
+)
+install(
+    DIRECTORY
+    share/icons/mimes/
+    DESTINATION
+    ${CMAKE_INSTALL_DATAROOTDIR}/qtfm/mimes
+    FILES_MATCHING
+    PATTERN "*.svg"
+    PATTERN "*.png"
 )
 if(ENABLE_DBUS AND ENABLE_TRAY)
     install(
