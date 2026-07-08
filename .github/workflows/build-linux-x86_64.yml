@@ -75,7 +75,9 @@ jobs:
             https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
           wget -q -O linuxdeploy-plugin-qt.AppImage \
             https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
-          chmod +x linuxdeploy.AppImage linuxdeploy-plugin-qt.AppImage
+          wget -q -O appimagetool.AppImage \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x linuxdeploy.AppImage linuxdeploy-plugin-qt.AppImage appimagetool.AppImage
 
       - name: Install into AppDir
         working-directory: build
@@ -108,20 +110,23 @@ jobs:
             --icon-file="${APPDIR}/usr/share/icons/hicolor/scalable/apps/qtfm.svg" \
             --plugin qt \
             "${EXTRA_LIBS[@]}" \
-            --output appimage
+            --output appdir
 
-          shopt -s nullglob
-          if [ -f "QtFM-${QTFM_VERSION}-x86_64.AppImage" ]; then
-            mv "QtFM-${QTFM_VERSION}-x86_64.AppImage" "qtfm-${QTFM_VERSION}-x86_64.AppImage"
-          elif [ -f "qtfm-${QTFM_VERSION}-x86_64.AppImage" ]; then
-            true
-          else
-            echo "No AppImage produced. Contents:"
-            ls -la
-            find "${GITHUB_WORKSPACE}" -maxdepth 3 -name '*.AppImage' -print
-            exit 1
-          fi
+          # gzip squashfs: works with older squashfuse on Arch/Manjaro (zstd needs newer tools)
+          ARCH=x86_64 ./appimagetool.AppImage --comp gzip --no-appstream \
+            "${APPDIR}" "qtfm-${QTFM_VERSION}-x86_64.AppImage"
+
+          chmod +x "qtfm-${QTFM_VERSION}-x86_64.AppImage"
           ls -lah "qtfm-${QTFM_VERSION}-x86_64.AppImage"
+
+      - name: Verify AppImage (extract, no FUSE)
+        env:
+          QTFM_VERSION: ${{ env.QTFM_VERSION }}
+        run: |
+          ./qtfm-${QTFM_VERSION}-x86_64.AppImage --appimage-extract
+          test -x squashfs-root/AppRun
+          test -x squashfs-root/usr/bin/qtfm
+          rm -rf squashfs-root
 
       - name: Upload AppImage
         uses: actions/upload-artifact@v4
