@@ -281,6 +281,14 @@ QIcon FileUtils::searchFolderIcon(const QFileInfo &info, const QIcon &defaultIco
     if (icon.isNull() && primary != QLatin1String("folder")) {
         icon = QIcon::fromTheme(QStringLiteral("folder"));
     }
+    static bool loggedOnce = false;
+    if (!loggedOnce) {
+        loggedOnce = true;
+        qDebug() << "[icon-theme] first folder lookup, theme=" << QIcon::themeName()
+                  << "wanted" << primary
+                  << "found theme icon?" << !icon.isNull()
+                  << "availableSizes" << icon.availableSizes();
+    }
     return icon.isNull() ? defaultIcon : icon;
 }
 //---------------------------------------------------------------------------

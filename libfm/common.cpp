@@ -280,8 +280,13 @@ void Common::applyIconThemeName(const QString &themeName, const QString &appPath
         resolved = QStringLiteral("hicolor");
     }
 
-    qDebug() << "apply icon theme" << resolved << "paths" << QIcon::themeSearchPaths();
     QIcon::setThemeName(resolved);
+
+    qDebug() << "[icon-theme] requested" << themeName
+             << "resolved" << resolved
+             << "search paths" << QIcon::themeSearchPaths()
+             << "QIcon::themeName() now" << QIcon::themeName()
+             << "hasThemeIcon(folder)" << QIcon::hasThemeIcon(QStringLiteral("folder"));
 }
 
 QString Common::configDir()
@@ -388,11 +393,6 @@ void Common::prepareLinuxIconThemeEnvironment()
             xdg.append(":/usr/share:/usr/local/share");
             qputenv("XDG_DATA_DIRS", xdg.constData());
         }
-    }
-
-    // Bundled libqgtk3 makes QIcon::fromTheme use GTK settings and ignore QIcon::setThemeName.
-    if (qgetenv("QT_QPA_PLATFORMTHEME").isEmpty()) {
-        qputenv("QT_QPA_PLATFORMTHEME", QByteArray("qtfm"));
     }
 #endif
 }
