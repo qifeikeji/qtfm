@@ -1244,10 +1244,10 @@ void MainWindow::tabsOnTop()
 {
     if(tabsOnTopAct->isChecked()) {
         mainLayout->setDirection(QBoxLayout::BottomToTop);
-        tabs->setShape(QTabBar::North);
+        tabs->setShape(QTabBar::RoundedNorth);
     } else {
         mainLayout->setDirection(QBoxLayout::TopToBottom);
-        tabs->setShape(QTabBar::South);
+        tabs->setShape(QTabBar::RoundedSouth);
     }
     applyViewChromeStyles();
 }
