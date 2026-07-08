@@ -20,7 +20,11 @@ unix:!macx {
     isEmpty(XDGDIR): XDGDIR = /etc/xdg
 }
 
-QT += widgets svg
+# Qt modules for libfm and all subprojects that include this file.
+# Do NOT add "svg" here — only the qtfm app (fm/fm.pro) needs Qt Svg for toolbar icons.
+# Linux splits packages (qtbase5-dev vs libqt5svg5-dev); macOS Homebrew qt@5 is monolithic,
+# so putting svg here fails on Linux CI but can still pass on macOS.
+QT += widgets
 
 CONFIG += link_pkgconfig
 

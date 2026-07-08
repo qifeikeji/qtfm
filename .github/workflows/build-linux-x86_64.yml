@@ -29,6 +29,14 @@ jobs:
           echo "Runner architecture: ${arch}"
           test "${arch}" = "x86_64"
 
+      - name: Guard Qt Svg scope (libfm vs qtfm app)
+        run: |
+          if grep -E '^QT\s*\+=' share/qtfm.pri | grep -q svg; then
+            echo "Qt Svg must not be in share/qtfm.pri (libfm); use fm/fm.pro only."
+            exit 1
+          fi
+          grep -qE 'QT.*svg' fm/fm.pro || { echo "fm/fm.pro must request Qt Svg"; exit 1; }
+
       - name: Install build dependencies
         run: |
           sudo apt-get update
@@ -37,6 +45,7 @@ jobs:
             pkg-config \
             qtbase5-dev \
             qt5-qmake \
+            libqt5svg5-dev \
             libmagick++-dev \
             libavdevice-dev \
             libswscale-dev \

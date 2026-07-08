@@ -21,7 +21,7 @@ jobs:
     - name: apt install
       run: |
         sudo apt-get update
-        sudo apt-get install tree qtbase5-dev libmagick++-dev libavdevice-dev libswscale-dev libavformat-dev libavcodec-dev libavutil-dev
+        sudo apt-get install tree qtbase5-dev libmagick++-dev libavdevice-dev libswscale-dev libavformat-dev libavcodec-dev libavutil-dev libqt5svg5-dev
     - name: Build 1 (qmake release)
       run: |
         cd $GITHUB_WORKSPACE

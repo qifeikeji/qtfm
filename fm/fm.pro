@@ -1,6 +1,6 @@
 include($${top_srcdir}/share/qtfm.pri)
 
-QT+= widgets concurrent
+QT+= widgets concurrent svg
 
 TARGET = $${QTFM_TARGET}
 TARGET_NAME = $${QTFM_TARGET_NAME}
