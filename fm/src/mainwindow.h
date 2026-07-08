@@ -172,6 +172,7 @@ public slots:
     void writeBookmarkGroups();
     void selectBookmarkGroup(const QString &groupId);
     void addBookmarkGroup();
+    void changeBookmarkGroupIcon(const QString &groupId);
     void removeBookmarkGroup(const QString &groupId);
     void refreshBookmarkGroupBar();
     void handleBookmarksChanged();
