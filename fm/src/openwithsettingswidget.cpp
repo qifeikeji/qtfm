@@ -3,6 +3,8 @@
 
 #include <QGroupBox>
 #include <QClipboard>
+#include <QLayout>
+#include <QMimeData>
 #include <QFormLayout>
 #include <QFrame>
 #include <QGuiApplication>

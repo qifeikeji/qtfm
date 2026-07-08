@@ -3,6 +3,7 @@
 
 #include <QFileInfo>
 #include <QIcon>
+#include <QList>
 #include <QSettings>
 #include <QString>
 #include <QStringList>

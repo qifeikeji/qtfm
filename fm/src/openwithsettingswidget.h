@@ -1,6 +1,8 @@
 #ifndef OPENWITHSETTINGSWIDGET_H
 #define OPENWITHSETTINGSWIDGET_H
 
+#include <QHash>
+#include <QString>
 #include <QWidget>
 
 class QVBoxLayout;
