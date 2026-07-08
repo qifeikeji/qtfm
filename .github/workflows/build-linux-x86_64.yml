@@ -68,22 +68,12 @@ jobs:
           make -j"$(nproc)" 2>&1 | tee build.log
           make_rc=${PIPESTATUS[0]}
           if [ "$make_rc" -ne 0 ]; then
-            echo "::group::Compiler / linker errors (first 80 lines)"
-            grep -E ':( error:|fatal error:|undefined reference)|make\[1\]: \*\*\* \[Makefile' build.log | head -80 || true
+            echo "::group::Compiler / linker errors (first 60 lines)"
+            grep -E ':( error:|fatal error:|undefined reference)' build.log | head -60 || true
             echo "::endgroup::"
-            echo "::group::fm rebuild (serial tail — real failure is usually here)"
-            make sub-fm-make_first 2>&1 | tail -100 || true
-            echo "::endgroup::"
+            echo "Full log: build/build.log in the job artifact (see step output above)."
             exit "$make_rc"
           fi
-
-      - name: Upload build log on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: qmake-build-log
-          path: build/build.log
-          if-no-files-found: ignore
 
       - name: Verify binary
         run: |
