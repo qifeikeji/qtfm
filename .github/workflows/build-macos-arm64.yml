@@ -53,27 +53,15 @@ jobs:
           make install
           echo "PKG_CONFIG_PATH=${GITHUB_WORKSPACE}/deps-arm64/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "${GITHUB_ENV}"
 
-      - name: Prepare app icon (if missing)
+      - name: Prepare app icon from app.png
         run: |
-          if [ -f share/images/QtFM.icns ]; then
-            exit 0
+          chmod +x share/scripts/app-icon-from-png.sh
+          if [ -f share/images/app.png ]; then
+            share/scripts/app-icon-from-png.sh
+          elif [ ! -f share/images/QtFM.icns ]; then
+            echo "No share/images/app.png or QtFM.icns" >&2
+            exit 1
           fi
-          mkdir -p share/images /tmp/QtFM.iconset
-          if [ -f share/icons/app.svg ]; then
-            ICON_SRC=share/icons/app.svg
-          else
-            ICON_SRC=share/hicolor/scalable/apps/qtfm.svg
-          fi
-          for size in 16 32 128 256 512; do
-            rsvg-convert -w "${size}" -h "${size}" \
-              "${ICON_SRC}" \
-              -o "/tmp/QtFM.iconset/icon_${size}x${size}.png"
-            double=$((size * 2))
-            rsvg-convert -w "${double}" -h "${double}" \
-              share/hicolor/scalable/apps/qtfm.svg \
-              -o "/tmp/QtFM.iconset/icon_${size}x${size}@2x.png"
-          done
-          iconutil -c icns /tmp/QtFM.iconset -o share/images/QtFM.icns
 
       - name: Build (qmake release, arm64)
         run: |

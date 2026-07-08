@@ -19,66 +19,99 @@
 *
 ****************************************************************************/
 
-
 #include "icondlg.h"
-#if QT_VERSION >= 0x050000
-  #include <QtConcurrent/QtConcurrent>
-#else
-#endif
-
+#include "iconview.h"
 #include "bundledicons.h"
 
-//---------------------------------------------------------------------------
-icondlg::icondlg()
+#include <QScrollArea>
+#include <QTimer>
+#include <QtConcurrent/QtConcurrent>
+
+icondlg::icondlg(QWidget *parent)
+    : QDialog(parent)
 {
     setWindowTitle(tr("Select icon"));
+    resize(720, 520);
 
-    iconList = new QListWidget;
-    iconList->setIconSize(QSize(24,24));
-    iconList->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    iconModel = new QStandardItemModel(this);
+    iconView = new QListView(this);
+    iconView->setModel(iconModel);
+    iconView->setSelectionMode(QAbstractItemView::SingleSelection);
+    iconView->setWrapping(true);
+    iconView->setFlow(QListView::LeftToRight);
+    iconView->setResizeMode(QListView::Adjust);
+    iconView->setViewMode(QListView::IconMode);
+    iconView->setMovement(QListView::Static);
+    iconView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    iconView->setTextElideMode(Qt::ElideNone);
+    iconView->setWordWrap(true);
 
-    buttons = new QDialogButtonBox;
-    buttons->setStandardButtons(QDialogButtonBox::Save|QDialogButtonBox::Cancel);
+    iconDelegate = new IconViewDelegate(this);
+    iconDelegate->setCellGap(kCellGap);
+    iconView->setItemDelegate(iconDelegate);
+    applyGridLayout();
+
+    connect(iconView, SIGNAL(activated(QModelIndex)), this, SLOT(onIconActivated(QModelIndex)));
+    connect(iconView, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(onIconActivated(QModelIndex)));
+
+    buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
     connect(buttons, SIGNAL(accepted()), this, SLOT(accept()));
     connect(buttons, SIGNAL(rejected()), this, SLOT(reject()));
 
-    QVBoxLayout *layout = new QVBoxLayout;
-    layout->addWidget(iconList);
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->addWidget(iconView, 1);
     layout->addWidget(buttons);
     setLayout(layout);
 
-    fileNames = BundledIcons::availableIconBaseNames();
-    thread.setFuture(QtConcurrent::run(this,&icondlg::scanTheme));
-    connect(&thread,SIGNAL(finished()),this,SLOT(loadIcons()));
+    pendingNames = BundledIcons::availableIconBaseNames();
+    thread.setFuture(QtConcurrent::run(this, &icondlg::scanTheme));
+    connect(&thread, SIGNAL(finished()), this, SLOT(loadIcons()));
 }
 
-//---------------------------------------------------------------------------
+void icondlg::applyGridLayout()
+{
+    iconDelegate->setCellGap(kCellGap);
+    const QSize grid = IconViewDelegate::iconGridSize(
+        kPickerZoom, kCellGap, iconView->fontMetrics());
+    iconView->setIconSize(QSize(kPickerZoom, kPickerZoom));
+    iconView->setGridSize(grid);
+}
+
 void icondlg::scanTheme()
 {
-    // Names already collected in constructor; keep hook for async UI batching.
+    // Names collected synchronously; hook kept for async batching.
 }
 
-//---------------------------------------------------------------------------
 void icondlg::loadIcons()
 {
     int counter = 0;
-
-    foreach(QString name, fileNames)
-    {
-        new QListWidgetItem(BundledIcons::iconByName(name), name, iconList);
-        fileNames.removeOne(name);
+    while (!pendingNames.isEmpty() && counter < 24) {
+        const QString name = pendingNames.takeFirst();
+        QStandardItem *item = new QStandardItem(BundledIcons::iconByName(name), name);
+        item->setToolTip(name);
+        iconModel->appendRow(item);
         counter++;
-        if(counter == 20)
-        {
-            QTimer::singleShot(50,this,SLOT(loadIcons()));
-            return;
-        }
+    }
+    if (!pendingNames.isEmpty()) {
+        QTimer::singleShot(10, this, SLOT(loadIcons()));
     }
 }
 
-//---------------------------------------------------------------------------
+void icondlg::onIconActivated(const QModelIndex &index)
+{
+    if (!index.isValid()) {
+        return;
+    }
+    iconView->setCurrentIndex(index);
+    accept();
+}
+
 void icondlg::accept()
 {
-    result = iconList->currentItem()->text();
-    this->done(1);
+    const QModelIndex index = iconView->currentIndex();
+    if (!index.isValid()) {
+        return;
+    }
+    result = index.data(Qt::DisplayRole).toString();
+    done(QDialog::Accepted);
 }

@@ -27,6 +27,7 @@ SOURCES += \
     iconlist.cpp \
     fm.cpp \
     bookmarkmodel.cpp \
+    disksmodel.cpp \
     dfmqtreeview.cpp \
     dfmqstyleditemdelegate.cpp
 
@@ -51,6 +52,7 @@ HEADERS += \
     sortmodel.h \
     fm.h \
     bookmarkmodel.h \
+    disksmodel.h \
     dfmqtreeview.h \
     dfmqstyleditemdelegate.h
 

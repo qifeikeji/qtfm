@@ -99,6 +99,9 @@ public:
     static QVector<QStringList> getDefaultActions();
     static QString formatSize(qint64 num);
     static QString getDriveInfo(QString path);
+    /** Raw statfs usage for the filesystem containing `path`; returns false
+     *  if the query fails (e.g. path not mounted / doesn't exist). */
+    static bool getDriveUsage(const QString &path, qint64 *usedBytes, qint64 *totalBytes);
     static QString getXdgCacheHome();
     static constexpr int thumbnailPixelSize = 200;
     static QString qtfmThumbnailCacheDir();

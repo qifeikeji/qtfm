@@ -21,6 +21,7 @@
 
 #include "bookmarkmodel.h"
 #include "common.h"
+#include "bundledicons.h"
 
 #include <QApplication>
 #include <QStyle>
@@ -58,6 +59,12 @@ void bookmarkmodel::addBookmark(QString name,
 
     QIcon theIcon = QIcon::fromTheme(icon,
                                      QApplication::style()->standardIcon(QStyle::SP_DirIcon));
+    if (!icon.isEmpty()) {
+        const QIcon bundled = BundledIcons::iconByName(icon);
+        if (!bundled.isNull()) {
+            theIcon = bundled;
+        }
+    }
     /*if (icon.isEmpty()) {
         if (folderIcons->contains(name)) { theIcon = folderIcons->value(name); }
     }*/

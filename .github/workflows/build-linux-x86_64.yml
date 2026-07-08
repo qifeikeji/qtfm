@@ -119,10 +119,16 @@ jobs:
               || true
           )
 
+          ICON_PNG="${GITHUB_WORKSPACE}/share/images/app.png"
+          ICON_ARG="${APPDIR}/usr/share/icons/hicolor/scalable/apps/qtfm.svg"
+          if [ -f "$ICON_PNG" ]; then
+            ICON_ARG="$ICON_PNG"
+          fi
+
           ./linuxdeploy.AppImage --appdir="${APPDIR}" \
             --executable="${APPDIR}/usr/bin/qtfm" \
             --desktop-file="${APPDIR}/usr/share/applications/qtfm.desktop" \
-            --icon-file="${APPDIR}/usr/share/icons/hicolor/scalable/apps/qtfm.svg" \
+            --icon-file="${ICON_ARG}" \
             --plugin qt \
             "${EXTRA_LIBS[@]}"
 

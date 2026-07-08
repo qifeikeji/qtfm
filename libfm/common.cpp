@@ -31,6 +31,10 @@
 #include <QTemporaryFile>
 #include <QImageReader>
 #include <QImage>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonValue>
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
@@ -521,6 +525,26 @@ QString Common::getDriveInfo(QString path)
             .arg((info.f_blocks - info.f_bavail)*100/info.f_blocks);
 }
 
+bool Common::getDriveUsage(const QString &path, qint64 *usedBytes, qint64 *totalBytes)
+{
+    if (usedBytes) { *usedBytes = 0; }
+    if (totalBytes) { *totalBytes = 0; }
+    if (path.isEmpty()) { return false; }
+#ifdef __NetBSD__
+    struct statvfs info;
+    if (statvfs(path.toLocal8Bit(), &info) != 0) { return false; }
+#else
+    struct statfs info;
+    if (statfs(path.toLocal8Bit(), &info) != 0) { return false; }
+#endif
+    if (info.f_blocks == 0) { return false; }
+    if (totalBytes) { *totalBytes = static_cast<qint64>(info.f_blocks) * info.f_bsize; }
+    if (usedBytes) {
+        *usedBytes = static_cast<qint64>(info.f_blocks - info.f_bavail) * info.f_bsize;
+    }
+    return true;
+}
+
 QString Common::getXdgCacheHome()
 {
     QString result = qgetenv("XDG_CACHE_HOME");
@@ -699,6 +723,57 @@ bool runFfmpegExtract(const QString &ffmpeg, const QStringList &extraArgs,
         && QFileInfo(outPng).size() > 0;
 }
 
+/**
+ * Uses ffprobe (ships alongside ffmpeg) to find the absolute stream index of
+ * an embedded cover-art stream (disposition "attached_pic"), e.g. the poster
+ * image muxed in by `yt-dlp --embed-thumbnail`. Returns -1 if ffprobe is
+ * missing, the file has no such stream, or probing fails.
+ */
+int findAttachedPicStreamIndex(const QString &mediaPath)
+{
+    const QString ffprobe = QStandardPaths::findExecutable(QStringLiteral("ffprobe"));
+    if (ffprobe.isEmpty()) {
+        return -1;
+    }
+
+    QProcess proc;
+    proc.setProgram(ffprobe);
+    proc.setArguments({
+        QStringLiteral("-v"), QStringLiteral("quiet"),
+        QStringLiteral("-print_format"), QStringLiteral("json"),
+        QStringLiteral("-show_entries"),
+        QStringLiteral("stream=index,codec_type:stream_disposition=attached_pic"),
+        mediaPath,
+    });
+    proc.setStandardInputFile(QProcess::nullDevice());
+    proc.start();
+    if (!proc.waitForFinished(10000)) {
+        proc.kill();
+        proc.waitForFinished(2000);
+        return -1;
+    }
+    if (proc.exitStatus() != QProcess::NormalExit || proc.exitCode() != 0) {
+        return -1;
+    }
+
+    const QJsonDocument doc = QJsonDocument::fromJson(proc.readAllStandardOutput());
+    if (!doc.isObject()) {
+        return -1;
+    }
+    const QJsonArray streams = doc.object().value(QStringLiteral("streams")).toArray();
+    for (const QJsonValue &v : streams) {
+        const QJsonObject stream = v.toObject();
+        if (stream.value(QStringLiteral("codec_type")).toString() != QLatin1String("video")) {
+            continue;
+        }
+        const QJsonObject disp = stream.value(QStringLiteral("disposition")).toObject();
+        if (disp.value(QStringLiteral("attached_pic")).toInt() == 1) {
+            return stream.value(QStringLiteral("index")).toInt(-1);
+        }
+    }
+    return -1;
+}
+
 } // namespace
 
 QImage Common::videoFirstFrameImage(const QString &mediaPath)
@@ -720,13 +795,27 @@ QImage Common::videoFirstFrameImage(const QString &mediaPath)
     tmp.close();
     tmp.remove();
 
-    // 1) Try to grab embedded cover art (works for most audio files, and for
-    //    some videos with an attached picture stream).
-    bool ok = runFfmpegExtract(ffmpeg,
-                               { QStringLiteral("-an") },
-                               mediaPath, outPng);
+    bool ok = false;
 
-    // 2) Otherwise decode a real frame a little bit into the stream (avoids
+    // 1) Prefer a precisely-identified embedded cover art stream (e.g. from
+    //    `yt-dlp --embed-thumbnail`), located via ffprobe's disposition info.
+    const int attachedPicIndex = findAttachedPicStreamIndex(mediaPath);
+    if (attachedPicIndex >= 0) {
+        ok = runFfmpegExtract(ffmpeg,
+                              { QStringLiteral("-map"),
+                                QStringLiteral("0:%1").arg(attachedPicIndex) },
+                              mediaPath, outPng);
+    }
+
+    // 2) Heuristic fallback: many audio files only have a single video
+    //    stream (the cover), so `-an` alone picks it up even without ffprobe.
+    if (!ok) {
+        ok = runFfmpegExtract(ffmpeg,
+                              { QStringLiteral("-an") },
+                              mediaPath, outPng);
+    }
+
+    // 3) Otherwise decode a real frame a little bit into the stream (avoids
     //    all-black leading frames); fall back to the very first frame.
     if (!ok) {
         ok = runFfmpegExtract(ffmpeg,

@@ -22,6 +22,7 @@
 #include "mainwindow.h"
 #include "common.h"
 #include "icondlg.h"
+#include "bundledicons.h"
 
 #include <QStatusBar>
 #include <QApplication>
@@ -62,11 +63,11 @@ void MainWindow::delBookmark()
 void MainWindow::editBookmark()
 {
     icondlg * themeIcons = new icondlg;
-    if (themeIcons->exec() == 1) {
+    if (themeIcons->exec() == QDialog::Accepted) {
         QStandardItem * item = modelBookmarks->itemFromIndex(bookmarksList->currentIndex());
         item->setData(themeIcons->result,
                       BOOKMARK_ICON);
-        item->setIcon(QIcon::fromTheme(themeIcons->result));
+        item->setIcon(BundledIcons::iconByName(themeIcons->result));
         handleBookmarksChanged();
     }
     delete themeIcons;
@@ -81,14 +82,6 @@ void MainWindow::toggleWrapBookmarks()
 
 void MainWindow::bookmarkPressed(QModelIndex current)
 {
-#ifndef NO_UDISKS
-    if (current.data(MEDIA_MODEL).toBool() &&
-        !current.data(MEDIA_PATH).toString().isEmpty()) {
-        if (current.data(BOOKMARK_PATH).toString().isEmpty()) {
-            disks->devices[current.data(MEDIA_PATH).toString()]->mount();
-        }
-    }
-#endif
     if (QApplication::mouseButtons() == Qt::MiddleButton) {
         tabs->setCurrentIndex(addTab(current.data(BOOKMARK_PATH).toString()));
     }
@@ -97,15 +90,6 @@ void MainWindow::bookmarkPressed(QModelIndex current)
 void MainWindow::bookmarkClicked(QModelIndex item)
 {
     if (item.data(BOOKMARK_PATH).toString() == pathEdit->currentText()) { return; }
-
-#ifndef NO_UDISKS
-    if (item.data(MEDIA_MODEL).toBool() &&
-        !item.data(MEDIA_PATH).toString().isEmpty()) {
-        if (item.data(BOOKMARK_PATH).toString().isEmpty()) {
-            disks->devices[item.data(MEDIA_PATH).toString()]->mount();
-        }
-    }
-#endif
 
     QString info(item.data(BOOKMARK_PATH).toString());
     if (info.isEmpty()) { return; } //separator

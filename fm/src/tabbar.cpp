@@ -21,6 +21,7 @@
 
 #include "tabbar.h"
 #include "bundledicons.h"
+#include <QMenu>
 
 //---------------------------------------------------------------------------
 tabBar::tabBar(QHash<QString,QIcon> * icons)
@@ -48,7 +49,18 @@ void tabBar::mousePressEvent(QMouseEvent * event)
     }
     else
     if(event->button() == Qt::RightButton)
-        this->setCurrentIndex(tabAt(event->pos()));
+    {
+        int tab = tabAt(event->pos());
+        if(tab != -1)
+        {
+            this->setCurrentIndex(tab);
+            QMenu menu(this);
+            QAction *newWinAction = menu.addAction(tr("Open in new window"));
+            if (menu.exec(event->globalPos()) == newWinAction) {
+                emit openInNewWindowRequested(tab);
+            }
+        }
+    }
 
     return QTabBar::mousePressEvent(event);
 }

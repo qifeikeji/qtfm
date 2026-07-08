@@ -58,7 +58,11 @@ public:
   MimeUtils* getMimeUtils() const;
   QHash<QString,QIcon> *mimeIcons;
   QHash<QString,QIcon> *folderIcons;
+  /** Per-file custom icon (absolute path -> bundled icon base name). */
+  QHash<QString, QString> *pathIconNames;
   QCache<QString,QIcon> *icons;
+  void setPathIcon(const QString &absolutePath, const QString &iconBaseName);
+  void removePathIcon(const QString &absolutePath);
 public slots:
   void notifyChange();
   void notifyProcess(int eventID, QString fileName = QString());

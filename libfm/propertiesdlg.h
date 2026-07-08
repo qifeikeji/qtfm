@@ -86,6 +86,7 @@ private:
   QString pathName;
   QString permString;
   bool iconChanged;
+  QString selectedIconName;
   myModel * model;
   QHash<QString,QIcon> *folderIcons;
   QHash<QString,QIcon> *fileIcons;

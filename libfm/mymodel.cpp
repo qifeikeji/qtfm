@@ -51,6 +51,7 @@ myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
   mimeGlob = new QHash<QString,QString>;
   mimeIcons = new QHash<QString,QIcon>;
   folderIcons = new QHash<QString,QIcon>;
+  pathIconNames = new QHash<QString, QString>;
   thumbPaths = new QHash<QString, QString>;
   icons = new QCache<QString,QIcon>;
   icons->setMaxCost(500);
@@ -76,6 +77,13 @@ myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
       QDataStream out(&fileIcons);
       out.setDevice(&fileIcons);
       out >> *folderIcons;
+      fileIcons.close();
+  }
+
+  fileIcons.setFileName(QString("%1/path-icons.cache").arg(Common::configDir()));
+  if (fileIcons.open(QIODevice::ReadOnly)) {
+      QDataStream in(&fileIcons);
+      in >> *pathIconNames;
       fileIcons.close();
   }
 
@@ -114,6 +122,7 @@ myModel::~myModel() {
   delete mimeGlob;
   delete mimeIcons;
   delete folderIcons;
+  delete pathIconNames;
   delete thumbPaths;
   delete icons;
   delete rootItem;
@@ -127,8 +136,32 @@ myModel::~myModel() {
 void myModel::clearIconCache() {
   folderIcons->clear();
   mimeIcons->clear();
+  pathIconNames->clear();
   QFile(QString("%1/folder.cache").arg(Common::configDir())).remove();
   QFile(QString("%1/file.cache").arg(Common::configDir())).remove();
+  QFile(QString("%1/path-icons.cache").arg(Common::configDir())).remove();
+}
+
+void myModel::setPathIcon(const QString &absolutePath, const QString &iconBaseName)
+{
+  if (absolutePath.isEmpty()) {
+    return;
+  }
+  if (iconBaseName.isEmpty()) {
+    pathIconNames->remove(absolutePath);
+  } else {
+    pathIconNames->insert(absolutePath, iconBaseName);
+  }
+  icons->remove(absolutePath);
+  const QModelIndex idx = index(absolutePath);
+  if (idx.isValid()) {
+    emit dataChanged(idx, idx);
+  }
+}
+
+void myModel::removePathIcon(const QString &absolutePath)
+{
+  setPathIcon(absolutePath, QString());
 }
 
 void myModel::forceRefresh()
@@ -592,6 +625,13 @@ void myModel::cacheInfo()
         fileIcons.close();
     }
 
+    fileIcons.setFileName(QString("%1/path-icons.cache").arg(Common::configDir()));
+    if (fileIcons.open(QIODevice::WriteOnly)) {
+        QDataStream out(&fileIcons);
+        out << *pathIconNames;
+        fileIcons.close();
+    }
+
     fileIcons.setFileName(QString("%1/folder.cache").arg(Common::configDir()));
     if (fileIcons.open(QIODevice::WriteOnly)) {
         QDataStream out(&fileIcons);
@@ -959,6 +999,15 @@ QVariant myModel::findIcon(myModelItem *item) const {
   //qDebug() << "findicon" << item->absoluteFilePath();
   // If type of file is directory, return icon of directory
   QFileInfo type(item->fileInfo());
+  const QString absPath = type.absoluteFilePath();
+  if (pathIconNames->contains(absPath)) {
+    const QIcon custom = BundledIcons::iconByName(pathIconNames->value(absPath));
+    if (!custom.isNull()) {
+      return custom;
+    }
+    pathIconNames->remove(absPath);
+  }
+
   if (type.isDir()) {
     if (folderIcons->contains(type.fileName())) {
       return folderIcons->value(type.fileName());

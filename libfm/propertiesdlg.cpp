@@ -30,6 +30,8 @@
 #include "common.h"
 #include "propertiesdlg.h"
 #include "icondlg.h"
+#include "bundledicons.h"
+#include "fileutils.h"
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
@@ -56,6 +58,7 @@ PropertiesDialog::PropertiesDialog(QStringList paths, myModel *modelList) {
   folderIcons = nullptr;
   fileIcons = nullptr;
   iconChanged = 0;
+  selectedIconName.clear();
 
   files = 0;
   folders = 0;
@@ -89,6 +92,9 @@ PropertiesDialog::PropertiesDialog(QStringList paths, myModel *modelList) {
       iconButton = new QToolButton;
       if (folderIcons->contains(file.fileName())) {
         iconButton->setIcon(folderIcons->value(file.fileName()));
+      } else if (modelList->pathIconNames->contains(file.absoluteFilePath())) {
+        iconButton->setIcon(BundledIcons::iconByName(
+            modelList->pathIconNames->value(file.absoluteFilePath())));
       } else {
         iconButton->setIcon(QIcon::fromTheme("folder"));
       }
@@ -102,10 +108,12 @@ PropertiesDialog::PropertiesDialog(QStringList paths, myModel *modelList) {
       type = 2;
       fileIcons = modelList->mimeIcons;
 
-      QLabel *iconLabel = new QLabel();
+      iconButton = new QToolButton;
       QIcon theIcon;
-
-      if (file.suffix().isEmpty()) {
+      if (modelList->pathIconNames->contains(file.absoluteFilePath())) {
+        theIcon = BundledIcons::iconByName(
+            modelList->pathIconNames->value(file.absoluteFilePath()));
+      } else if (file.suffix().isEmpty()) {
         if (file.isExecutable()) {
           theIcon = fileIcons->value("exec");
         } else {
@@ -114,9 +122,15 @@ PropertiesDialog::PropertiesDialog(QStringList paths, myModel *modelList) {
       } else {
         theIcon = fileIcons->value(file.suffix());
       }
+      if (theIcon.isNull()) {
+        theIcon = BundledIcons::iconForFileSuffix(FileUtils::getRealSuffix(file.fileName()));
+      }
 
-      iconLabel->setPixmap(theIcon.pixmap(64,64));
-      layoutPath->addWidget(iconLabel,0,0);
+      iconButton->setIcon(theIcon);
+      iconButton->setIconSize(QSize(64, 64));
+      iconButton->setAutoRaise(true);
+      connect(iconButton, SIGNAL(clicked()), this, SLOT(changeIcon()));
+      layoutPath->addWidget(iconButton, 0, 0);
       layoutPath->addWidget(new QLabel(tr("Filetype:")),3,0);
       containsInfo->setText(modelList->getMimeUtils()->getMimeType(pathName));
     }
@@ -332,7 +346,16 @@ void PropertiesDialog::accept()
         }
     }
 
-    if(iconChanged) folderIcons->insert(QFileInfo(pathName).fileName(),iconButton->icon());
+    if(iconChanged) {
+        const QFileInfo info(pathName);
+        const QString canonical = info.absoluteFilePath();
+        model->setPathIcon(canonical, selectedIconName);
+        if (type == 1) {
+            folderIcons->insert(info.fileName(),
+                                BundledIcons::iconByName(selectedIconName));
+        }
+        model->cacheInfo();
+    }
 
     emit propertiesUpdated();
     this->done(1);
@@ -378,11 +401,11 @@ void PropertiesDialog::numericChanged(QString text)
 //---------------------------------------------------------------------------
 void PropertiesDialog::changeIcon()
 {
-    icondlg *icons = new icondlg;
-    if(icons->exec() == 1)
-    {
+    icondlg *icons = new icondlg(this);
+    if (icons->exec() == QDialog::Accepted && !icons->result.isEmpty()) {
         iconChanged = 1;
-        iconButton->setIcon(QIcon::fromTheme(icons->result));
+        selectedIconName = icons->result;
+        iconButton->setIcon(BundledIcons::iconByName(selectedIconName));
     }
     delete icons;
 }

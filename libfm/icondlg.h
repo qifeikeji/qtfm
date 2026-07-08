@@ -22,34 +22,43 @@
 #ifndef ICONDLG_H
 #define ICONDLG_H
 
-#include <QtGui>
 #include <QDialog>
-#include <QListWidget>
-#include <QVBoxLayout>
-#include <QCompleter>
 #include <QDialogButtonBox>
+#include <QListView>
+#include <QStandardItemModel>
+#include <QVBoxLayout>
+#include <QFutureWatcher>
+
+class IconViewDelegate;
 
 class icondlg : public QDialog
 {
-
-Q_OBJECT
+    Q_OBJECT
 
 public:
-    icondlg();
+    icondlg(QWidget *parent = nullptr);
+    /** Bundled icon base name (e.g. "folder10", "mp4"), not a freedesktop theme name. */
     QString result;
 
 public slots:
     void scanTheme();
     void loadIcons();
-    void accept();
+    void accept() override;
+
+private slots:
+    void onIconActivated(const QModelIndex &index);
 
 private:
-    QListWidget *iconList;
+    void applyGridLayout();
+
+    QListView *iconView;
+    QStandardItemModel *iconModel;
+    IconViewDelegate *iconDelegate;
     QDialogButtonBox *buttons;
-    QVBoxLayout *layout;
-    QStringList fileNames;
-    QStringList themes;
+    QStringList pendingNames;
     QFutureWatcher<void> thread;
+    static constexpr int kPickerZoom = 100;
+    static constexpr int kCellGap = 4;
 };
 
 #endif // ICONDLG_H

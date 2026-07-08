@@ -41,6 +41,7 @@
 #include "mymodel.h"
 #include "fileutils.h"
 #include "applicationdialog.h"
+#include "sidebaritemdelegate.h"
 
 #include "common.h"
 #include "openwithconfig.h"
@@ -131,6 +132,18 @@ MainWindow::MainWindow()
     bookmarksList->setFocusPolicy(Qt::ClickFocus); // Avoid hijacking focus when Tab on Edit Path
     dockBookmarks->setWidget(bookmarksList);
     addDockWidget(Qt::LeftDockWidgetArea, dockBookmarks);
+
+    // Separate area below bookmarks for removable/external disks, stacked in
+    // the same left column.
+    dockDisks = new QDockWidget(tr("Disks"),this,Qt::SubWindow);
+    dockDisks->setObjectName("disksDock");
+    dockDisks->setSizePolicy(QSizePolicy::Fixed,QSizePolicy::Fixed);
+    disksList = new QListView(dockDisks);
+    disksList->setMinimumHeight(24);
+    disksList->setFocusPolicy(Qt::ClickFocus);
+    dockDisks->setWidget(disksList);
+    addDockWidget(Qt::LeftDockWidgetArea, dockDisks);
+    splitDockWidget(dockBookmarks, dockDisks, Qt::Vertical);
 
     QWidget *main = new QWidget(this);
     mainLayout = new QVBoxLayout(main);
@@ -225,6 +238,13 @@ MainWindow::MainWindow()
     // Create bookmarks model
     modelBookmarks = new bookmarkmodel(/*modelList->folderIcons*/);
     connect(modelBookmarks, SIGNAL(bookmarksChanged()), this, SLOT(handleBookmarksChanged()));
+
+    // Create disks model (removable/external media only, kept separate from
+    // user bookmarks)
+    modelDisks = new disksModel(this);
+    disksList->setModel(modelDisks);
+    connect(disksList, SIGNAL(activated(QModelIndex)), this, SLOT(diskActivated(QModelIndex)));
+    connect(disksList, SIGNAL(doubleClicked(QModelIndex)), this, SLOT(diskActivated(QModelIndex)));
 
     // Load settings before showing window
     loadSettings();
@@ -359,6 +379,7 @@ void MainWindow::lateStart() {
   connect(tabs, SIGNAL(currentChanged(int)), this, SLOT(tabChanged(int)));
   connect(tabs, SIGNAL(dragDropTab(const QMimeData *, QString, QStringList)),
           this, SLOT(pasteLauncher(const QMimeData *, QString, QStringList)));
+  connect(tabs, SIGNAL(openInNewWindowRequested(int)), this, SLOT(openTabInNewWindow(int)));
   connect(list, SIGNAL(pressed(QModelIndex)),
           this, SLOT(listItemPressed(QModelIndex)));
   connect(detailTree, SIGNAL(pressed(QModelIndex)),
@@ -431,6 +452,12 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   bookmarksList->setResizeMode(QListView::Adjust);
   bookmarksList->setFlow(QListView::TopToBottom);
   bookmarksList->setIconSize(QSize(24,24));
+  bookmarksList->setItemDelegate(new BookmarkItemDelegate(bookmarksList));
+
+  disksList->setResizeMode(QListView::Adjust);
+  disksList->setFlow(QListView::TopToBottom);
+  disksList->setIconSize(QSize(24,24));
+  disksList->setItemDelegate(new DiskItemDelegate(disksList));
 
   // Load information whether bookmarks are displayed
   wrapBookmarksAct->setChecked(settings->value("wrapBookmarks", 0).toBool());
@@ -489,7 +516,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
 
   // Load information whether tabs can be shown on top
   if (tabState) {
-      tabsOnTopAct->setChecked(settings->value("tabsOnTop", 0).toBool());
+      tabsOnTopAct->setChecked(settings->value("tabsOnTop", 1).toBool());
       tabsOnTop();
   }
 
@@ -547,7 +574,6 @@ void MainWindow::writeBookmarks()
     settings->remove("bookmarks");
     settings->beginGroup("bookmarks");
     for (int i = 0; i < modelBookmarks->rowCount(); i++) {
-      if (modelBookmarks->item(i)->data(MEDIA_MODEL).toBool()) { continue; } // ignore media devices
       QStringList temp;
       temp << modelBookmarks->item(i)->text()
            << modelBookmarks->item(i)->data(BOOKMARK_PATH).toString()
@@ -831,6 +857,13 @@ void MainWindow::openTab()
     }
 }
 
+void MainWindow::openNewWindowFromSelection()
+{
+    QFileInfo info(curIndex.filePath());
+    if (!info.isDir()) { return; }
+    newWindow(curIndex.filePath());
+}
+
 void MainWindow::openNewTab()
 {
     QFileInfo info(curIndex.filePath());
@@ -855,6 +888,20 @@ void MainWindow::tabsOnTop()
         mainLayout->setDirection(QBoxLayout::TopToBottom);
         tabs->setShape(QTabBar::RoundedSouth);
     }
+    updateTabBarPalette();
+}
+
+//---------------------------------------------------------------------------
+/**
+ * @brief Makes the selected tab blend with the file view's background so it
+ * visually reads as "part of" the currently displayed folder area.
+ */
+void MainWindow::updateTabBarPalette()
+{
+    const QColor blend = list->palette().color(QPalette::Base);
+    tabs->setStyleSheet(QString(
+        "QTabBar::tab:selected { background: %1; }"
+    ).arg(blend.name()));
 }
 
 //---------------------------------------------------------------------------
@@ -879,13 +926,27 @@ void MainWindow::tabChanged(int index)
     }
 }
 
-void MainWindow::newWindow()
+void MainWindow::newWindow(const QString &path)
 {
     if (settings->value("clearCache").toBool()) {
         settings->setValue("clearCache", false); // we don't want the new window to clear our existing cache
     }
     writeSettings();
-    QProcess::startDetached(qApp->applicationFilePath(), QStringList());
+    QStringList args;
+    if (!path.isEmpty()) { args << path; }
+    QProcess::startDetached(qApp->applicationFilePath(), args);
+}
+
+void MainWindow::openTabInNewWindow(int index)
+{
+    if (index < 0 || index >= tabs->count()) { return; }
+    const QString path = tabs->tabData(index).toString();
+    newWindow(path);
+    // Move semantics: close the tab in this window now that it lives in the new one.
+    if (tabs->count() > 1) {
+        tabs->setCurrentIndex(index);
+        tabs->closeTab();
+    }
 }
 
 
@@ -1338,6 +1399,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
       else {
         //popup->addAction(openAct);
         popup->addAction(openInTabAct);
+        popup->addAction(openInNewWindowAct);
         popup->addSeparator();
         popup->addAction(addBookmarkAct);
         popup->addSeparator();
@@ -1409,29 +1471,32 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
       listSelectionModel->clearSelection();
       if (bookmarksList->indexAt(bookmarksList->mapFromGlobal(event->globalPos())).isValid()) {
         curIndex = bookmarksList->currentIndex().data(BOOKMARK_PATH).toString();
-        isMedia = bookmarksList->currentIndex().data(MEDIA_MODEL).toBool();
-        if (!isMedia) {
-            popup->addAction(delBookmarkAct);
-            if (!curIndex.path().isEmpty()) {
-                popup->addAction(editBookmarkAct);	//icon
-            }
-        } else {
-            // media actions
-#ifndef NO_UDISKS
-            QString mediaPath = bookmarksList->currentIndex().data(MEDIA_PATH).toString();
-            if (!mediaPath.isEmpty()) {
-                if (!disks->devices[mediaPath]->mountpoint.isEmpty()) { // mounted
-                    popup->addAction(mediaUnmountAct);
-                } else { // unmounted
-                    if (disks->devices[mediaPath]->isOptical) { popup->addAction(mediaEjectAct); }
-                }
-            }
-#endif
+        popup->addAction(delBookmarkAct);
+        if (!curIndex.path().isEmpty()) {
+            popup->addAction(editBookmarkAct);	//icon
         }
       } else {
         bookmarksList->clearSelection();
         popup->addAction(addSeparatorAct);	//separator
         popup->addAction(wrapBookmarksAct);
+      }
+      popup->addSeparator();
+    } else if (focusWidget() == disksList) {
+      listSelectionModel->clearSelection();
+      if (disksList->indexAt(disksList->mapFromGlobal(event->globalPos())).isValid()) {
+#ifndef NO_UDISKS
+        isMedia = true;
+        QString mediaPath = disksList->currentIndex().data(DISK_DEVICE_PATH).toString();
+        if (!mediaPath.isEmpty() && disks->devices.contains(mediaPath)) {
+            if (!disks->devices[mediaPath]->mountpoint.isEmpty()) { // mounted
+                popup->addAction(mediaUnmountAct);
+            } else { // unmounted
+                if (disks->devices[mediaPath]->isOptical) { popup->addAction(mediaEjectAct); }
+            }
+        }
+#endif
+      } else {
+        disksList->clearSelection();
       }
       popup->addSeparator();
     } else {
@@ -1445,6 +1510,7 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
           popup->addAction(newFileAct);
           popup->addAction(newWinAct);
           popup->addAction(openTabAct);
+          popup->addAction(openInNewWindowAct);
           popup->addSeparator();
           popup->addAction(cutAct);
           popup->addAction(copyAct);
@@ -1751,41 +1817,28 @@ void MainWindow::populateMedia()
     QMapIterator<QString, Device*> device(disks->devices);
     while (device.hasNext()) {
         device.next();
-        if (mediaBookmarkExists(device.value()->path)>-1) { continue; }
         if ((device.value()->isOptical && !device.value()->hasMedia)
 #ifndef __FreeBSD__
                 || (!device.value()->isOptical && !device.value()->isRemovable)
 #endif
-                || (!device.value()->isOptical && !device.value()->hasPartition)) { continue; }
-        modelBookmarks->addBookmark(QString("%1 (%2)").arg(device.value()->name).arg(device.value()->dev),
-                                    device.value()->mountpoint,
-                                    "",
-                                    device.value()->isOptical?"drive-optical":"drive-removable-media",
-                                    device.value()->path,
-                                    true,
-                                    false);
+                || (!device.value()->isOptical && !device.value()->hasPartition)) {
+            modelDisks->removeDisk(device.value()->path);
+            continue;
+        }
+        modelDisks->upsertDisk(device.value()->path,
+                               QString("%1 (%2)").arg(device.value()->name).arg(device.value()->dev),
+                               device.value()->mountpoint,
+                               device.value()->isOptical?"drive-optical":"drive-removable-media",
+                               device.value()->isOptical);
     }
+    modelDisks->refreshUsage();
 }
 
 void MainWindow::handleMediaMountpointChanged(QString path, QString mountpoint)
 {
-    Q_UNUSED(mountpoint)
     if (path.isEmpty()) { return; }
-    for (int i = 0; i < modelBookmarks->rowCount(); i++) {
-        if (modelBookmarks->item(i)->data(MEDIA_MODEL).toBool() && modelBookmarks->item(i)->data(MEDIA_PATH).toString() == path) {
-            modelBookmarks->item(i)->setData(disks->devices[path]->mountpoint, BOOKMARK_PATH);
-        }
-    }
-}
-
-int MainWindow::mediaBookmarkExists(QString path)
-{
-    if (path.isEmpty()) { return -1; }
-    for (int i = 0; i < modelBookmarks->rowCount(); ++i) {
-        if (modelBookmarks->item(i)->data(MEDIA_MODEL).toBool()
-                && modelBookmarks->item(i)->data(MEDIA_PATH).toString() == path) { return i; }
-    }
-    return -1;
+    modelDisks->setMountpoint(path, mountpoint);
+    modelDisks->refreshUsage();
 }
 
 void MainWindow::handleMediaAdded(QString path)
@@ -1796,17 +1849,16 @@ void MainWindow::handleMediaAdded(QString path)
 
 void MainWindow::handleMediaRemoved(QString path)
 {
-    int bookmark = mediaBookmarkExists(path);
-    if (bookmark>-1) { modelBookmarks->removeRow(bookmark); }
+    modelDisks->removeDisk(path);
 }
 
 void MainWindow::handleMediaChanged(QString path, bool present)
 {
     //qDebug() << "changed" << path << present;
     if (path.isEmpty()) { return; }
-    if (disks->devices[path]->isOptical && !present && mediaBookmarkExists(path)>-1) {
+    if (disks->devices[path]->isOptical && !present && modelDisks->contains(path)) {
         handleMediaRemoved(path);
-    } else if (disks->devices[path]->isOptical && present && mediaBookmarkExists(path)==-1) {
+    } else if (disks->devices[path]->isOptical && present && !modelDisks->contains(path)) {
         handleMediaAdded(path);
     }
 }
@@ -1814,9 +1866,9 @@ void MainWindow::handleMediaChanged(QString path, bool present)
 void MainWindow::handleMediaUnmount()
 {
     //qDebug() << "handle media unmount";
-    QStandardItem *item = modelBookmarks->itemFromIndex(bookmarksList->currentIndex());
-    if (item == nullptr) { return; }
-    QString path = item->data(MEDIA_PATH).toString();
+    QModelIndex index = disksList->currentIndex();
+    if (!index.isValid()) { return; }
+    QString path = index.data(DISK_DEVICE_PATH).toString();
     if (path.isEmpty()) { return; }
     disks->devices[path]->unmount();
 }
@@ -1824,9 +1876,9 @@ void MainWindow::handleMediaUnmount()
 void MainWindow::handleMediaEject()
 {
     //qDebug() << "handle media eject";
-    QStandardItem *item = modelBookmarks->itemFromIndex(bookmarksList->currentIndex());
-    if (item == nullptr) { return; }
-    QString path = item->data(MEDIA_PATH).toString();
+    QModelIndex index = disksList->currentIndex();
+    if (!index.isValid()) { return; }
+    QString path = index.data(DISK_DEVICE_PATH).toString();
     if (path.isEmpty()) { return; }
     disks->devices[path]->eject();
 }
@@ -1835,7 +1887,26 @@ void MainWindow::handleMediaError(QString path, QString error)
 {
     QMessageBox::warning(this, path, error);
 }
+
 #endif
+
+void MainWindow::diskActivated(QModelIndex item)
+{
+    if (!item.isValid()) { return; }
+    QString mountpoint = item.data(DISK_MOUNTPOINT).toString();
+#ifndef NO_UDISKS
+    const QString devicePath = item.data(DISK_DEVICE_PATH).toString();
+    if (mountpoint.isEmpty() && !devicePath.isEmpty() && disks->devices.contains(devicePath)) {
+        disks->devices[devicePath]->mount();
+        // Mounting is async; handleMediaMountpointChanged() will update the
+        // model once done. Re-read here in case it was already mounted.
+        mountpoint = modelDisks->index(item.row()).data(DISK_MOUNTPOINT).toString();
+    }
+#endif
+    if (mountpoint.isEmpty()) { return; }
+    tree->setCurrentIndex(modelTree->mapFromSource(modelList->index(mountpoint)));
+    status->showMessage(Common::getDriveInfo(mountpoint));
+}
 
 void MainWindow::clearCache()
 {

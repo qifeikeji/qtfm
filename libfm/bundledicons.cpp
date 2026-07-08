@@ -9,8 +9,84 @@
 #include <QSet>
 #include <QStandardPaths>
 #include <QSvgRenderer>
+#include <QtEndian>
 
 namespace {
+
+/** Load Apple .icns (PNG/JPEG chunks); works on Linux without Qt icns plugin. */
+QIcon iconFromIcnsFile(const QString &path)
+{
+#if defined(Q_OS_MACOS) || defined(Q_OS_MAC)
+    const QIcon native(path);
+    if (!native.isNull()) {
+        return native;
+    }
+#endif
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QIcon();
+    }
+    const QByteArray data = file.readAll();
+    if (data.size() < 8 || !data.startsWith("icns")) {
+        return QIcon();
+    }
+
+    QImage best;
+    int bestArea = 0;
+
+    auto tryImage = [&](const QByteArray &payload) {
+        if (payload.size() < 8) {
+            return;
+        }
+        QImage img;
+        if (!img.loadFromData(payload)) {
+            return;
+        }
+        const int area = img.width() * img.height();
+        if (area > bestArea) {
+            best = img;
+            bestArea = area;
+        }
+    };
+
+    int offset = 8;
+    while (offset + 8 <= data.size()) {
+        const quint32 chunkSize = qFromBigEndian<quint32>(
+            reinterpret_cast<const uchar *>(data.constData() + offset + 4));
+        if (chunkSize < 8 || offset + static_cast<int>(chunkSize) > data.size()) {
+            break;
+        }
+        const QByteArray payload = data.mid(offset + 8, static_cast<int>(chunkSize) - 8);
+        tryImage(payload);
+        offset += static_cast<int>(chunkSize);
+    }
+
+    // Some icns nest PNG without clean chunk boundaries; scan as fallback.
+    for (int i = 0; i + 8 < data.size(); ++i) {
+        if (static_cast<uchar>(data.at(i)) == 0x89
+            && data.at(i + 1) == 'P' && data.at(i + 2) == 'N'
+            && data.at(i + 3) == 'G') {
+            tryImage(data.mid(i));
+        }
+    }
+
+    if (best.isNull()) {
+        return QIcon();
+    }
+    QIcon icon;
+    const int sizes[] = {16, 24, 32, 48, 64, 96, 128, 192, 256};
+    for (int size : sizes) {
+        QPixmap pm = QPixmap::fromImage(
+            best.scaled(size, size, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        icon.addPixmap(pm);
+    }
+    return icon;
+}
+
+static const char *kBundledExtensions[] = {
+    ".svg", ".png", ".icns", ".SVG", ".PNG", ".ICNS",
+};
+
 
 QStringList bundledMimeIconDirectories()
 {
@@ -87,10 +163,8 @@ QIcon loadIconFromBaseName(const QString &baseName)
         return cache.value(key);
     }
 
-    static const char *extensions[] = {".svg", ".png", ".SVG", ".PNG"};
-
     for (const QString &dirPath : bundledMimeIconDirectories()) {
-        for (const char *ext : extensions) {
+        for (const char *ext : kBundledExtensions) {
             const QString path = dirPath + QLatin1Char('/') + key
                                  + QString::fromLatin1(ext);
             if (!QFileInfo::exists(path)) {
@@ -99,6 +173,8 @@ QIcon loadIconFromBaseName(const QString &baseName)
             QIcon icon;
             if (path.endsWith(QLatin1String(".svg"), Qt::CaseInsensitive)) {
                 icon = iconFromSvgFile(path);
+            } else if (path.endsWith(QLatin1String(".icns"), Qt::CaseInsensitive)) {
+                icon = iconFromIcnsFile(path);
             } else {
                 icon = QIcon(path);
             }
@@ -109,7 +185,7 @@ QIcon loadIconFromBaseName(const QString &baseName)
         }
     }
 
-    for (const char *ext : extensions) {
+    for (const char *ext : kBundledExtensions) {
         const QString resource = QStringLiteral(":/icons/mimes/") + key
                                  + QString::fromLatin1(ext);
         if (!QFile::exists(resource)) {
@@ -118,6 +194,8 @@ QIcon loadIconFromBaseName(const QString &baseName)
         QIcon icon;
         if (resource.endsWith(QLatin1String(".svg"), Qt::CaseInsensitive)) {
             icon = iconFromSvgFile(resource);
+        } else if (resource.endsWith(QLatin1String(".icns"), Qt::CaseInsensitive)) {
+            icon = iconFromIcnsFile(resource);
         } else {
             icon = QIcon(resource);
         }
@@ -134,16 +212,15 @@ QIcon loadIconFromBaseName(const QString &baseName)
 QString findIconFilePath(const QString &baseName)
 {
     const QString key = resolveBundledBaseName(baseName);
-    static const char *extensions[] = {".svg", ".png", ".SVG", ".PNG"};
     for (const QString &dirPath : bundledMimeIconDirectories()) {
-        for (const char *ext : extensions) {
+        for (const char *ext : kBundledExtensions) {
             const QString path = dirPath + QLatin1Char('/') + key + QString::fromLatin1(ext);
             if (QFileInfo::exists(path)) {
                 return path;
             }
         }
     }
-    for (const char *ext : extensions) {
+    for (const char *ext : kBundledExtensions) {
         const QString resource = QStringLiteral(":/icons/mimes/") + key + QString::fromLatin1(ext);
         if (!QFile::exists(resource)) {
             continue;
@@ -376,19 +453,23 @@ QIcon BundledIcons::iconByName(const QString &name)
 QStringList BundledIcons::availableIconBaseNames()
 {
     QStringList names;
-    static const char *extensions[] = {".svg", ".png"};
     for (const QString &dirPath : bundledMimeIconDirectories()) {
         QDir dir(dirPath);
-        for (const char *ext : extensions) {
-            for (const QFileInfo &fi : dir.entryInfoList({QStringLiteral("*") + ext}, QDir::Files)) {
+        for (const char *ext : kBundledExtensions) {
+            const QString pattern = QStringLiteral("*") + QString::fromLatin1(ext);
+            for (const QFileInfo &fi : dir.entryInfoList({pattern}, QDir::Files)) {
                 names << fi.completeBaseName();
             }
         }
     }
     QDir resourceDir(QStringLiteral(":/icons/mimes"));
     if (resourceDir.exists()) {
-        for (const char *ext : extensions) {
-            for (const QString &entry : resourceDir.entryList({QStringLiteral("*") + ext}, QDir::Files)) {
+        for (const char *ext : kBundledExtensions) {
+            if (qstrcmp(ext, ".icns") == 0 || qstrcmp(ext, ".ICNS") == 0) {
+                continue; // large icns are filesystem-only, not in qrc
+            }
+            const QString pattern = QStringLiteral("*") + QString::fromLatin1(ext);
+            for (const QString &entry : resourceDir.entryList({pattern}, QDir::Files)) {
                 names << QFileInfo(entry).completeBaseName();
             }
         }

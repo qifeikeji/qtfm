@@ -40,6 +40,7 @@
 
 #include "mymodel.h"
 #include "bookmarkmodel.h"
+#include "disksmodel.h"
 #include "propertiesdlg.h"
 #include "icondlg.h"
 #include "tabbar.h"
@@ -124,6 +125,7 @@ public slots:
     void bookmarkClicked(QModelIndex);
     void bookmarkPressed(QModelIndex);
     void bookmarkShortcutTrigger();
+    void diskActivated(QModelIndex);
     void contextMenuEvent(QContextMenuEvent *);
     void toggleLockLayout();
     void dragLauncher(const QMimeData *data, const QString &newPath, Common::DragMode dragMode);
@@ -133,10 +135,13 @@ public slots:
     void listItemClicked(QModelIndex);
     void listItemPressed(QModelIndex);
     void tabChanged(int index);
-    void newWindow();
+    void newWindow(const QString &path = QString());
+    void openTabInNewWindow(int index);
     void openTab();
     void openNewTab();
+    void openNewWindowFromSelection();
     void tabsOnTop();
+    void updateTabBarPalette();
     int addTab(QString path);
     void clearCutItems();
     void zoomInAction();
@@ -175,7 +180,6 @@ private slots:
 #ifndef NO_UDISKS
     void populateMedia();
     void handleMediaMountpointChanged(QString path, QString mountpoint);
-    int mediaBookmarkExists(QString path);
     void handleMediaAdded(QString path);
     void handleMediaRemoved(QString path);
     void handleMediaChanged(QString path, bool present);
@@ -215,12 +219,14 @@ private:
     QSettings *settings;
     QDockWidget *dockTree;
     QDockWidget *dockBookmarks;
+    QDockWidget *dockDisks;
     QVBoxLayout *mainLayout;
     QStackedWidget *stackWidget;
     QTreeView *tree;
     DfmQTreeView *detailTree;
     QListView *list;
     QListView *bookmarksList;
+    QListView *disksList;
     QComboBox *pathEdit;
 
     QString term;
@@ -231,6 +237,7 @@ private:
     QSortFilterProxyModel *modelView;
 
     bookmarkmodel *modelBookmarks;
+    disksModel *modelDisks;
     QItemSelectionModel *treeSelectionModel;
     QItemSelectionModel *listSelectionModel;
     QStringList mounts;
@@ -297,6 +304,7 @@ private:
     QAction *newWinAct;
     QAction *openTabAct;
     QAction *openInTabAct;
+    QAction *openInNewWindowAct;
     QAction *closeTabAct;
     QAction *tabsOnTopAct;
     QAction *aboutAct;

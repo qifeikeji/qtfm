@@ -18,7 +18,8 @@ HEADERS += \
     src/mainwindow.h \
     src/tabbar.h \
     src/settingsdialog.h \
-    src/openwithsettingswidget.h
+    src/openwithsettingswidget.h \
+    src/sidebaritemdelegate.h
 
 SOURCES += \
     src/main.cpp \
@@ -28,7 +29,8 @@ SOURCES += \
     src/settingsdialog.cpp \
     src/openwithsettingswidget.cpp \
     src/actiondefs.cpp \
-    src/actiontriggers.cpp
+    src/actiontriggers.cpp \
+    src/sidebaritemdelegate.cpp
 
 RESOURCES += $${top_srcdir}/share/$${TARGET}.qrc \
               $${top_srcdir}/share/mimes.qrc

@@ -1041,7 +1041,7 @@ void SettingsDialog::accept() {
 void SettingsDialog::getIcon(QTreeWidgetItem* item, int column) {
   if (column == 2) {
     icondlg *icons = new icondlg;
-    if (icons->exec() == 1) {
+    if (icons->exec() == QDialog::Accepted) {
       item->setText(column, icons->result);
       item->setIcon(column, BundledIcons::iconByName(icons->result));
     }

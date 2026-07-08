@@ -1,5 +1,6 @@
 # QtFM bundled file icons — place files in this directory (see list below).
-# After adding icons, run:  ./share/icons/mimes/update_qrc.sh
+# After adding SVG/PNG icons, run:  ./share/icons/mimes/update_qrc.sh
+# (.icns files stay on disk only — they are not embedded in mimes.qrc)
 # Current pack: 116 SVG files (+ folder.svg copied from default-folder.svg).
 #
 # Put each icon here as  <basename>.svg  or  <basename>.png

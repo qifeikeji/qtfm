@@ -47,6 +47,7 @@ protected:
 
 signals:
         void dragDropTab(const QMimeData * data, QString newPath, QStringList cutList);
+        void openInNewWindowRequested(int index);
 
 public slots:
         void closeTab();
