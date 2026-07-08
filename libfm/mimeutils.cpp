@@ -8,6 +8,7 @@
 #include <QMimeType>
 #include <QDir>
 #include <QApplication>
+#include <QUrl>
 
 #ifdef Q_OS_DARWIN
 #include <CoreFoundation/CoreFoundation.h>
@@ -15,6 +16,56 @@
 #endif
 
 #include "common.h"
+
+namespace {
+
+QString substituteSingleFileTokens(QString line, const QFileInfo &file)
+{
+    const QString path = file.filePath();
+    const QString url = QUrl::fromLocalFile(path).toString(QUrl::FullyEncoded);
+    if (line.contains(QStringLiteral("%F"), Qt::CaseInsensitive)) {
+        line.replace(QStringLiteral("%F"), path, Qt::CaseInsensitive);
+    } else if (line.contains(QStringLiteral("%U"), Qt::CaseInsensitive)) {
+        line.replace(QStringLiteral("%U"), url, Qt::CaseInsensitive);
+    } else if (line.contains(QStringLiteral("%f"), Qt::CaseInsensitive)) {
+        line.replace(QStringLiteral("%f"), path, Qt::CaseInsensitive);
+    } else if (line.contains(QStringLiteral("%u"), Qt::CaseInsensitive)) {
+        line.replace(QStringLiteral("%u"), url, Qt::CaseInsensitive);
+    } else {
+        line = line.trimmed();
+        if (!line.isEmpty()) {
+            line += QLatin1Char(' ');
+        }
+        line += path;
+    }
+    return line;
+}
+
+bool startDetachedCommand(const QString &commandLine, const QString &termCmd)
+{
+    const QString line = commandLine.trimmed();
+    if (line.isEmpty()) {
+        return false;
+    }
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    QStringList parts = QProcess::splitCommand(line);
+#else
+    QStringList parts = line.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+#endif
+    if (parts.isEmpty()) {
+        return false;
+    }
+    const QString program = parts.takeFirst();
+    if (program.isEmpty()) {
+        return false;
+    }
+    if (!termCmd.isEmpty()) {
+        return QProcess::startDetached(termCmd, QStringList() << QStringLiteral("-e") << line);
+    }
+    return QProcess::startDetached(program, parts);
+}
+
+} // namespace
 
 
 /**
@@ -121,63 +172,49 @@ void MimeUtils::openInApp(QString exe, const QFileInfo &file,
 
   qDebug() << "openInApp" << exe << file.absoluteFilePath() << termCmd;
 
-  // This is not the right the solution, but qpdfview won't start otherwise
-  // TODO: Repair it correctly
-  if (exe.contains("qpdfview")) {
-    exe = "qpdfview";
+  if (exe.contains(QStringLiteral("qpdfview"))) {
+    exe = QStringLiteral("qpdfview");
   }
 
-  // Separate application name from its arguments
-  QStringList split = exe.split(" ");
-  QString name = split.takeAt(0);
-  QString args = split.join(" ");
-
-  // Get relative path
-  //args = args.split(QDir::separator()).last();
-
-  // Replace parameters with file name. If there are no parameters simply append
-  // file name to the end of argument list
-  if (args.toLower().contains("%f")) {
-    args.replace("%f", "\"" + file.filePath() + "\"", Qt::CaseInsensitive);
-  } else if (args.toLower().contains("%u")) {
-    args.replace("%u", "\"" + file.filePath() + "\"", Qt::CaseInsensitive);
-  } else {
-    args.append(args.isEmpty() ? "" : " ");
-    args.append("\"" + file.filePath() + "\"");
-  }
-
-  qDebug() << "qprocess start detached" << name << args;
-
-  // Start application
-  const bool terminal = !termCmd.isEmpty();
-  if (terminal) { args = QString("%1 %2").arg(name, args); }
-  QProcess::startDetached(terminal ? termCmd : name,
-                          terminal ? QStringList() << "-e" << args :
-                                     QStringList() << args);
+  const QString commandLine = substituteSingleFileTokens(exe, file);
+  qDebug() << "launch" << commandLine;
+  startDetachedCommand(commandLine, termCmd);
 }
 
 void MimeUtils::openFilesInApp(QString exe, const QStringList &files, QString termCmd)
 {
-    // Separate application name from its arguments
-    QStringList split = exe.split(" ");
-    QString name = split.takeAt(0);
-    QString args = split.join(" ");
-
-    if (args.toLower().contains("%f")) {
-        args.replace("%f", "", Qt::CaseInsensitive);
-    } else if (args.toLower().contains("%u")) {
-        args.replace("%u", "", Qt::CaseInsensitive);
+    QString line = exe;
+    if (line.contains(QStringLiteral("%F"), Qt::CaseInsensitive)) {
+        QStringList quoted;
+        for (const QString &path : files) {
+            quoted << path;
+        }
+        line.replace(QStringLiteral("%F"), quoted.join(QLatin1Char(' ')), Qt::CaseInsensitive);
+    } else if (line.contains(QStringLiteral("%U"), Qt::CaseInsensitive)) {
+        QStringList urls;
+        for (const QString &path : files) {
+            urls << QUrl::fromLocalFile(path).toString(QUrl::FullyEncoded);
+        }
+        line.replace(QStringLiteral("%U"), urls.join(QLatin1Char(' ')), Qt::CaseInsensitive);
+    } else if (line.contains(QStringLiteral("%f"), Qt::CaseInsensitive)) {
+        line.replace(QStringLiteral("%f"), files.join(QLatin1Char(' ')), Qt::CaseInsensitive);
+    } else if (line.contains(QStringLiteral("%u"), Qt::CaseInsensitive)) {
+        QStringList urls;
+        for (const QString &path : files) {
+            urls << QUrl::fromLocalFile(path).toString(QUrl::FullyEncoded);
+        }
+        line.replace(QStringLiteral("%u"), urls.join(QLatin1Char(' ')), Qt::CaseInsensitive);
+    } else {
+        line = line.trimmed();
+        for (const QString &path : files) {
+            if (!line.isEmpty()) {
+                line += QLatin1Char(' ');
+            }
+            line += path;
+        }
     }
-    for (int i=0;i<files.size();++i) {
-        args.append("\"" + files.at(i) + "\" ");
-    }
 
-    // Start application
-    const bool terminal = !termCmd.isEmpty();
-    if (terminal) { args = QString("%1 %2").arg(name, args); }
-    QProcess::startDetached(terminal ? termCmd : name,
-                            terminal ? QStringList() << "-e" << args :
-                                       QStringList() << args);
+    startDetachedCommand(line, termCmd);
 }
 //---------------------------------------------------------------------------
 

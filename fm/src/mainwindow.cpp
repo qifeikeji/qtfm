@@ -266,16 +266,14 @@ void MainWindow::lateStart() {
   detailTree->setDragDropMode(QAbstractItemView::DragDrop);
   detailTree->setDefaultDropAction(Qt::MoveAction);
   detailTree->setDropIndicatorShown(true);
-  detailTree->setEditTriggers(QAbstractItemView::EditKeyPressed |
-                              QAbstractItemView::SelectedClicked);
+  detailTree->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
   // Configure list view
   list->setResizeMode(QListView::Adjust);
   list->setSelectionMode(QAbstractItemView::ExtendedSelection);
   list->setSelectionRectVisible(true);
   list->setFocus();
-  list->setEditTriggers(QAbstractItemView::EditKeyPressed |
-                        QAbstractItemView::SelectedClicked);
+  list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
   // Clipboard configuration
   clipboardChanged();
@@ -447,6 +445,9 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   zoomBook = settings->value("zoomBook", 24).toInt();
   zoomList = settings->value("zoomList", 24).toInt();
   zoomDetail = settings->value("zoomDetail", 32).toInt();
+  iconViewGap = settings->value("iconViewGap", 4).toInt();
+  ivdelegate->setCellGap(iconViewGap);
+  updateGrid();
   detailTree->setIconSize(QSize(zoomDetail, zoomDetail));
   tree->setIconSize(QSize(zoomTree, zoomTree));
   bookmarksList->setIconSize(QSize(zoomBook, zoomBook));
@@ -1170,6 +1171,7 @@ void MainWindow::writeSettings() {
   settings->setValue("zoomBook", zoomBook);
   settings->setValue("zoomList", zoomList);
   settings->setValue("zoomDetail", zoomDetail);
+  settings->setValue("iconViewGap", iconViewGap);
   settings->setValue("sortBy", currentSortColumn);
   settings->setValue("sortOrder", currentSortOrder);
   settings->setValue("showThumbs", thumbsAct->isChecked());
@@ -1601,7 +1603,6 @@ void MainWindow::enableReload()
  * @brief Selects application for opening file
  */
 void MainWindow::selectApp() {
-  // Select application in the dialog
   ApplicationDialog *dialog = new ApplicationDialog(true, this);
   if (dialog->exec()) {
     if (dialog->getCurrentLauncher().compare("") != 0) {
@@ -1609,7 +1610,10 @@ void MainWindow::selectApp() {
       QString desktop = Common::findApplication(qApp->applicationFilePath(), appName);
       if (desktop.isEmpty()) { return; }
       DesktopFile df = DesktopFile(desktop);
-      mimeUtils->openInApp(df.getExec(), curIndex, df.isTerminal()?term:"");
+      QModelIndex idx = listSelectionModel->currentIndex();
+      if (!idx.isValid()) { return; }
+      QFileInfo fileInfo(modelList->filePath(modelView->mapToSource(idx)));
+      mimeUtils->openInApp(df.getExec(), fileInfo, df.isTerminal()?term:"");
     }
   }
 }
@@ -1692,7 +1696,8 @@ void MainWindow::openInApp()
 void MainWindow::updateGrid()
 {
     if (list->viewMode() != QListView::IconMode) { return; }
-    const QSize grid = IconViewDelegate::iconGridSize(zoom, fontMetrics());
+    ivdelegate->setCellGap(iconViewGap);
+    const QSize grid = IconViewDelegate::iconGridSize(zoom, iconViewGap, fontMetrics());
     list->setIconSize(QSize(zoom, zoom));
     if (list->gridSize() != grid) {
         list->setGridSize(grid);
@@ -1864,7 +1869,8 @@ void MainWindow::actionMapper(QString cmd)
     temp.clear();
 
     foreach(QModelIndex index,selList) {
-        temp.append(modelList->filePath(modelView->mapToSource(index)).replace(" ","\\"));
+        temp.append(QStringLiteral("\"") + modelList->filePath(modelView->mapToSource(index))
+                    + QStringLiteral("\""));
     }
 
     cmd.replace("%F",temp.join(" "));

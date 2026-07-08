@@ -52,8 +52,7 @@ FM::FM(MimeUtils *mimeUtils,
     list->setSelectionMode(QAbstractItemView::ExtendedSelection);
     list->setSelectionRectVisible(true);
     list->setFocus();
-    list->setEditTriggers(QAbstractItemView::EditKeyPressed |
-                          QAbstractItemView::SelectedClicked);
+    list->setEditTriggers(QAbstractItemView::NoEditTriggers);
 
     connect(list, SIGNAL(doubleClicked(QModelIndex))
             ,this, SLOT(listDoubleClicked(QModelIndex)));
@@ -123,7 +122,7 @@ void FM::dirLoaded()
 void FM::updateGrid()
 {
     if (list->viewMode() != QListView::IconMode) { return; }
-    const QSize grid = IconViewDelegate::iconGridSize(zoom, fontMetrics());
+    const QSize grid = IconViewDelegate::iconGridSize(zoom, 4, fontMetrics());
     list->setIconSize(QSize(zoom, zoom));
     if (list->gridSize() != grid) {
         list->setGridSize(grid);

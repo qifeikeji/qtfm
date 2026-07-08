@@ -2,13 +2,17 @@
 #include "bundledicons.h"
 
 #include <QListView>
+#include <QFrame>
 #include <QPainterPath>
+#include <QPlainTextEdit>
+#include <QTextBlockFormat>
+#include <QTextCursor>
+#include <QTextDocument>
 #include <QTextLayout>
 #include <QTextOption>
 
 namespace {
 
-constexpr int kInterCellGap = 4;
 constexpr int kIconTop = 6;
 constexpr int kTextTopGap = 2;
 constexpr int kFramePad = 2;
@@ -82,12 +86,28 @@ void drawTwoLineFileName(QPainter *painter, const QRect &rect, const QString &te
 
 } // namespace
 
-QSize IconViewDelegate::iconGridSize(int zoom, const QFontMetrics &fm)
+void IconViewDelegate::setCellGap(int gap)
 {
+    _cellGap = qBound(0, gap, 64);
+}
+
+QSize IconViewDelegate::iconGridSize(int zoom, int cellGap, const QFontMetrics &fm)
+{
+    const int gap = qBound(0, cellGap, 64);
     const int textHeight = twoLineTextHeight(fm);
-    const int cellWidth = zoom + kInterCellGap;
+    const int cellWidth = zoom + gap;
     const int cellHeight = kIconTop + zoom + kTextTopGap + textHeight + kFramePad;
     return QSize(cellWidth, cellHeight);
+}
+
+QRect IconViewDelegate::textLabelRect(const QRect &itemRect, int zoom, int cellGap,
+                                      const QFontMetrics &fm)
+{
+    const int gap = qBound(0, cellGap, 64);
+    const int inset = qMax(1, gap / 2);
+    const int iconBottom = itemRect.top() + kIconTop + zoom;
+    return QRect(itemRect.left() + inset, iconBottom + kTextTopGap,
+                 itemRect.width() - 2 * inset, twoLineTextHeight(fm));
 }
 
 bool IconViewDelegate::eventFilter(QObject *object,
@@ -103,19 +123,63 @@ bool IconViewDelegate::eventFilter(QObject *object,
     return QStyledItemDelegate::eventFilter(editor, event);
 }
 
+QWidget *IconViewDelegate::createEditor(QWidget *parent,
+                                        const QStyleOptionViewItem &option,
+                                        const QModelIndex &index) const
+{
+    Q_UNUSED(index);
+    QPlainTextEdit *editor = new QPlainTextEdit(parent);
+    editor->setFrameStyle(QFrame::NoFrame);
+    editor->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    editor->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    editor->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+    editor->setTabChangesFocus(true);
+    editor->document()->setDocumentMargin(0);
+    editor->setFixedHeight(twoLineTextHeight(option.fontMetrics) + 2);
+    editor->setStyleSheet(QStringLiteral("background: palette(base);"));
+    return editor;
+}
+
+void IconViewDelegate::updateEditorGeometry(QWidget *editor,
+                                            const QStyleOptionViewItem &option,
+                                            const QModelIndex &index) const
+{
+    Q_UNUSED(index);
+    const int zoom = iconPaintSize(option);
+    const QRect txtRect = textLabelRect(option.rect, zoom, _cellGap, option.fontMetrics);
+    editor->setGeometry(txtRect);
+}
+
 void IconViewDelegate::setEditorData(QWidget *editor,
                                      const QModelIndex &index) const
-{ // workaround for QTBUG
+{
     _isEditing = true;
     _index = index;
-    QStyledItemDelegate::setEditorData(editor, index);
+    auto *plain = qobject_cast<QPlainTextEdit *>(editor);
+    if (!plain) {
+        return;
+    }
+    plain->setPlainText(index.data(Qt::EditRole).toString());
+    QTextCursor cursor = plain->textCursor();
+    QTextBlockFormat blockFormat;
+    blockFormat.setAlignment(Qt::AlignHCenter);
+    cursor.select(QTextDocument::SelectDocument);
+    cursor.mergeBlockFormat(blockFormat);
+    cursor.movePosition(QTextCursor::End);
+    plain->setTextCursor(cursor);
 }
 
 void IconViewDelegate::setModelData(QWidget *editor,
                                     QAbstractItemModel *model,
                                     const QModelIndex &index) const
-{ // workaround for QTBUG
-    QStyledItemDelegate::setModelData(editor, model, index);
+{
+    auto *plain = qobject_cast<QPlainTextEdit *>(editor);
+    if (plain) {
+        QString name = plain->toPlainText();
+        name.replace(QLatin1Char('\n'), QLatin1Char(' '));
+        name = name.trimmed();
+        model->setData(index, name, Qt::EditRole);
+    }
     _isEditing = false;
     _index = QModelIndex();
 }
@@ -124,7 +188,7 @@ QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem &option,
                                  const QModelIndex &index) const
 {
     Q_UNUSED(index);
-    return iconGridSize(iconPaintSize(option), option.fontMetrics);
+    return iconGridSize(iconPaintSize(option), _cellGap, option.fontMetrics);
 }
 
 void IconViewDelegate::paint(QPainter *painter,
@@ -138,14 +202,12 @@ void IconViewDelegate::paint(QPainter *painter,
 
     const int zoom = iconPaintSize(opt);
     QRect item = opt.rect;
-    const int inset = kInterCellGap / 2;
+    const int inset = qMax(1, _cellGap / 2);
     QRect iconRect(item.left() + (item.width() - zoom) / 2,
                    item.top() + kIconTop,
                    zoom, zoom);
     const QFontMetrics fm = opt.fontMetrics;
-    const int textHeight = twoLineTextHeight(fm);
-    QRect txtRect(item.left() + inset, iconRect.bottom() + kTextTopGap,
-                  item.width() - 2 * inset, textHeight);
+    QRect txtRect = textLabelRect(item, zoom, _cellGap, fm);
     QBrush txtBrush = qvariant_cast<QBrush>(index.data(Qt::ForegroundRole));
     bool isSelected = opt.state & QStyle::State_Selected;
     bool isEditing = _isEditing && index==_index;

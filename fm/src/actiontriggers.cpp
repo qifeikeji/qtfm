@@ -52,7 +52,7 @@ void MainWindow::executeFile(QModelIndex index, bool run) {
     QProcess::startDetached(filePath, QStringList());
 #endif
   } else {
-    mimeUtils->openInApp(filePath, ""/*term*/);
+    mimeUtils->openInApp(QFileInfo(filePath), QString());
   }
 }
 //---------------------------------------------------------------------------

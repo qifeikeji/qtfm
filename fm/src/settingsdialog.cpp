@@ -189,6 +189,9 @@ QWidget *SettingsDialog::createAppearanceSettings()
     showHomeButton = new QCheckBox(grpAppear);
     showNewTabButton = new QCheckBox(grpAppear);
     showTerminalButton = new QCheckBox(grpAppear);
+    spinIconViewGap = new QSpinBox(grpAppear);
+    spinIconViewGap->setRange(0, 48);
+    spinIconViewGap->setSuffix(tr(" px"));
 
 #if QT_VERSION >= 0x050000
     layoutAppear->addRow(tr("Use \"Dark Mode\""), checkDarkTheme);
@@ -198,6 +201,7 @@ QWidget *SettingsDialog::createAppearanceSettings()
     layoutAppear->addRow(tr("Show Home button"), showHomeButton);
     layoutAppear->addRow(tr("Show \"new tab\" button"), showNewTabButton);
     layoutAppear->addRow(tr("Show Terminal button"), showTerminalButton);
+    layoutAppear->addRow(tr("Icon view spacing"), spinIconViewGap);
 
     // Layout widget
     layoutWidget->addWidget(grpAppear);
@@ -687,6 +691,7 @@ void SettingsDialog::readSettings() {
   showHomeButton->setChecked(settingsPtr->value("home_button", true).toBool());
   showNewTabButton->setChecked(settingsPtr->value("newtab_button", false).toBool());
   showTerminalButton->setChecked(settingsPtr->value("terminal_button", true).toBool());
+  spinIconViewGap->setValue(settingsPtr->value("iconViewGap", 4).toInt());
 #if QT_VERSION >= 0x050000
 #ifdef DEPLOY
   checkDarkTheme->setChecked(settingsPtr->value("darkTheme", true).toBool());
@@ -911,6 +916,7 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("home_button", showHomeButton->isChecked());
   settingsPtr->setValue("newtab_button", showNewTabButton->isChecked());
   settingsPtr->setValue("terminal_button", showTerminalButton->isChecked());
+  settingsPtr->setValue("iconViewGap", spinIconViewGap->value());
   settingsPtr->setValue("windowTitlePath", checkWindowTitlePath->isChecked());
 
 #ifndef Q_OS_MAC

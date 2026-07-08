@@ -17,24 +17,34 @@ class IconViewDelegate : public QStyledItemDelegate
 public:
     static constexpr int iconZoomMin = 16;
     static constexpr int iconZoomMax = 256;
-    /** Icon-mode cell size: width ~ icon square + gap; height = icon + two text lines. */
-    static QSize iconGridSize(int zoom, const QFontMetrics &fm);
+    static QSize iconGridSize(int zoom, int cellGap, const QFontMetrics &fm);
+    static QRect textLabelRect(const QRect &itemRect, int zoom, int cellGap,
+                               const QFontMetrics &fm);
+
+    void setCellGap(int gap);
+
+    QSize sizeHint(const QStyleOptionViewItem &option,
+                   const QModelIndex &index) const override;
+    void paint(QPainter *painter,
+               const QStyleOptionViewItem &option,
+               const QModelIndex &index) const override;
+    QWidget *createEditor(QWidget *parent,
+                          const QStyleOptionViewItem &option,
+                          const QModelIndex &index) const override;
+    void updateEditorGeometry(QWidget *editor,
+                              const QStyleOptionViewItem &option,
+                              const QModelIndex &index) const override;
+    void setEditorData(QWidget *editor,
+                       const QModelIndex &index) const override;
+    void setModelData(QWidget *editor,
+                      QAbstractItemModel *model,
+                      const QModelIndex &index) const override;
 
 private: // workaround for QTBUG
     mutable bool _isEditing;
     mutable QModelIndex _index;
+    int _cellGap = 4;
 protected: // workaround for QTBUG
     bool eventFilter(QObject * object,
-                     QEvent * event);
-public:
-    void setEditorData(QWidget * editor,
-                       const QModelIndex & index) const;
-    void setModelData(QWidget * editor,
-                      QAbstractItemModel * model,
-                      const QModelIndex & index) const;
-    QSize sizeHint(const QStyleOptionViewItem &option,
-                   const QModelIndex &index) const;
-    void paint(QPainter *painter,
-               const QStyleOptionViewItem &option,
-               const QModelIndex &index) const;
+                     QEvent * event) override;
 };

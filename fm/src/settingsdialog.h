@@ -12,6 +12,7 @@
 #include <QSettings>
 #include <QComboBox>
 #include <QGroupBox>
+#include <QSpinBox>
 
 /**
  * @class SettingsDialog
@@ -78,6 +79,7 @@ protected:
   QCheckBox* showTerminalButton;
   QCheckBox* showHomeButton;
   QCheckBox* showNewTabButton;
+  QSpinBox* spinIconViewGap;
   QCheckBox* checkDarkTheme;
   QCheckBox* checkFileColor;
   QCheckBox* checkPathHistory;

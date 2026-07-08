@@ -198,6 +198,7 @@ private:
     int zoomList;
     int zoomDetail;
     int zoomBook;
+    int iconViewGap = 4;
     int currentView;        // 0=list, 1=icons, 2=details
     int currentSortColumn;  // 0=name, 1=size, 3=date
     Qt::SortOrder currentSortOrder;

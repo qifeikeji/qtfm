@@ -4,6 +4,7 @@
 #include <QMenu>
 #include <QTimer>
 #include <QDebug>
+#include <QProcess>
 #include "common.h"
 
 /**
@@ -145,13 +146,15 @@ QList<QAction*>* CustomActionsManager::getActionList() const {
 void CustomActionsManager::execAction(const QString &cmd, const QString &path) {
 
     //qDebug() << "custom action" << cmd << path;
-  // Retrieve executable name from splitted command, the rest is arguments
-  QStringList temp = cmd.split(" ");
-  QString exec = temp.at(0);
-  temp.removeAt(0);
-
-  // Fix rest of command
-  temp.replaceInStrings("\\"," ");
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    QStringList temp = QProcess::splitCommand(cmd);
+#else
+    QStringList temp = cmd.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+#endif
+    if (temp.isEmpty()) {
+        return;
+    }
+    QString exec = temp.takeAt(0);
 
   // Create new custom process
   QProcess *p = new QProcess();
