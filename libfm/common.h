@@ -86,6 +86,7 @@ public:
     static bool removeFolderCache();
     static bool removeThumbsCache();
     static void setupIconTheme(QString appFilePath);
+    static void installIconThemeSearchPaths(const QString &appPath);
     static DragMode int2dad(int value);
     static QVariant readSetting(QString key,
                                 QString fallback = QString());

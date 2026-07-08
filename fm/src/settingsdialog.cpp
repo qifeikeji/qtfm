@@ -929,12 +929,16 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("autoPlayAudioCD", checkAudioCD->isChecked());
   settingsPtr->setValue("trayAutoMount", checkAutoMount->isChecked());
   settingsPtr->setValue("autoPlayDVD", checkDVD->isChecked());
-  settingsPtr->setValue("fallbackTheme", cmbIconTheme->currentText());
   settingsPtr->setValue("defMimeAppsFile", cmbDefaultMimeApps->currentText());
 
-  if (cmbIconTheme->currentText() != settingsPtr->value("fallbackTheme").toString()) {
+  const QString oldTheme = settingsPtr->value("fallbackTheme").toString();
+  const QString newTheme = cmbIconTheme->currentText();
+  settingsPtr->setValue("fallbackTheme", newTheme);
+  if (oldTheme != newTheme) {
       settingsPtr->setValue("clearCache", true);
-      QMessageBox::warning(this, tr("Restart to apply settings"), tr("You must restart application to apply theme settings"));
+      QMessageBox::warning(this, tr("Restart to apply settings"),
+                           tr("Icon theme changed. Restart QtFM to refresh all file icons, "
+                              "or use Clear cache from the Edit menu after restart."));
   }
 #endif
 
