@@ -64,7 +64,16 @@ jobs:
           mkdir -p build
           cd build
           qmake CONFIG+=with_magick CONFIG+=with_ffmpeg CONFIG+=release PREFIX=/usr ..
-          make -j"$(nproc)"
+          set -o pipefail
+          make -j"$(nproc)" 2>&1 | tee build.log
+          make_rc=${PIPESTATUS[0]}
+          if [ "$make_rc" -ne 0 ]; then
+            echo "::group::Compiler / linker errors (first 60 lines)"
+            grep -E ':( error:|fatal error:|undefined reference)' build.log | head -60 || true
+            echo "::endgroup::"
+            echo "Full log: build/build.log in the job artifact (see step output above)."
+            exit "$make_rc"
+          fi
 
       - name: Verify binary
         run: |
