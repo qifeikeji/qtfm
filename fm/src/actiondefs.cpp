@@ -28,6 +28,7 @@
 #include <QLineEdit>
 #include <QWidget>
 #include <QSizePolicy>
+#include <QStatusBar>
 
 void MainWindow::createActionIcons() {
 

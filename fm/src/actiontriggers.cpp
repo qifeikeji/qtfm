@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QDockWidget>
 #include <QStatusBar>
+#include <QHeaderView>
 #include <QToolBar>
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
