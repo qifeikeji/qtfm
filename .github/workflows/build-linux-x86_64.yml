@@ -56,6 +56,9 @@ jobs:
             file \
             wget
 
+      - name: Regenerate mimes.qrc
+        run: ./share/icons/mimes/update_qrc.sh
+
       - name: Build (qmake release)
         run: |
           mkdir -p build
@@ -82,6 +85,12 @@ jobs:
       - name: Install into AppDir
         working-directory: build
         run: make INSTALL_ROOT="${GITHUB_WORKSPACE}/AppDir" install
+
+      - name: Verify bundled mime icons in AppDir
+        run: |
+          test -f "${GITHUB_WORKSPACE}/AppDir/usr/share/qtfm/mimes/folder.svg"
+          test -f "${GITHUB_WORKSPACE}/AppDir/usr/share/qtfm/mimes/mp4.svg"
+          test -x "${GITHUB_WORKSPACE}/AppDir/usr/bin/qtfm"
 
       - name: Build AppImage
         env:

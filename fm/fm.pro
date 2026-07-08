@@ -59,9 +59,8 @@ unix:!macx {
     hicolor.path = $${PREFIX}/share/icons
     INSTALLS += hicolor
 
-    qtfm_mimes.files = $$files($${top_srcdir}/share/icons/mimes/*.svg) \
-                       $$files($${top_srcdir}/share/icons/mimes/*.png)
-    qtfm_mimes.path = $${PREFIX}/share/qtfm/mimes
+    qtfm_mimes.files = $${top_srcdir}/share/icons/mimes
+    qtfm_mimes.path = $${PREFIX}/share/qtfm
     INSTALLS += qtfm_mimes
 
     CONFIG(no_dbus) {
