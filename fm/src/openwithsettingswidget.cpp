@@ -1,19 +1,21 @@
 #include "openwithsettingswidget.h"
 #include "openwithconfig.h"
 
-#include <QGroupBox>
 #include <QClipboard>
-#include <QLayout>
-#include <QMimeData>
 #include <QFormLayout>
 #include <QFrame>
+#include <QGroupBox>
 #include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLayout>
 #include <QLineEdit>
+#include <QMimeData>
+#include <QObject>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QVBoxLayout>
+#include <QVector>
 
 namespace {
 
@@ -49,7 +51,9 @@ void fillEntryForm(QFormLayout *form, OpenWithEntry *entry, const QStringList &s
     auto *iconRow = new QHBoxLayout();
     iconRow->addWidget(iconEdit, 1);
     iconRow->addWidget(pasteBtn);
-    form->addRow(QObject::tr("Icon path"), iconRow);
+    QWidget *iconRowWidget = new QWidget();
+    iconRowWidget->setLayout(iconRow);
+    form->addRow(QObject::tr("Icon path"), iconRowWidget);
 
     QObject::connect(nameEdit, &QLineEdit::textChanged, [entry](const QString &t) {
         entry->name = t;
@@ -100,7 +104,7 @@ OpenWithSettingsWidget::OpenWithSettingsWidget(QWidget *parent) : QWidget(parent
                                "On macOS use: /Applications/App.app %f , or open -a \"App Name\" %f . "
                                "A .app path alone also works; the file is added automatically."));
 #else
-    auto *hint = new QLabel(tr("These handlers override the “Mime Types” tab. "
+    auto *hint = new QLabel(tr("These handlers override the \"Mime Types\" tab. "
                                "Use %f or %F for file path in commands."));
 #endif
     hint->setWordWrap(true);
@@ -138,7 +142,7 @@ QWidget *OpenWithSettingsWidget::buildCategorySection(const QString &categoryId)
         tr("Category: %1")
             .arg(categoryId == QLatin1String("image") ? tr("Image")
                  : categoryId == QLatin1String("video") ? tr("Video")
-                 : categoryId == QLatin1String("text") ? tr("Text & code")
+                 : categoryId == QLatin1String("text") ? tr("Text and code")
                  : categoryId == QLatin1String("archive") ? tr("Archive")
                  : categoryId));
     title->setToolTip(OpenWithConfig::suffixesForCategory(categoryId).join(QStringLiteral(", ")));
