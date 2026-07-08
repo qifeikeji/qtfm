@@ -25,7 +25,8 @@ folder-red.svg          # optional: "root"
 folder-visiting.svg     # optional: symlink dir
 #
 # --- Fallbacks (recommended) ---
-unknown.svg             # anything unmatched
+empty.svg               # anything without a dedicated icon
+unknown.svg             # legacy name (optional)
 video.svg               # video fallback if no per-ext icon
 image.svg               # image fallback
 text.svg                # text/code fallback

@@ -27,6 +27,7 @@
         <file>icons/mimes/default-folder-open.svg</file>
         <file>icons/mimes/default-folder.svg</file>
         <file>icons/mimes/default-network.svg</file>
+        <file>icons/mimes/empty.svg</file>
         <file>icons/mimes/exec.svg</file>
         <file>icons/mimes/extension.svg</file>
         <file>icons/mimes/fbx.svg</file>
@@ -93,7 +94,6 @@
         <file>icons/mimes/text-x-changelog.svg</file>
         <file>icons/mimes/text-x-generic.svg</file>
         <file>icons/mimes/text-xml.svg</file>
-        <file>icons/mimes/text-x-preview.svg</file>
         <file>icons/mimes/text-x-readme.svg</file>
         <file>icons/mimes/text-x-sql.svg</file>
         <file>icons/mimes/text-x-typescript.svg</file>

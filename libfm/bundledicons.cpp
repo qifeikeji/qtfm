@@ -126,7 +126,7 @@ QIcon iconWithFallbacks(const QStringList &baseNames)
             return icon;
         }
     }
-    return loadIconFromBaseName(QStringLiteral("unknown"));
+    return loadIconFromBaseName(QStringLiteral("empty"));
 }
 
 } // namespace
@@ -219,7 +219,7 @@ QIcon BundledIcons::iconForFileSuffix(const QString &suffix)
 {
     const QString base = baseNameForSuffix(suffix);
     if (base.isEmpty()) {
-        return loadIconFromBaseName(QStringLiteral("unknown"));
+        return loadIconFromBaseName(QStringLiteral("empty"));
     }
 
     QStringList tryNames;
@@ -264,7 +264,7 @@ QIcon BundledIcons::iconForFileSuffix(const QString &suffix)
         tryNames << QStringLiteral("text");
     }
 
-    tryNames << QStringLiteral("unknown");
+    tryNames << QStringLiteral("empty");
     return iconWithFallbacks(tryNames);
 }
 
@@ -274,7 +274,7 @@ QIcon BundledIcons::iconForMimeType(const QString &mime)
     if (!base.isEmpty()) {
         return iconForFileSuffix(base);
     }
-    return loadIconFromBaseName(QStringLiteral("unknown"));
+    return loadIconFromBaseName(QStringLiteral("empty"));
 }
 
 QIcon BundledIcons::iconForFolder(const QFileInfo &info)
@@ -291,7 +291,7 @@ QIcon BundledIcons::iconForFolder(const QFileInfo &info)
 
 QIcon BundledIcons::iconForExecutable()
 {
-    return iconWithFallbacks({QStringLiteral("exec"), QStringLiteral("unknown")});
+    return iconWithFallbacks({QStringLiteral("exec"), QStringLiteral("empty")});
 }
 
 QStringList BundledIcons::mimeIconDirectories()
@@ -307,13 +307,13 @@ QString BundledIcons::iconFilePath(const QString &baseName)
 QIcon BundledIcons::iconByName(const QString &name)
 {
     if (name.isEmpty()) {
-        return loadIconFromBaseName(QStringLiteral("unknown"));
+        return loadIconFromBaseName(QStringLiteral("empty"));
     }
     QIcon icon = loadIconFromBaseName(name);
     if (!icon.isNull()) {
         return icon;
     }
-    return loadIconFromBaseName(QStringLiteral("unknown"));
+    return loadIconFromBaseName(QStringLiteral("empty"));
 }
 
 QStringList BundledIcons::availableIconBaseNames()

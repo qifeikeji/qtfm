@@ -122,27 +122,9 @@ void FM::dirLoaded()
 
 void FM::updateGrid()
 {
-    qDebug() << "updateGrid";
-    QFontMetrics fm = fontMetrics();
-    int textWidth = fm.averageCharWidth() * 17;
-    int realTextWidth = fm.averageCharWidth() * 14;
-    int textHeight = fm.lineSpacing() * 3;
-    QSize grid;
-    grid.setWidth(qMax(zoom, textWidth));
-    grid.setHeight(zoom+textHeight);
-
-    QModelIndexList items;
-    for (int x = 0; x < modelList->rowCount(modelList->index(getPath())); ++x) {
-        items.append(modelList->index(x,0,modelList->index(getPath())));
-    }
-    foreach (QModelIndex theItem,items) {
-        QString filename = modelList->fileName(theItem);
-        QRect item(0,0,realTextWidth,grid.height());
-        QSize txtsize = fm.boundingRect(item, Qt::AlignTop|Qt::AlignHCenter|Qt::TextWordWrap|Qt::TextWrapAnywhere, filename).size();
-        int newHeight = txtsize.height()+zoom+5+8+4;
-        if  (txtsize.width()>grid.width()) { grid.setWidth(txtsize.width()); }
-        if (newHeight>grid.height()) { grid.setHeight(newHeight); }
-    }
+    if (list->viewMode() != QListView::IconMode) { return; }
+    const QSize grid = IconViewDelegate::iconGridSize(zoom, fontMetrics());
+    list->setIconSize(QSize(zoom, zoom));
     if (list->gridSize() != grid) {
         list->setGridSize(grid);
     }

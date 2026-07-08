@@ -609,7 +609,7 @@ void MainWindow::zoomInAction()
     } else {
         if(stackWidget->currentIndex() == 0) {
             if(iconAct->isChecked()) {
-                (zoom == 128) ? zoom=128 : zoom+= 8;
+                (zoom == IconViewDelegate::iconZoomMax) ? zoom = IconViewDelegate::iconZoomMax : zoom += 8;
                 zoomLevel = zoom;
             } else {
                 (zoomList == 128) ? zoomList=128 : zoomList+= 8;
@@ -644,7 +644,7 @@ void MainWindow::zoomOutAction()
     } else {
         if(stackWidget->currentIndex() == 0) {
             if(iconAct->isChecked()) {
-                (zoom == 16) ? zoom=16 : zoom-= 8;
+                (zoom == IconViewDelegate::iconZoomMin) ? zoom = IconViewDelegate::iconZoomMin : zoom -= 8;
                 zoomLevel = zoom;
             } else {
                 (zoomList == 16) ? zoomList=16 : zoomList-= 8;
@@ -659,6 +659,7 @@ void MainWindow::zoomOutAction()
     }
 
     status->showMessage(QString(tr("Zoom: %1")).arg(zoomLevel));
+    updateGrid();
 }
 
 //---------------------------------------------------------------------------

@@ -14,6 +14,12 @@
 
 class IconViewDelegate : public QStyledItemDelegate
 {
+public:
+    static constexpr int iconZoomMin = 16;
+    static constexpr int iconZoomMax = 256;
+    /** Icon-mode cell size: width ~ icon square + gap; height = icon + two text lines. */
+    static QSize iconGridSize(int zoom, const QFontMetrics &fm);
+
 private: // workaround for QTBUG
     mutable bool _isEditing;
     mutable QModelIndex _index;
