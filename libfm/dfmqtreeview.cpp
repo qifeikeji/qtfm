@@ -294,7 +294,7 @@ void DfmQTreeView::updateElasticBandSelection()
     // TODO - would this still work if the columns could be re-ordered?
     QModelIndex startIndex = QTreeView::indexAt(boundingRect.topLeft());
     if (startIndex.parent().isValid()) {
-        startIndex = startIndex.parent().child(startIndex.row(), COLUMN_NAME);
+        startIndex = model()->index(startIndex.row(), COLUMN_NAME, startIndex.parent());
     } else {
         startIndex = model()->index(startIndex.row(), COLUMN_NAME);
     }
