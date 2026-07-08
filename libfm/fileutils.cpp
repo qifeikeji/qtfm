@@ -2,6 +2,7 @@
 #include <QDirIterator>
 #include <QUrl>
 #include <QApplication>
+#include <QDebug>
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
@@ -284,10 +285,10 @@ QIcon FileUtils::searchFolderIcon(const QFileInfo &info, const QIcon &defaultIco
     static bool loggedOnce = false;
     if (!loggedOnce) {
         loggedOnce = true;
-        qDebug() << "[icon-theme] first folder lookup, theme=" << QIcon::themeName()
-                  << "wanted" << primary
-                  << "found theme icon?" << !icon.isNull()
-                  << "availableSizes" << icon.availableSizes();
+        qWarning() << "[icon-theme] first folder lookup, theme=" << QIcon::themeName()
+                   << "wanted" << primary
+                   << "found theme icon?" << !icon.isNull()
+                   << "availableSizes" << icon.availableSizes();
     }
     return icon.isNull() ? defaultIcon : icon;
 }

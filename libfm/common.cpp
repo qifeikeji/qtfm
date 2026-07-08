@@ -282,11 +282,11 @@ void Common::applyIconThemeName(const QString &themeName, const QString &appPath
 
     QIcon::setThemeName(resolved);
 
-    qDebug() << "[icon-theme] requested" << themeName
-             << "resolved" << resolved
-             << "search paths" << QIcon::themeSearchPaths()
-             << "QIcon::themeName() now" << QIcon::themeName()
-             << "hasThemeIcon(folder)" << QIcon::hasThemeIcon(QStringLiteral("folder"));
+    qWarning() << "[icon-theme] requested" << themeName
+               << "resolved" << resolved
+               << "search paths" << QIcon::themeSearchPaths()
+               << "QIcon::themeName() now" << QIcon::themeName()
+               << "hasThemeIcon(folder)" << QIcon::hasThemeIcon(QStringLiteral("folder"));
 }
 
 QString Common::configDir()
@@ -741,7 +741,7 @@ QStringList Common::getIconThemes(QString appPath)
         }
     }
 
-    qDebug() << "icon theme roots" << icons << "found" << result.size();
+    qWarning() << "icon theme roots" << icons << "found" << result.size();
     QStringList preferredFirst;
     const QString macIcons = findMacIconsTheme(icons);
     if (!macIcons.isEmpty()) {
