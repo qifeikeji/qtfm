@@ -18,9 +18,11 @@ elif command -v convert >/dev/null 2>&1; then
   RESIZE=convert
 elif command -v ffmpeg >/dev/null 2>&1; then
   RESIZE=ffmpeg
+elif command -v sips >/dev/null 2>&1 && [ "$(uname -s)" = Darwin ]; then
+  RESIZE=sips
 fi
 if [ -z "$RESIZE" ]; then
-  echo "Need magick, convert, or ffmpeg to resize app.png" >&2
+  echo "Need magick, convert, ffmpeg, or macOS sips to resize app.png" >&2
   exit 1
 fi
 
@@ -31,6 +33,8 @@ resize_png() {
   mkdir -p "$(dirname "$out")"
   if [ "$RESIZE" = ffmpeg ]; then
     ffmpeg -y -loglevel error -i "$src" -vf "scale=${size}:${size}" "$out"
+  elif [ "$RESIZE" = sips ]; then
+    sips -z "$size" "$size" "$src" --out "$out" >/dev/null
   else
     "$RESIZE" "$src" -resize "${size}x${size}" "$out"
   fi

@@ -21,17 +21,25 @@ if command -v magick >/dev/null 2>&1; then
   RESIZE=magick
 elif command -v convert >/dev/null 2>&1; then
   RESIZE=convert
+elif command -v sips >/dev/null 2>&1; then
+  RESIZE=sips
 fi
 if [ -z "$RESIZE" ]; then
-  echo "Need ImageMagick (magick or convert) to resize app.png" >&2
+  echo "Need ImageMagick (magick or convert) or macOS sips to resize app.png" >&2
   exit 1
 fi
 ICONSET="$(mktemp -d /tmp/QtFM.iconset.XXXXXX)"
 trap 'rm -rf "$ICONSET"' EXIT
 for size in 16 32 128 256 512; do
-  "$RESIZE" "$PNG" -resize "${size}x${size}" "$ICONSET/icon_${size}x${size}.png"
-  double=$((size * 2))
-  "$RESIZE" "$PNG" -resize "${double}x${double}" "$ICONSET/icon_${size}x${size}@2x.png"
+  if [ "$RESIZE" = sips ]; then
+    sips -z "$size" "$size" "$PNG" --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+    double=$((size * 2))
+    sips -z "$double" "$double" "$PNG" --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+  else
+    "$RESIZE" "$PNG" -resize "${size}x${size}" "$ICONSET/icon_${size}x${size}.png"
+    double=$((size * 2))
+    "$RESIZE" "$PNG" -resize "${double}x${double}" "$ICONSET/icon_${size}x${size}@2x.png"
+  fi
 done
 iconutil -c icns "$ICONSET" -o "$OUT"
 echo "Wrote $OUT"
