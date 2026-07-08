@@ -140,10 +140,8 @@ bool viewsSortProxyModel::lessThan(const QModelIndex &left, const QModelIndex &r
             return ld < rd;
         }
     } else if (column == 3) {
-        const QModelIndex l3 = fsModel->index(left.row(), 3, left.parent());
-        const QModelIndex r3 = fsModel->index(right.row(), 3, right.parent());
-        const QString lf = fsModel->data(l3, Qt::DisplayRole).toString();
-        const QString rf = fsModel->data(r3, Qt::DisplayRole).toString();
+        const QString lf = fsModel->getMimeType(left);
+        const QString rf = fsModel->getMimeType(right);
         static QCollator collator;
         collator.setNumericMode(true);
         const int cmp = collator.compare(lf, rf);
