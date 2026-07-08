@@ -2,6 +2,7 @@
 #define SETTINGSDIALOG_H
 
 #include "mimeutils.h"
+#include "openwithsettingswidget.h"
 
 #include <QDialog>
 #include <QListWidget>
@@ -60,6 +61,7 @@ protected:
   QWidget *createAppearanceSettings();
   QWidget* createActionsSettings();
   QWidget* createShortcutSettings();
+  QWidget* createOpenWithSettings();
   QWidget* createMimeSettings();
   QWidget* createSystraySettings();
   QWidget* createAdvSettings();
@@ -80,6 +82,7 @@ protected:
   QCheckBox* showHomeButton;
   QCheckBox* showNewTabButton;
   QSpinBox* spinIconViewGap;
+  OpenWithSettingsWidget *openWithSettingsWidget = nullptr;
   QCheckBox* checkDarkTheme;
   QCheckBox* checkFileColor;
   QCheckBox* checkPathHistory;

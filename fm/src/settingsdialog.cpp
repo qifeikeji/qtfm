@@ -12,6 +12,7 @@
 #include <QAction>
 #include <QApplication>
 
+#include "openwithconfig.h"
 #include "common.h"
 #include "bundledicons.h"
 
@@ -73,6 +74,7 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
   selector->addItem(new QListWidgetItem(icon5, tr("Appearance"), selector));
   selector->addItem(new QListWidgetItem(icon2, tr("Custom Actions"), selector));
   selector->addItem(new QListWidgetItem(icon3, tr("Shortcuts"), selector));
+  selector->addItem(new QListWidgetItem(icon4, tr("Open with"), selector));
 #ifndef Q_OS_MAC
   selector->addItem(new QListWidgetItem(icon4, tr("Mime Types"), selector));
   selector->addItem(new QListWidgetItem(icon4, tr("System Tray"), selector));
@@ -83,6 +85,7 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
   stack->addWidget(createAppearanceSettings());
   stack->addWidget(createActionsSettings());
   stack->addWidget(createShortcutSettings());
+  stack->addWidget(createOpenWithSettings());
 #ifndef Q_OS_MAC
   stack->addWidget(createMimeSettings());
   stack->addWidget(createSystraySettings());
@@ -330,6 +333,14 @@ QWidget* SettingsDialog::createShortcutSettings() {
   return widget;
 }
 //---------------------------------------------------------------------------
+
+QWidget *SettingsDialog::createOpenWithSettings()
+{
+    openWithSettingsWidget = new OpenWithSettingsWidget(this);
+    OpenWithConfig::load(settingsPtr);
+    openWithSettingsWidget->loadFromConfig();
+    return openWithSettingsWidget;
+}
 
 /**
  * @brief Creates widget with mime settings
@@ -692,6 +703,10 @@ void SettingsDialog::readSettings() {
   showNewTabButton->setChecked(settingsPtr->value("newtab_button", false).toBool());
   showTerminalButton->setChecked(settingsPtr->value("terminal_button", true).toBool());
   spinIconViewGap->setValue(settingsPtr->value("iconViewGap", 4).toInt());
+  OpenWithConfig::load(settingsPtr);
+  if (openWithSettingsWidget) {
+      openWithSettingsWidget->loadFromConfig();
+  }
 #if QT_VERSION >= 0x050000
 #ifdef DEPLOY
   checkDarkTheme->setChecked(settingsPtr->value("darkTheme", true).toBool());
@@ -825,7 +840,7 @@ void SettingsDialog::loadMimes(int section) {
 #endif
 
   // Mime progress section
-  const int MIME_PROGRESS_SECTION = 4;
+  const int MIME_PROGRESS_SECTION = 5;
 
   // If section is not mime type configuration section exit
   if (section != MIME_PROGRESS_SECTION) {
@@ -900,6 +915,8 @@ void SettingsDialog::loadMimes(int section) {
  * @return true if successful
  */
 bool SettingsDialog::saveSettings() {
+
+  OpenWithConfig::save(settingsPtr);
 
   // General settings
   settingsPtr->setValue("confirmDelete", checkDelete->isChecked());

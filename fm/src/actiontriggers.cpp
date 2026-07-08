@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "settingsdialog.h"
+#include "openwithconfig.h"
 #include <QApplication>
 #include <QInputDialog>
 #include <QMessageBox>
@@ -52,6 +53,11 @@ void MainWindow::executeFile(QModelIndex index, bool run) {
     QProcess::startDetached(filePath, QStringList());
 #endif
   } else {
+    const QString customCmd = OpenWithConfig::defaultCommandFor(QFileInfo(filePath));
+    if (!customCmd.isEmpty()) {
+      mimeUtils->openInApp(customCmd, QFileInfo(filePath), QString());
+      return;
+    }
     mimeUtils->openInApp(QFileInfo(filePath), QString());
   }
 }
@@ -98,6 +104,11 @@ void MainWindow::openFile()
         QString filePath = modelList->filePath(srcIndex);
         QFileInfo fileInfo(filePath);
         if (fileInfo.isDir()) { continue; }
+        const QString customCmd = OpenWithConfig::defaultCommandFor(fileInfo);
+        if (!customCmd.isEmpty()) {
+            mimeUtils->openInApp(customCmd, fileInfo, QString());
+            continue;
+        }
         QString mime = mimeUtils->getMimeType(filePath);
         if (mime.isEmpty()) { continue; }
         files[filePath] = mime;
@@ -790,10 +801,40 @@ void MainWindow::showAboutBox()
 }
 //---------------------------------------------------------------------------
 
-/**
- * @brief Displays settings dialog
- */
-void MainWindow::showEditDialog() {
+#ifdef Q_OS_MAC
+void MainWindow::showMacOpenWithHelp()
+{
+    QMessageBox box(this);
+    box.setWindowTitle(tr("macOS 打开方式设置"));
+    box.setIcon(QMessageBox::Information);
+    box.setText(tr("在 QtFM 中配置默认打开与「Open with」"));
+    box.setInformativeText(
+        tr("<p>打开 <b>设置 (Settings) → Open with</b>。这里的规则优先于系统默认关联。</p>"
+           "<p><b>扩展名模块</b>：填写后缀，逗号分隔（如 <code>pdf</code>、"
+           "<code>glb,gltf</code>），优先级最高。</p>"
+           "<p><b>分类</b>（图片 / 视频 / 文本与代码 / 压缩包）：在大框内添加应用模块；"
+           "<b>第一个模块</b> 用于双击打开文件。</p>"
+           "<p><b>占位符</b>（QtFM 在启动前替换，macOS 与 Linux 相同）：</p>"
+           "<ul><li><code>%f</code> 或 <code>%F</code> — 文件的完整路径</li></ul>"
+           "<p><b>macOS 命令示例</b></p>"
+           "<ul>"
+           "<li><code>/Applications/Preview.app %f</code></li>"
+           "<li><code>/System/Applications/TextEdit.app</code> "
+           "（不写 %f 也会自动带上当前文件）</li>"
+           "<li><code>open -a Preview %f</code></li>"
+           "<li><code>open -a \"Visual Studio Code\" %f</code></li>"
+           "</ul>"
+           "<p>不要指望单独输入 <code>xxx.app</code> 当 shell 命令；"
+           "QtFM 会对 <code>.app</code> 包自动使用 <code>open -a</code>。</p>"
+           "<p><b>图标路径</b>：可选，用于 Open with 菜单（PNG/ICNS，"
+           "例如 Preview 的 AppIcon.icns）。</p>"
+           "<p>改完后在设置窗口点 <b>Save</b> 保存。</p>"));
+    box.setStandardButtons(QMessageBox::Ok);
+    box.exec();
+}
+#endif
+
+//---------------------------------------------------------------------------
 
   // Deletes current list of custom actions
   customActManager->freeActions();
@@ -813,6 +854,7 @@ void MainWindow::showEditDialog() {
 
     modelList->clearIconCache();
     modelList->refreshItems();
+    OpenWithConfig::load(settings);
     customActManager->readActions();
   }
 

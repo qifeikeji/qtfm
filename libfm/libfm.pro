@@ -12,6 +12,7 @@ SOURCES += \
     desktopfile.cpp \
     fileutils.cpp \
     bundledicons.cpp \
+    openwithconfig.cpp \
     mimeutils.cpp \
     properties.cpp \
     icondlg.cpp \
@@ -35,6 +36,7 @@ HEADERS += \
     desktopfile.h \
     fileutils.h \
     bundledicons.h \
+    openwithconfig.h \
     mimeutils.h \
     properties.h \
     common.h \

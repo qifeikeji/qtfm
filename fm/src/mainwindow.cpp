@@ -43,6 +43,7 @@
 #include "applicationdialog.h"
 
 #include "common.h"
+#include "openwithconfig.h"
 
 #include "qtcopydialog.h"
 #include "qtfilecopier.h"
@@ -440,6 +441,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   toggleLockLayout();
 
   // Load zoom settings
+  OpenWithConfig::load(settings);
   zoom = settings->value("zoom", 48).toInt();
   zoomTree = settings->value("zoomTree", 16).toInt();
   zoomBook = settings->value("zoomBook", 24).toInt();
@@ -1480,57 +1482,87 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
 QMenu* MainWindow::createOpenWithMenu() {
 
   qDebug() << "open with";
-  // Add open with functionality ...
   QMenu *openMenu = new QMenu(tr("Open with"));
 
-  // Select action
   QAction *selectAppAct = new QAction(tr("Select..."), openMenu);
   selectAppAct->setStatusTip(tr("Select application for opening the file"));
-  //selectAppAct->setIcon(actionIcons->at(18));
   connect(selectAppAct, SIGNAL(triggered()), this, SLOT(selectAppForFiles()));
 
-  // Load default applications for current mime
-  QString mime = mimeUtils->getMimeType(curIndex.filePath());
-  QStringList appNames = mimeUtils->getDefault(mime);
-  if (appNames.size()==1 && appNames.at(0).isEmpty() && mime.startsWith("text/")) {
-      qDebug() << "get fallback apps for text/plain";
-      appNames = mimeUtils->getDefault("text/plain");
-  }
+  const QFileInfo fileInfo(curIndex.filePath());
+  const QList<OpenWithEntry> handlers = OpenWithConfig::handlersFor(fileInfo);
 
-  qDebug() << mime << appNames;
-
-  // Create actions for opening
-  QList<QAction*> defaultApps;
-  foreach (QString appName, appNames) {
-    // Skip empty app name
-    if (appName.isEmpty()) { continue; }
-
-    // find .desktop
-    QString appDesktopFile = Common::findApplication(qApp->applicationFilePath(), appName);
-    if (appDesktopFile.isEmpty()) { continue; }
-
-    // Load desktop file for application
-    DesktopFile df = DesktopFile(appDesktopFile);
-
-    // Create action
-    QAction* action = new QAction(df.getName(), openMenu);
-    action->setData(/*df.getExec()*/appDesktopFile);
-    action->setIcon(FileUtils::searchAppIcon(df));
-    defaultApps.append(action);
-
-    // TODO: icon and connect
-    connect(action, SIGNAL(triggered()), SLOT(openInApp()));
-
-    // Add action to menu
+  QList<QAction*> customApps;
+  foreach (const OpenWithEntry &entry, handlers) {
+    const QString cmd = entry.fullCommand();
+    if (cmd.isEmpty()) {
+      continue;
+    }
+    QAction *action = new QAction(entry.name.isEmpty() ? cmd : entry.name, openMenu);
+    action->setData(cmd);
+    const QIcon icon = entry.menuIcon();
+    if (!icon.isNull()) {
+      action->setIcon(icon);
+    }
+    connect(action, SIGNAL(triggered()), SLOT(openWithConfiguredApp()));
+    customApps.append(action);
     openMenu->addAction(action);
   }
 
-  // Add open action to menu
-  if (!defaultApps.isEmpty()) {
+  if (customApps.isEmpty()) {
+    QString mime = mimeUtils->getMimeType(curIndex.filePath());
+    QStringList appNames = mimeUtils->getDefault(mime);
+    if (appNames.size()==1 && appNames.at(0).isEmpty() && mime.startsWith("text/")) {
+      appNames = mimeUtils->getDefault("text/plain");
+    }
+    foreach (QString appName, appNames) {
+      if (appName.isEmpty()) { continue; }
+      QString appDesktopFile = Common::findApplication(qApp->applicationFilePath(), appName);
+      if (appDesktopFile.isEmpty()) { continue; }
+      DesktopFile df = DesktopFile(appDesktopFile);
+      QAction* action = new QAction(df.getName(), openMenu);
+      action->setData(appDesktopFile);
+      action->setIcon(FileUtils::searchAppIcon(df));
+      connect(action, SIGNAL(triggered()), SLOT(openInApp()));
+      customApps.append(action);
+      openMenu->addAction(action);
+    }
+  }
+
+  if (!customApps.isEmpty()) {
     openMenu->addSeparator();
   }
   openMenu->addAction(selectAppAct);
   return openMenu;
+}
+
+void MainWindow::openWithConfiguredApp()
+{
+  QAction *action = qobject_cast<QAction *>(sender());
+  if (!action) {
+    return;
+  }
+  const QString cmd = action->data().toString();
+  if (cmd.isEmpty()) {
+    return;
+  }
+
+  QModelIndexList items;
+  if (listSelectionModel->selectedRows(0).count()) {
+    items = listSelectionModel->selectedRows(0);
+  } else {
+    items = listSelectionModel->selectedIndexes();
+  }
+  if (items.isEmpty()) {
+    mimeUtils->openInApp(cmd, curIndex, QString());
+    return;
+  }
+  foreach (QModelIndex index, items) {
+    const QFileInfo fi(modelList->filePath(modelView->mapToSource(index)));
+    if (fi.isDir()) {
+      continue;
+    }
+    mimeUtils->openInApp(cmd, fi, QString());
+  }
 }
 
 bool MainWindow::eventFilter(QObject *o, QEvent *e)

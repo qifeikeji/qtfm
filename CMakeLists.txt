@@ -91,6 +91,7 @@ add_library(
     libfm/icondlg.cpp
     libfm/iconlist.cpp
     libfm/iconview.cpp
+    libfm/openwithconfig.cpp
     libfm/mimeutils.cpp
     libfm/mymodel.cpp
     libfm/mymodelitem.cpp
@@ -161,6 +162,7 @@ add_executable(
     fm/src/bookmarks.cpp
     fm/src/tabbar.cpp
     fm/src/settingsdialog.cpp
+    fm/src/openwithsettingswidget.cpp
     fm/src/actiondefs.cpp
     fm/src/actiontriggers.cpp
     share/${PROJECT_NAME}.qrc

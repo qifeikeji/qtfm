@@ -365,6 +365,13 @@ void MainWindow::createActions() {
   connect(aboutQtAct, SIGNAL(triggered(bool)), qApp, SLOT(aboutQt()));
   actionList->append(aboutQtAct);
 
+#ifdef Q_OS_MAC
+  macOpenWithHelpAct = new QAction(tr("macOS 打开方式设置…"), this);
+  macOpenWithHelpAct->setStatusTip(tr("如何在设置里配置 Open with"));
+  connect(macOpenWithHelpAct, SIGNAL(triggered()), this, SLOT(showMacOpenWithHelp()));
+  actionList->append(macOpenWithHelpAct);
+#endif
+
 #ifndef NO_UDISKS
   mediaUnmountAct = new QAction(tr("Safely Remove"), this);
   mediaUnmountAct->setIcon(QIcon::fromTheme("media-eject"));
@@ -561,6 +568,10 @@ void MainWindow::createMenus() {
   // Help menu
   // ----------------------------------------------------------------------
   QMenu* helpMenu = new QMenu(tr("Help"));
+#ifdef Q_OS_MAC
+  helpMenu->addAction(macOpenWithHelpAct);
+  helpMenu->addSeparator();
+#endif
   helpMenu->addAction(aboutAct);
   helpMenu->addAction(aboutQtAct);
 

@@ -41,12 +41,44 @@ QString substituteSingleFileTokens(QString line, const QFileInfo &file)
     return line;
 }
 
-bool startDetachedCommand(const QString &commandLine, const QString &termCmd)
+bool startDetachedCommand(const QString &commandLine, const QString &termCmd,
+                          const QFileInfo &contextFile = QFileInfo())
 {
     const QString line = commandLine.trimmed();
     if (line.isEmpty()) {
         return false;
     }
+
+#ifdef Q_OS_DARWIN
+    if (termCmd.isEmpty()) {
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        QStringList parts = QProcess::splitCommand(line);
+#else
+        QStringList parts = line.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+#endif
+        if (!parts.isEmpty()) {
+            if (parts.at(0) == QLatin1String("open")) {
+                return QProcess::startDetached(QStringLiteral("/usr/bin/open"), parts.mid(1));
+            }
+            const QString first = parts.at(0);
+            const QFileInfo firstInfo(first);
+            const bool appBundle = first.endsWith(QLatin1String(".app"), Qt::CaseInsensitive)
+                                   || firstInfo.isBundle();
+            if (appBundle) {
+                QStringList openArgs;
+                openArgs << QStringLiteral("-a") << first;
+                const QStringList rest = parts.mid(1);
+                if (!rest.isEmpty()) {
+                    openArgs << rest;
+                } else if (contextFile.exists()) {
+                    openArgs << contextFile.absoluteFilePath();
+                }
+                return QProcess::startDetached(QStringLiteral("/usr/bin/open"), openArgs);
+            }
+        }
+    }
+#endif
+
 #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
     QStringList parts = QProcess::splitCommand(line);
 #else
@@ -178,7 +210,7 @@ void MimeUtils::openInApp(QString exe, const QFileInfo &file,
 
   const QString commandLine = substituteSingleFileTokens(exe, file);
   qDebug() << "launch" << commandLine;
-  startDetachedCommand(commandLine, termCmd);
+  startDetachedCommand(commandLine, termCmd, file);
 }
 
 void MimeUtils::openFilesInApp(QString exe, const QStringList &files, QString termCmd)
@@ -214,7 +246,7 @@ void MimeUtils::openFilesInApp(QString exe, const QStringList &files, QString te
         }
     }
 
-    startDetachedCommand(line, termCmd);
+    startDetachedCommand(line, termCmd, QFileInfo(files.isEmpty() ? QString() : files.first()));
 }
 //---------------------------------------------------------------------------
 

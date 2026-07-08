@@ -156,6 +156,9 @@ public slots:
     void handleBookmarksChanged();
     void firstRunCustomActions(bool isFirstRun);
     void showAboutBox();
+#ifdef Q_OS_MAC
+    void showMacOpenWithHelp();
+#endif
 
 signals:
     void updateCopyProgress(qint64, qint64, QString);
@@ -166,6 +169,7 @@ private slots:
     void selectApp();
     void selectAppForFiles();
     void openInApp();
+    void openWithConfiguredApp();
     void updateGrid();
     // libdisks
 #ifndef NO_UDISKS
@@ -297,6 +301,9 @@ private:
     QAction *tabsOnTopAct;
     QAction *aboutAct;
     QAction *aboutQtAct;
+#ifdef Q_OS_MAC
+    QAction *macOpenWithHelpAct;
+#endif
 #ifndef NO_UDISKS
     QAction *mediaUnmountAct;
     QAction *mediaEjectAct;

@@ -16,7 +16,8 @@ DEFINES += APP_VERSION=\"\\\"$${VERSION}\\\"\"
 HEADERS += \
     src/mainwindow.h \
     src/tabbar.h \
-    src/settingsdialog.h
+    src/settingsdialog.h \
+    src/openwithsettingswidget.h
 
 SOURCES += \
     src/main.cpp \
@@ -24,6 +25,7 @@ SOURCES += \
     src/bookmarks.cpp \
     src/tabbar.cpp \
     src/settingsdialog.cpp \
+    src/openwithsettingswidget.cpp \
     src/actiondefs.cpp \
     src/actiontriggers.cpp
 
