@@ -22,6 +22,7 @@
 #include <QPalette>
 #include <QVector>
 #include <QCryptographicHash>
+#include <QDateTime>
 #include <QPainter>
 #include <QUrl>
 #include <QStandardPaths>
