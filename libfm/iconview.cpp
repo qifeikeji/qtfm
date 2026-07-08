@@ -160,10 +160,10 @@ void IconViewDelegate::setEditorData(QWidget *editor,
         return;
     }
     plain->setPlainText(index.data(Qt::EditRole).toString());
+    plain->selectAll();
     QTextCursor cursor = plain->textCursor();
     QTextBlockFormat blockFormat;
     blockFormat.setAlignment(Qt::AlignHCenter);
-    cursor.select(QTextCursor::SelectDocument);
     cursor.mergeBlockFormat(blockFormat);
     cursor.movePosition(QTextCursor::End);
     plain->setTextCursor(cursor);
