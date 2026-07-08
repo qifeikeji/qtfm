@@ -109,8 +109,7 @@ jobs:
             --desktop-file="${APPDIR}/usr/share/applications/qtfm.desktop" \
             --icon-file="${APPDIR}/usr/share/icons/hicolor/scalable/apps/qtfm.svg" \
             --plugin qt \
-            "${EXTRA_LIBS[@]}" \
-            --output appdir
+            "${EXTRA_LIBS[@]}"
 
           # gzip squashfs: works with older squashfuse on Arch/Manjaro (zstd needs newer tools)
           ARCH=x86_64 ./appimagetool.AppImage --comp gzip --no-appstream \
