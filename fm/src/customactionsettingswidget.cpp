@@ -111,16 +111,10 @@ CustomActionSettingsWidget::CustomActionSettingsWidget(QWidget *parent) : QWidge
     connect(addBtn, &QPushButton::clicked, this, &CustomActionSettingsWidget::addActionModule);
 
     auto *infoBtn = new QPushButton(tr("Usage…"));
-    auto *clearBtn = new QPushButton(tr("Restore defaults"));
-    SettingsUiStyles::styleDeleteButton(clearBtn);
     connect(infoBtn, &QPushButton::clicked, this, &CustomActionSettingsWidget::showUsageInfo);
-    connect(clearBtn, &QPushButton::clicked, this, [this]() {
-        setDefaults(Common::getDefaultActions());
-    });
 
     toolbar->addWidget(addBtn);
     toolbar->addWidget(infoBtn);
-    toolbar->addWidget(clearBtn);
     toolbar->addStretch(1);
     pageLayout->addLayout(toolbar);
 

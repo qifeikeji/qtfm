@@ -700,10 +700,6 @@ void MainWindow::createToolBars() {
   navToolBar->addAction(iconAct);
   navToolBar->addAction(listViewAct);
 
-  auto *addrSpacer = new QWidget(this);
-  addrSpacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
-  navToolBar->addWidget(addrSpacer);
-
   navToolBar->addWidget(pathEdit);
   navToolBar->addAction(newTabAct);
   navToolBar->addAction(terminalAct);
