@@ -244,7 +244,7 @@ void IconViewDelegate::setEditorData(QWidget *editor,
 {
     _isEditing = true;
     _index = index;
-    auto *plain = qobject_cast<RenameEditor *>(editor);
+    auto *plain = static_cast<RenameEditor *>(editor);
     if (!plain) {
         return;
     }
@@ -260,7 +260,7 @@ void IconViewDelegate::setModelData(QWidget *editor,
                                     QAbstractItemModel *model,
                                     const QModelIndex &index) const
 {
-    auto *plain = qobject_cast<QPlainTextEdit *>(editor);
+    auto *plain = static_cast<RenameEditor *>(editor);
     if (plain) {
         QString name = plain->toPlainText();
         name.replace(QLatin1Char('\n'), QLatin1Char(' '));
