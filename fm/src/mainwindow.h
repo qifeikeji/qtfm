@@ -125,6 +125,7 @@ public slots:
     void addBookmarkAction();
     void addSeparatorAction();
     void delBookmark();
+    void removeSeparator();
     void editBookmark();
     void renameBookmark();
     void toggleWrapBookmarks();
@@ -152,6 +153,8 @@ public slots:
     void openNewWindowFromSelection();
     void tabsOnTop();
     void updateTabBarPalette();
+    void applyThemeFromSettings();
+    void applyViewChromeStyles();
     int addTab(QString path);
     void clearCutItems();
     void zoomInAction();
@@ -301,6 +304,7 @@ private:
     QAction *addBookmarkAct;
     QAction *addSeparatorAct;
     QAction *delBookmarkAct;
+    QAction *removeSeparatorAct;
     QAction *renameBookmarkAct;
     QAction *editBookmarkAct;
     QAction *wrapBookmarksAct;

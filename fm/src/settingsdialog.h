@@ -48,6 +48,7 @@ protected slots:
   void restartToApply(int triggered);
   void restartToApply(bool triggered);
   void filterMimes(QString filter);
+  void previewDarkTheme(bool dark);
 
 protected:
   QWidget* createGeneralSettings();

@@ -65,11 +65,15 @@ void BookmarkGroupBar::applyButtonSizes()
     setMinimumWidth(m_tabButtonSize + 8);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Expanding);
 
+    const QColor border = palette().color(QPalette::Mid);
+    QColor hoverBg = palette().color(QPalette::Highlight);
+    hoverBg.setAlpha(80);
     const QString btnStyle = QStringLiteral(
-        "QToolButton { border: 1px solid palette(mid); border-radius: 4px; "
+        "QToolButton { border: 1px solid %1; border-radius: 4px; "
         "background: palette(button); }"
-        "QToolButton:hover { background: palette(light); }"
-        "QToolButton:checked { background: palette(highlight); }");
+        "QToolButton:hover { background: %2; }"
+        "QToolButton:checked { background: palette(highlight); }")
+                             .arg(border.name(), hoverBg.name(QColor::HexArgb));
 
     if (m_addButton) {
         m_addButton->setIconSize(iconSize);

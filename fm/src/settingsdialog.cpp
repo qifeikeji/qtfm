@@ -1,4 +1,5 @@
 #include "settingsdialog.h"
+#include "mainwindow.h"
 #include "fileutils.h"
 #include "applicationdialog.h"
 #include "properties.h"
@@ -132,8 +133,19 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
  * @brief Creates widget with general settings
  * @return widget
  */
-QWidget *SettingsDialog::createGeneralSettings() {
+void SettingsDialog::previewDarkTheme(bool dark)
+{
+#if QT_VERSION >= 0x050000
+    settingsPtr->setValue(QStringLiteral("darkTheme"), dark);
+    if (auto *mw = qobject_cast<MainWindow *>(parentWidget())) {
+        mw->applyThemeFromSettings();
+    }
+#else
+    Q_UNUSED(dark);
+#endif
+}
 
+QWidget *SettingsDialog::createGeneralSettings() {
   // Main widget and layout
   QWidget* widget = new QWidget();
   QVBoxLayout* layoutWidget = new QVBoxLayout(widget);
@@ -210,6 +222,7 @@ QWidget *SettingsDialog::createAppearanceSettings()
     QFormLayout* layoutAppear = new QFormLayout(grpAppear);
 #if QT_VERSION >= 0x050000
     checkDarkTheme = new QCheckBox(grpAppear);
+    connect(checkDarkTheme, &QCheckBox::toggled, this, &SettingsDialog::previewDarkTheme);
 #endif
     checkWindowTitlePath = new QCheckBox(grpAppear);
     checkFileColor = new QCheckBox(grpAppear);
@@ -716,9 +729,13 @@ void SettingsDialog::readSettings() {
   }
 #if QT_VERSION >= 0x050000
 #ifdef DEPLOY
+  checkDarkTheme->blockSignals(true);
   checkDarkTheme->setChecked(settingsPtr->value("darkTheme", true).toBool());
+  checkDarkTheme->blockSignals(false);
 #else
+  checkDarkTheme->blockSignals(true);
   checkDarkTheme->setChecked(settingsPtr->value("darkTheme", false).toBool());
+  checkDarkTheme->blockSignals(false);
 #endif
 #endif
   checkFileColor->setChecked(settingsPtr->value("fileColor", false).toBool());
@@ -962,9 +979,6 @@ bool SettingsDialog::saveSettings() {
 #endif
 
 #if QT_VERSION >= 0x050000
-  if (checkDarkTheme->isChecked() != settingsPtr->value("darkTheme").toBool()) {
-      QMessageBox::warning(this, tr("Restart to apply settings"), tr("You must restart application to apply theme settings"));
-  }
   settingsPtr->setValue("darkTheme", checkDarkTheme->isChecked());
 #endif
   settingsPtr->setValue("fileColor", checkFileColor->isChecked());

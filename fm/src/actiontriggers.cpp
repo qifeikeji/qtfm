@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 #include "settingsdialog.h"
 #include "openwithconfig.h"
+#include "dfmqstyleditemdelegate.h"
 #include <QApplication>
 #include <QInputDialog>
 #include <QMessageBox>
@@ -529,12 +530,32 @@ void MainWindow::copyFile() {
  * @brief Renames file
  */
 void MainWindow::renameFile() {
-  if (focusWidget() == tree) {
+  if (!listSelectionModel || !listSelectionModel->hasSelection()) {
+    return;
+  }
+  QModelIndex idx = listSelectionModel->currentIndex();
+  if (!idx.isValid()) {
+    return;
+  }
+
+  if (currentView == 1) {
+    if (idx.column() != 0) {
+      idx = idx.sibling(idx.row(), 0);
+    }
+    list->setFocus(Qt::ShortcutFocusReason);
+    list->edit(idx);
+    return;
+  }
+  if (currentView == 2) {
+    const QModelIndex nameIdx = idx.column() == COLUMN_NAME
+                                    ? idx
+                                    : idx.sibling(idx.row(), COLUMN_NAME);
+    detailTree->setFocus(Qt::ShortcutFocusReason);
+    detailTree->edit(nameIdx);
+    return;
+  }
+  if (focusWidget() == tree && treeSelectionModel) {
     tree->edit(treeSelectionModel->currentIndex());
-  } else if(focusWidget() == list) {
-    list->edit(listSelectionModel->currentIndex());
-  } else if(focusWidget() == detailTree) {
-    detailTree->edit(listSelectionModel->currentIndex());
   }
 }
 //---------------------------------------------------------------------------
@@ -749,7 +770,7 @@ void MainWindow::applyListRowHeight()
     const int iconSz = qMax(16, h - 4);
     detailTree->setIconSize(QSize(iconSz, iconSz));
     detailTree->setIndentation(0);
-    detailTree->setStyleSheet(QStringLiteral("QTreeView::item { height: %1px; }").arg(h));
+    applyViewChromeStyles();
     QHeaderView *header = detailTree->header();
     const int iconCol = settings->value(QStringLiteral("listColumnWidth0"), 0).toInt();
     header->resizeSection(COLUMN_ICON, iconCol > 0 ? iconCol : iconSz + 8);

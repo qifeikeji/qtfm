@@ -10,12 +10,32 @@
 #include <QTextDocument>
 #include <QTextLayout>
 #include <QTextOption>
+#include <QApplication>
 
 namespace {
 
 constexpr int kIconTop = 6;
 constexpr int kTextTopGap = 2;
 constexpr int kFramePad = 2;
+
+QString renameEditorStyleSheet()
+{
+    const QPalette pal = QApplication::palette();
+    const QString border = pal.color(QPalette::Mid).name();
+    const QString selBg = pal.color(QPalette::Highlight).name();
+    const QString selFg = pal.color(QPalette::HighlightedText).name();
+    return QStringLiteral(
+               "QPlainTextEdit {"
+               " background: palette(base);"
+               " color: palette(text);"
+               " border: 1px solid %1;"
+               " border-radius: 2px;"
+               " padding: 2px;"
+               " selection-background-color: %2;"
+               " selection-color: %3;"
+               "}")
+        .arg(border, selBg, selFg);
+}
 
 int iconPaintSize(const QStyleOptionViewItem &option)
 {
@@ -143,7 +163,12 @@ QWidget *IconViewDelegate::createEditor(QWidget *parent,
     editor->setTabChangesFocus(true);
     editor->document()->setDocumentMargin(0);
     editor->setFixedHeight(twoLineTextHeight(option.fontMetrics) + 2);
-    editor->setStyleSheet(QStringLiteral("background: palette(base);"));
+    editor->setStyleSheet(renameEditorStyleSheet());
+    QPalette pal = editor->palette();
+    pal.setColor(QPalette::Highlight, QApplication::palette().color(QPalette::Highlight));
+    pal.setColor(QPalette::HighlightedText,
+                 QApplication::palette().color(QPalette::HighlightedText));
+    editor->setPalette(pal);
     return editor;
 }
 
@@ -228,7 +253,17 @@ void IconViewDelegate::paint(QPainter *painter,
         QRect frame(item.left() + inset, frameTop,
                     item.width() - 2 * inset, frameBottom - frameTop);
         path.addRoundedRect(frame, 15, 15);
-        painter->setOpacity(0.7);
+        painter->setOpacity(0.85);
+        painter->fillPath(path, opt.palette.highlight());
+        painter->setOpacity(1.0);
+    } else if ((opt.state & QStyle::State_MouseOver) && !isEditing) {
+        QPainterPath path;
+        const int frameTop = iconRect.top() - kFramePad;
+        const int frameBottom = txtRect.bottom() + kFramePad;
+        QRect frame(item.left() + inset, frameTop,
+                    item.width() - 2 * inset, frameBottom - frameTop);
+        path.addRoundedRect(frame, 15, 15);
+        painter->setOpacity(0.38);
         painter->fillPath(path, opt.palette.highlight());
         painter->setOpacity(1.0);
     }

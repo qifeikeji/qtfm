@@ -46,6 +46,27 @@ void MainWindow::addSeparatorAction()
                                 "");
 }
 
+void MainWindow::removeSeparator()
+{
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this,
+        tr("Remove separator"),
+        tr("Remove this separator line?"),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+    if (answer != QMessageBox::Yes) {
+        return;
+    }
+
+    QModelIndexList list = bookmarksList->selectionModel()->selectedIndexes();
+    while (!list.isEmpty()) {
+        const QModelIndex src = bookmarkListProxy->mapToSource(list.first());
+        modelBookmarks->removeRow(src.row());
+        list = bookmarksList->selectionModel()->selectedIndexes();
+    }
+    handleBookmarksChanged();
+}
+
 void MainWindow::delBookmark()
 {
     const QMessageBox::StandardButton answer = QMessageBox::question(

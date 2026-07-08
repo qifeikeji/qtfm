@@ -425,6 +425,13 @@ void MainWindow::lateStart() {
   list->setSelectionRectVisible(true);
   list->setFocus();
   list->setEditTriggers(QAbstractItemView::NoEditTriggers);
+  list->setMouseTracking(true);
+  bookmarksList->setMouseTracking(true);
+#ifndef NO_UDISKS
+  if (disksList) {
+    disksList->setMouseTracking(true);
+  }
+#endif
 
   // Clipboard configuration
   clipboardChanged();
@@ -717,14 +724,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   copyXofTS = settings->value("copyXofTS", COPY_X_TS).toString();
 
 #if QT_VERSION >= 0x050000
-  const bool darkUi = settings->value("darkTheme").toBool();
-  BundledIcons::setUiDarkMode(darkUi);
-  if (darkUi) {
-    qApp->setPalette(Common::darkTheme());
-  } else {
-    qApp->setPalette(qApp->style()->standardPalette());
-  }
-  refreshBundledUiIcons();
+  applyThemeFromSettings();
 #endif
 }
 
@@ -1244,25 +1244,91 @@ void MainWindow::tabsOnTop()
 {
     if(tabsOnTopAct->isChecked()) {
         mainLayout->setDirection(QBoxLayout::BottomToTop);
-        tabs->setShape(QTabBar::RoundedNorth);
+        tabs->setShape(QTabBar::North);
     } else {
         mainLayout->setDirection(QBoxLayout::TopToBottom);
-        tabs->setShape(QTabBar::RoundedSouth);
+        tabs->setShape(QTabBar::South);
     }
-    updateTabBarPalette();
+    applyViewChromeStyles();
 }
 
-//---------------------------------------------------------------------------
-/**
- * @brief Makes the selected tab blend with the file view's background so it
- * visually reads as "part of" the currently displayed folder area.
- */
+void MainWindow::applyThemeFromSettings()
+{
+#if QT_VERSION >= 0x050000
+    if (!settings) {
+        return;
+    }
+    const bool darkUi = settings->value(QStringLiteral("darkTheme")).toBool();
+    BundledIcons::setUiDarkMode(darkUi);
+    if (darkUi) {
+        qApp->setPalette(Common::darkTheme());
+    } else {
+        qApp->setPalette(qApp->style()->standardPalette());
+    }
+    refreshBundledUiIcons();
+    applyViewChromeStyles();
+    if (bookmarkGroupBar) {
+        bookmarkGroupBar->applyButtonSizes();
+    }
+#endif
+}
+
+void MainWindow::applyViewChromeStyles()
+{
+    if (!tabs || !list) {
+        return;
+    }
+    const QPalette pal = list->palette();
+    QColor highlight = pal.highlight().color();
+    QColor hover = highlight;
+    hover.setAlpha(qMin(255, hover.alpha() + static_cast<int>(255 * 0.28)));
+    if (hover.alpha() < 72) {
+        hover.setAlpha(72);
+    }
+    QColor selected = highlight;
+    selected.setAlpha(qMin(255, selected.alpha() + static_cast<int>(255 * 0.40)));
+    if (selected.alpha() < 100) {
+        selected.setAlpha(100);
+    }
+
+    const QString tabQss = QStringLiteral(
+        "QTabBar::tab { min-height: 32px; max-height: 32px; padding: 6px 14px;"
+        " border: none; border-radius: 0px; margin: 0px; background: transparent; }"
+        "QTabBar::tab:selected { background: %1; }"
+        "QTabBar::tab:hover:!selected { background: %2; }"
+        "QTabBar::tab:!selected { min-height: 32px; max-height: 32px; }"
+        "QTabBar::tab:selected:!hover { min-height: 32px; max-height: 32px; }"
+    ).arg(selected.name(QColor::HexArgb), hover.name(QColor::HexArgb));
+
+    tabs->setStyleSheet(tabQss);
+    tabs->setUsesScrollButtons(false);
+    tabs->setExpanding(true);
+    tabs->setDocumentMode(true);
+    if (sidebarTabs) {
+        sidebarTabs->tabBar()->setStyleSheet(tabQss);
+    }
+
+    const int rowH = qMax(18, zoomDetail);
+    const QString treeQss = QStringLiteral(
+        "QTreeView::item { height: %1px; }"
+        "QTreeView::item:hover { background-color: %2; }"
+        "QTreeView::item:selected { background-color: %3; }"
+        "QTreeView QLineEdit {"
+        " background: palette(base); color: palette(text);"
+        " border: 1px solid %4; border-radius: 2px; padding: 1px 4px;"
+        " selection-background-color: %3; selection-color: palette(highlighted-text);"
+        "}"
+    ).arg(rowH)
+     .arg(hover.name(QColor::HexArgb), selected.name(QColor::HexArgb),
+          pal.color(QPalette::Mid).name());
+    if (detailTree) {
+        detailTree->setStyleSheet(treeQss);
+    }
+}
+
 void MainWindow::updateTabBarPalette()
 {
-    const QColor blend = list->palette().color(QPalette::Base);
-    tabs->setStyleSheet(QString(
-        "QTabBar::tab:selected { background: %1; }"
-    ).arg(blend.name()));
+    applyViewChromeStyles();
 }
 
 //---------------------------------------------------------------------------
@@ -1698,14 +1764,24 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
 
   if (isUnder(bookmarksList)) {
     listSelectionModel->clearSelection();
-    if (bookmarksList->indexAt(bookmarksList->mapFromGlobal(event->globalPos())).isValid()) {
-      const QString bookmarkPath = bookmarksList->currentIndex().data(BOOKMARK_PATH).toString();
-      if (!bookmarkPath.isEmpty()) {
+    const QModelIndex hit = bookmarksList->indexAt(
+        bookmarksList->mapFromGlobal(event->globalPos()));
+    if (hit.isValid()) {
+      bookmarksList->setCurrentIndex(hit);
+      const QModelIndex src = bookmarkListProxy->mapToSource(hit);
+      const QString bookmarkPath = src.data(BOOKMARK_PATH).toString();
+      const bool isSeparator = src.data(Qt::DisplayRole).toString().isEmpty()
+                               && bookmarkPath.isEmpty();
+      if (isSeparator) {
+        popup->addAction(removeSeparatorAct);
+      } else {
+        if (!bookmarkPath.isEmpty()) {
           popup->addAction(renameBookmarkAct);
           popup->addAction(editBookmarkAct);
+        }
+        popup->addSeparator();
+        popup->addAction(delBookmarkAct);
       }
-      popup->addSeparator();
-      popup->addAction(delBookmarkAct);
     } else {
       bookmarksList->clearSelection();
       popup->addAction(addSeparatorAct);
@@ -1742,11 +1818,21 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
     return;
   }
 
-  if (focusWidget() == list || focusWidget() == detailTree) {
+  if (focusWidget() == list || focusWidget() == detailTree || isUnder(stackWidget)) {
 
     if (!isUnder(stackWidget)) {
       delete popup;
       return;
+    }
+
+    if (currentView == 1 && isUnder(list)) {
+      const QPoint vp = list->viewport()->mapFromGlobal(event->globalPos());
+      const QModelIndex idx = list->indexAt(vp);
+      if (!idx.isValid()) {
+        listSelectionModel->clearSelection();
+      } else {
+        listSelectionModel->setCurrentIndex(idx, QItemSelectionModel::ClearAndSelect);
+      }
     }
 
     if (currentView == 2 && isUnder(detailTree)) {

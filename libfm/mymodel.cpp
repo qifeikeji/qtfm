@@ -1076,6 +1076,11 @@ QVariant myModel::findIcon(myModelItem *item) const {
     return FileUtils::searchFolderIcon(type, iconFactory->icon(type));
   }
 
+  // AppImage bundles the app's icon (often qtfm); use generic unknown-file icon instead.
+  if (type.fileName().endsWith(QLatin1String(".AppImage"), Qt::CaseInsensitive)) {
+    return BundledIcons::emptyIcon();
+  }
+
     // If thumbnails are allowed and current file has it, show it
     if (showThumbs) {
         if (icons->contains(item->absoluteFilePath())) {

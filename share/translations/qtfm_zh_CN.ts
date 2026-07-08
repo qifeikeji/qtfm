@@ -240,7 +240,7 @@
     </message>
     <message>
       <source>Edit</source>
-      <translation>Edit</translation>
+      <translation>编辑</translation>
     </message>
     <message>
       <source>Edit custom actions</source>
@@ -500,7 +500,7 @@
     </message>
     <message>
       <source>Show thumbs</source>
-      <translation>显示 thumbs</translation>
+      <translation>显示缩略图</translation>
     </message>
     <message>
       <source>Size</source>
@@ -536,7 +536,7 @@
     </message>
     <message>
       <source>Tabs on top</source>
-      <translation>Tabs on top</translation>
+      <translation>标签栏在顶部</translation>
     </message>
     <message>
       <source>Terminal</source>
@@ -568,7 +568,7 @@
     </message>
     <message>
       <source>View</source>
-      <translation>View</translation>
+      <translation>视图</translation>
     </message>
     <message>
       <source>View thumbnails for image files</source>
@@ -833,7 +833,7 @@
     </message>
     <message>
       <source>Clear cache</source>
-      <translation>Clear cache</translation>
+      <translation>清除缓存</translation>
     </message>
     <message>
       <source>Contains:</source>

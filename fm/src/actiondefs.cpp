@@ -111,6 +111,18 @@ void MainWindow::applyBundledToolbarIcons()
   refreshAct->setIcon(actionIcons->at(19));
   zoomInAct->setIcon(actionIcons->at(23));
   zoomOutAct->setIcon(actionIcons->at(24));
+  if (tabsOnTopAct) {
+    tabsOnTopAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("tabs-on-top")));
+  }
+  if (thumbsAct) {
+    thumbsAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("show-thumbs")));
+  }
+  if (aboutAct) {
+    aboutAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("about-qtfm")));
+  }
+  if (clearCacheAct) {
+    clearCacheAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("clear-cache")));
+  }
   if (bookmarkGroupBar) {
     bookmarkGroupBar->refreshToolbarIcons();
   }
@@ -177,7 +189,7 @@ void MainWindow::createActions() {
   tabsOnTopAct = new QAction(tr("Tabs on top"), this);
   tabsOnTopAct->setStatusTip(tr("Tabs on top"));
   tabsOnTopAct->setCheckable(true);
-  tabsOnTopAct->setIcon(QIcon::fromTheme("tab-new"));
+  tabsOnTopAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("tabs-on-top")));
   connect(tabsOnTopAct, SIGNAL(triggered()), this, SLOT(tabsOnTop()));
   actionList->append(tabsOnTopAct);
 
@@ -305,6 +317,12 @@ void MainWindow::createActions() {
   delBookmarkAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("window-close")));
   actionList->append(delBookmarkAct);
 
+  removeSeparatorAct = new QAction(tr("Remove separator"), this);
+  removeSeparatorAct->setStatusTip(tr("Remove this separator line"));
+  connect(removeSeparatorAct, SIGNAL(triggered()), this, SLOT(removeSeparator()));
+  removeSeparatorAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("window-close")));
+  actionList->append(removeSeparatorAct);
+
   renameBookmarkAct = new QAction(tr("Rename bookmark"), this);
   renameBookmarkAct->setStatusTip(tr("Rename this bookmark"));
   connect(renameBookmarkAct, SIGNAL(triggered()), this, SLOT(renameBookmark()));
@@ -343,6 +361,8 @@ void MainWindow::createActions() {
   renameAct = new QAction(tr("Rename"), this);
   renameAct->setStatusTip(tr("Rename file"));
   renameAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("rename")));
+  renameAct->setShortcut(QKeySequence(Qt::Key_F2));
+  renameAct->setShortcutContext(Qt::ApplicationShortcut);
   connect(renameAct, SIGNAL(triggered()),this, SLOT(renameFile()));
   actionList->append(renameAct);
 
@@ -383,7 +403,7 @@ void MainWindow::createActions() {
   thumbsAct = new QAction(tr("Show thumbs"), this);
   thumbsAct->setStatusTip(tr("View thumbnails for image files"));
   thumbsAct->setCheckable(true);
-  thumbsAct->setIcon(QIcon::fromTheme("image-x-generic"));
+  thumbsAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("show-thumbs")));
   connect(thumbsAct, SIGNAL(triggered()), this, SLOT(toggleThumbs()));
   actionList->append(thumbsAct);
 
@@ -435,7 +455,7 @@ void MainWindow::createActions() {
   actionList->append(focusListAct);
 
   aboutAct = new QAction(tr("About %1").arg(APP_NAME), this);
-  aboutAct->setIcon(QIcon::fromTheme("qtfm", QIcon(":/icons/app.svg")));
+  aboutAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("about-qtfm")));
   connect(aboutAct, SIGNAL(triggered()), this, SLOT(showAboutBox()));
   actionList->append(aboutAct);
 
@@ -461,7 +481,7 @@ void MainWindow::createActions() {
   connect(mediaEjectAct, SIGNAL(triggered(bool)), this, SLOT(handleMediaEject()));
 #endif
   clearCacheAct = new QAction(tr("Clear cache"), this);
-  clearCacheAct->setIcon(QIcon::fromTheme("edit-clear"));
+  clearCacheAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("clear-cache")));
   connect(clearCacheAct, SIGNAL(triggered()), this, SLOT(clearCache()));
 
   // Icon list kept for refreshBundledUiIcons(); release after actions are built.

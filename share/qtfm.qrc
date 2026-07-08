@@ -81,6 +81,14 @@
         <file>icons/settings/white/open-with.svg</file>
         <file>icons/settings/white/shortcuts.svg</file>
         <file>icons/settings/white/systray.svg</file>
+        <file>icons/toolbar/clear-cache.svg</file>
+        <file>icons/toolbar/white/clear-cache.svg</file>
+        <file>icons/toolbar/tabs-on-top.svg</file>
+        <file>icons/toolbar/white/tabs-on-top.svg</file>
+        <file>icons/toolbar/show-thumbs.svg</file>
+        <file>icons/toolbar/white/show-thumbs.svg</file>
+        <file>icons/toolbar/about-qtfm.svg</file>
+        <file>icons/toolbar/white/about-qtfm.svg</file>
         <file>../AUTHORS</file>
     </qresource>
 </RCC>
