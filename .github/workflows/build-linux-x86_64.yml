@@ -122,7 +122,17 @@ jobs:
           ICON_PNG="${GITHUB_WORKSPACE}/share/images/app.png"
           ICON_ARG="${APPDIR}/usr/share/icons/hicolor/scalable/apps/qtfm.svg"
           if [ -f "$ICON_PNG" ]; then
-            ICON_ARG="$ICON_PNG"
+            # linuxdeploy accepts PNG icons only at fixed sizes (max 512x512); app.png is often 1024.
+            ICON_DEPLOY="${GITHUB_WORKSPACE}/build/app-icon-512.png"
+            mkdir -p "${GITHUB_WORKSPACE}/build"
+            if command -v magick >/dev/null 2>&1; then
+              magick "$ICON_PNG" -resize 512x512 "$ICON_DEPLOY"
+            elif command -v convert >/dev/null 2>&1; then
+              convert "$ICON_PNG" -resize 512x512 "$ICON_DEPLOY"
+            else
+              ffmpeg -y -loglevel error -i "$ICON_PNG" -vf scale=512:512 "$ICON_DEPLOY"
+            fi
+            ICON_ARG="$ICON_DEPLOY"
           fi
 
           ./linuxdeploy.AppImage --appdir="${APPDIR}" \
