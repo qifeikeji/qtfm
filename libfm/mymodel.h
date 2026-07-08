@@ -90,7 +90,7 @@ protected:
 private:
   static bool fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils);
   static QString generateThumbnailToCache(const QString &absolutePath,
-                                          MimeUtils *mimeUtils);
+                                          const QString &itemMime);
 
   bool realMimeTypes;
   bool showThumbs;

@@ -701,7 +701,11 @@ void MainWindow::dirLoaded(bool thumbs)
     statusSize->setText(QString("%1 items").arg(items.count()));
     statusDate->setText(QString("%1").arg(total));
 
-    if (thumbsAct->isChecked() && thumbs) { QtConcurrent::run(modelList,&myModel::loadThumbs,items); }
+    if (thumbsAct->isChecked() && thumbs) {
+      QMetaObject::invokeMethod(modelList, [modelList, items]() {
+        modelList->loadThumbs(items);
+      }, Qt::QueuedConnection);
+    }
     updateGrid();
 }
 

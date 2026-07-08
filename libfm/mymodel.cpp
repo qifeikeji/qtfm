@@ -689,6 +689,9 @@ void myModel::loadThumbs(QModelIndexList indexes) {
         continue;
       }
       if (!thumbQueue.contains(path)) {
+        if (thumbQueue.size() >= 512) {
+          continue;
+        }
         thumbQueue.append(path);
         scheduled = true;
       }
@@ -702,23 +705,34 @@ void myModel::loadThumbs(QModelIndexList indexes) {
   }
 }
 
+namespace {
+
+QMutex g_thumbnailGeneratorMutex;
+
+} // namespace
+
 void myModel::pumpThumbnailQueue()
 {
-  constexpr int kMaxConcurrent = 2;
+  constexpr int kMaxConcurrent = 1;
   while (thumbActiveJobs.loadRelaxed() < kMaxConcurrent) {
     QString path;
+    QString itemMime;
     {
       QMutexLocker lock(&thumbMutex);
       if (thumbQueue.isEmpty()) {
         return;
       }
       path = thumbQueue.takeFirst();
+      itemMime = mimeUtilsPtr->getMimeType(path);
     }
 
     thumbActiveJobs.ref();
-    MimeUtils *mime = mimeUtilsPtr;
-    QtConcurrent::run([this, path, mime]() {
-      const QString cache = generateThumbnailToCache(path, mime);
+    QtConcurrent::run([this, path, itemMime]() {
+      QString cache;
+      {
+        QMutexLocker genLock(&g_thumbnailGeneratorMutex);
+        cache = generateThumbnailToCache(path, itemMime);
+      }
       if (!cache.isEmpty()) {
         QMutexLocker lock(&thumbMutex);
         thumbPaths->insert(path, cache);
@@ -769,7 +783,7 @@ bool myModel::fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils)
   return kExt.contains(FileUtils::getRealSuffix(path).toLower());
 }
 
-QString myModel::generateThumbnailToCache(const QString &item, MimeUtils *mimeUtils)
+QString myModel::generateThumbnailToCache(const QString &item, const QString &itemMime)
 {
   if (item.isEmpty()) {
     return QString();
@@ -787,11 +801,20 @@ QString myModel::generateThumbnailToCache(const QString &item, MimeUtils *mimeUt
     return QString();
   }
 
-  const QString itemMime = mimeUtils->getMimeType(item);
+  const QString mime = itemMime;
 
 #ifdef WITH_FFMPEG
-  if (itemMime.startsWith(QLatin1String("video"))
-      || itemMime.startsWith(QLatin1String("audio/"))) {
+  static const QSet<QString> kVideoExt = {
+      QStringLiteral("mp4"), QStringLiteral("mkv"), QStringLiteral("mov"),
+      QStringLiteral("avi"), QStringLiteral("webm"), QStringLiteral("m4v"),
+      QStringLiteral("mpeg"), QStringLiteral("mpg"), QStringLiteral("wmv"),
+      QStringLiteral("flv"), QStringLiteral("ts"), QStringLiteral("m2ts"),
+  };
+  const QString ext = FileUtils::getRealSuffix(item).toLower();
+  const bool isVideo = mime.startsWith(QLatin1String("video/"))
+                       || kVideoExt.contains(ext);
+  const bool isAudio = mime.startsWith(QLatin1String("audio/"));
+  if (isVideo || isAudio) {
     QByteArray frame = myModel::getVideoFrame(item, true);
     if (frame.isEmpty()) {
       frame = myModel::getVideoFrame(item, false);
@@ -853,13 +876,11 @@ QString myModel::generateThumbnailToCache(const QString &item, MimeUtils *mimeUt
 #ifdef WITH_FFMPEG
 QByteArray myModel::getVideoFrame(QString file, bool getEmbedded, int videoFrame, int pixSize)
 {
-    qDebug() << "getVideoFrame" << file << getEmbedded << videoFrame << pixSize;
     QByteArray result;
     if (file.isEmpty()) { return result; }
 
-    AVFormatContext *pFormatCtx = avformat_alloc_context();
+    AVFormatContext *pFormatCtx = nullptr;
     if (avformat_open_input(&pFormatCtx, file.toUtf8().constData(), nullptr, nullptr) != 0) {
-        avformat_free_context(pFormatCtx);
         return result;
     }
     if (avformat_find_stream_info(pFormatCtx, nullptr) < 0) {
@@ -898,7 +919,7 @@ QByteArray myModel::getVideoFrame(QString file, bool getEmbedded, int videoFrame
         if (avcodec_parameters_to_context(ctx, pFormatCtx->streams[streamIndex]->codecpar) < 0
             || avcodec_open2(ctx, codec, nullptr) < 0) {
             avcodec_free_context(&ctx);
-        return QByteArray();
+            return QByteArray();
         }
         av_seek_frame(pFormatCtx, streamIndex, 0, AVSEEK_FLAG_BACKWARD);
         AVFrame *frame = av_frame_alloc();
@@ -912,7 +933,8 @@ QByteArray myModel::getVideoFrame(QString file, bool getEmbedded, int videoFrame
             }
             if (avcodec_send_packet(ctx, &packet) == 0
                 && avcodec_receive_frame(ctx, frame) == 0) {
-                if (ctx->width <= 0 || ctx->height <= 0) {
+                if (ctx->width <= 0 || ctx->height <= 0
+                    || ctx->width > 8192 || ctx->height > 8192) {
                     av_packet_unref(&packet);
                     break;
                 }
@@ -1019,7 +1041,8 @@ QByteArray myModel::getVideoFrame(QString file, bool getEmbedded, int videoFrame
         }
         if (avcodec_send_packet(pCodecCtx, &packet) == 0
             && avcodec_receive_frame(pCodecCtx, pFrame) == 0
-            && pCodecCtx->width > 0 && pCodecCtx->height > 0) {
+            && pCodecCtx->width > 0 && pCodecCtx->height > 0
+            && pCodecCtx->width <= 8192 && pCodecCtx->height <= 8192) {
             SwsContext *sws = sws_getCachedContext(
                 nullptr, pCodecCtx->width, pCodecCtx->height, pCodecCtx->pix_fmt,
                 pCodecCtx->width, pCodecCtx->height, AV_PIX_FMT_RGB24,
