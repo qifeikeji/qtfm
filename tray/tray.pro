@@ -29,6 +29,7 @@ CONFIG(staticlib) {
         $${top_srcdir}/libfm/disks.cpp \
         $${top_srcdir}/libfm/udisks2.cpp \
         $${top_srcdir}/libfm/fileutils.cpp \
+        $${top_srcdir}/libfm/bundledicons.cpp \
         $${top_srcdir}/libfm/desktopfile.cpp \
         $${top_srcdir}/libfm/properties.cpp \
         $${top_srcdir}/libfm/mimeutils.cpp
@@ -37,6 +38,7 @@ CONFIG(staticlib) {
         $${top_srcdir}/libfm/disks.h \
         $${top_srcdir}/libfm/udisks2.h \
         $${top_srcdir}/libfm/fileutils.h \
+        $${top_srcdir}/libfm/bundledicons.h \
         $${top_srcdir}/libfm/desktopfile.h \
         $${top_srcdir}/libfm/properties.h \
         $${top_srcdir}/libfm/mimeutils.h
