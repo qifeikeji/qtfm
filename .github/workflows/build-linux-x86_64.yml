@@ -72,6 +72,14 @@ jobs:
             exit "$make_rc"
           fi
 
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log-linux
+          path: build/build.log
+          if-no-files-found: ignore
+
       - name: Verify binary
         run: |
           file build/bin/qtfm

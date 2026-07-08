@@ -54,6 +54,7 @@
 #endif
 
 MainWindow::MainWindow()
+    : skipNextSingleFileClear(false)
 {
 #ifndef NO_UDISKS
     disks = new Disks(this);
@@ -726,6 +727,10 @@ void MainWindow::dirLoaded(bool thumbs)
         return;
     }
 
+    if (!hiddenAct || !thumbsAct) {
+        return;
+    }
+
     qDebug() << "dirLoaded triggered, thumbs?" << thumbs;
     qint64 bytes = 0;
     QModelIndexList items;
@@ -963,6 +968,11 @@ void MainWindow::tabChanged(int index)
     if(!tabs->tabData(index).toString().isEmpty()) {
         tree->setCurrentIndex(modelTree->mapFromSource(modelList->index(tabs->tabData(index).toString())));
     }
+}
+
+void MainWindow::newWindow()
+{
+    newWindow(QString());
 }
 
 void MainWindow::newWindow(const QString &path)

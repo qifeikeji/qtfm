@@ -135,7 +135,8 @@ public slots:
     void listItemClicked(QModelIndex);
     void listItemPressed(QModelIndex);
     void tabChanged(int index);
-    void newWindow(const QString &path = QString());
+    void newWindow();
+    void newWindow(const QString &path);
     void openTabInNewWindow(int index);
     void openTab();
     void openNewTab();
@@ -257,9 +258,8 @@ private:
     QLabel * statusName;
     QLabel * statusDate;
     QString startPath;
-    /** When set, list view shows only this file until the user navigates elsewhere. */
     QString pendingSingleFileTarget;
-    bool skipNextSingleFileClear = false;
+    bool skipNextSingleFileClear;
 
     QAction *closeAct;
     QAction *exitAct;

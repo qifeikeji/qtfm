@@ -2,6 +2,7 @@
 #include <QSortFilterProxyModel>
 #include <QModelIndex>
 #include <QDir>
+#include <QString>
 
 //---------------------------------------------------------------------------------
 // Subclass QSortFilterProxyModel and override 'filterAcceptsRow' to only show
