@@ -81,8 +81,7 @@ jobs:
 
       - name: Package QtFM.app
         run: |
-          ditto -c -k --sequesterResource --keepParent \
-            build/fm/QtFM.app QtFM-macos-arm64.zip
+          (cd build/fm && zip -r -y ../../QtFM-macos-arm64.zip QtFM.app)
 
       - name: Upload QtFM.app
         uses: actions/upload-artifact@v4

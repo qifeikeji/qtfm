@@ -14,7 +14,8 @@ on:
 
 env:
   MACOSX_DEPLOYMENT_TARGET: "12.5"
-  QT_VERSION: "5.15.13"
+  QT_VERSION: "5.15.2"
+  QT_ARCH: clang_64
 
 jobs:
   build:
@@ -24,14 +25,15 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install Qt 5 (x86_64)
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: ${{ env.QT_VERSION }}
-          host: mac
-          target: desktop
-          arch: x64
-          cache: true
+      - name: Install Qt 5 (x86_64 / clang_64)
+        run: |
+          pip3 install aqtinstall==3.3.*
+          QT_DIR="${{ runner.tool_cache }}/Qt/${{ env.QT_VERSION }}/${{ env.QT_ARCH }}"
+          python3 -m aqt install-qt mac desktop "${{ env.QT_VERSION }}" "${{ env.QT_ARCH }}" \
+            --outputdir "${{ runner.tool_cache }}/Qt"
+          test -x "${QT_DIR}/bin/qmake"
+          echo "${QT_DIR}/bin" >> "${GITHUB_PATH}"
+          echo "PKG_CONFIG_PATH=${QT_DIR}/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "${GITHUB_ENV}"
 
       - name: Install build tools
         run: brew install autoconf automake libtool librsvg pkg-config
@@ -85,8 +87,7 @@ jobs:
 
       - name: Package QtFM.app
         run: |
-          ditto -c -k --sequesterResource --keepParent \
-            build/fm/QtFM.app QtFM-macos-x86_64.zip
+          (cd build/fm && zip -r -y ../../QtFM-macos-x86_64.zip QtFM.app)
 
       - name: Upload QtFM.app
         uses: actions/upload-artifact@v4
