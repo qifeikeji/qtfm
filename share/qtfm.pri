@@ -42,6 +42,8 @@ CONFIG(release, debug|release) {
     !CONFIG(sharedlib): CONFIG += staticlib
 }
 
+CONFIG += c++11
+
 freebsd: LIBS += -linotify
 netbsd-g++: PKGCONFIG += libinotify
 
