@@ -26,7 +26,7 @@ public:
     void setEditorData(QWidget *editor, const QModelIndex &index) const override;
     void setModelData(QWidget *editor, QAbstractItemModel *model,
                       const QModelIndex &index) const override;
-    void closeEditor(QWidget *editor, EndEditHint hint) const override;
+    void closeEditor(QWidget *editor, EndEditHint hint) override;
 
 private:
     mutable bool m_editing = false;

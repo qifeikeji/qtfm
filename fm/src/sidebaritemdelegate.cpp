@@ -192,7 +192,7 @@ void BookmarkItemDelegate::setModelData(QWidget *editor, QAbstractItemModel *mod
     m_editingIndex = QModelIndex();
 }
 
-void BookmarkItemDelegate::closeEditor(QWidget *editor, EndEditHint hint) const
+void BookmarkItemDelegate::closeEditor(QWidget *editor, EndEditHint hint)
 {
     m_editing = false;
     m_editingIndex = QModelIndex();
