@@ -61,19 +61,35 @@ jobs:
           mkdir -p build
           cd build
           qmake CONFIG+=with_magick CONFIG+=release PREFIX=/usr ..
-          set -o pipefail
-          make -j"$(nproc)" 2>&1 | tee build.log
-          make_rc=${PIPESTATUS[0]}
-          if [ "$make_rc" -ne 0 ]; then
-            echo "::group::Compiler / linker errors (first 80 lines)"
-            grep -E ':( error:|fatal error:|undefined reference)' build.log | head -80 || true
+          LOG=build.log
+          : > "$LOG"
+
+          run_make() {
+            local target="$1"
+            echo ""
+            echo "========== make ${target} =========="
+            set -o pipefail
+            make "${target}" -j"$(nproc)" 2>&1 | tee -a "$LOG"
+            return "${PIPESTATUS[0]}"
+          }
+
+          run_make sub-libfm-make_first || exit 1
+
+          if ! run_make sub-fm-make_first; then
+            echo ""
+            echo "::group::fm — compiler / linker errors"
+            grep -E ':( error:|fatal error:|undefined reference)' "$LOG" | tail -50 || true
             echo "::endgroup::"
-            echo "::group::Last 40 lines of build.log"
-            tail -40 build.log || true
+            echo "::group::fm — last 30 lines mentioning mainwindow / fm"
+            grep -E 'mainwindow|/fm/' "$LOG" | tail -30 || true
             echo "::endgroup::"
-            exit "$make_rc"
+            exit 1
           fi
-          test -x bin/qtfm || { echo "bin/qtfm missing after successful make"; exit 1; }
+
+          run_make sub-tray-make_first || exit 1
+
+          test -x bin/qtfm || { echo "bin/qtfm missing after build"; exit 1; }
+          echo "Built: bin/qtfm bin/qtfm-tray"
 
       - name: Upload build log on failure
         if: failure()

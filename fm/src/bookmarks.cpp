@@ -26,6 +26,7 @@
 
 #include <QStatusBar>
 #include <QApplication>
+#include <QDialog>
 #include <QPushButton>
 #include <QMessageBox>
 

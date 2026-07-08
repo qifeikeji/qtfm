@@ -29,6 +29,8 @@
 #include <QStatusBar>
 #include <QMenu>
 #include <QMenuBar>
+#include <QProcess>
+#include <QFileInfo>
 #ifndef NO_DBUS
 #include <QDBusConnection>
 #include <QDBusError>
