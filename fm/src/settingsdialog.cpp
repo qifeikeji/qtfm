@@ -8,6 +8,7 @@
 #include <QPushButton>
 #include <QHeaderView>
 #include <QMessageBox>
+#include <QDialogButtonBox>
 #include <QAction>
 #include <QApplication>
 #include <QTimer>
@@ -623,7 +624,6 @@ void SettingsDialog::restartToApply(bool /*triggered*/)
 
 void SettingsDialog::filterMimes(QString filter)
 {
-    qDebug() << "filter mimes" << filter;
     mimesWidget->setUpdatesEnabled(false);
     for (int i=0;i<mimesWidget->topLevelItemCount();++i) {
         QTreeWidgetItem *topItem = mimesWidget->topLevelItem(i);
