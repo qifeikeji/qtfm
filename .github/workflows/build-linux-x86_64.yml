@@ -1,4 +1,4 @@
-# CI: Linux x86_64 (ubuntu-22.04)
+# CI: Linux x86_64 (ubuntu-22.04) + AppImage artifact
 name: Build Linux x86_64
 
 on:
@@ -11,6 +11,9 @@ on:
     paths-ignore:
       - '**.md'
       - 'docs/**'
+
+env:
+  QTFM_VERSION: "6.3.0"
 
 jobs:
   build:
@@ -37,7 +40,10 @@ jobs:
             libswscale-dev \
             libavformat-dev \
             libavcodec-dev \
-            libavutil-dev
+            libavutil-dev \
+            libfuse2 \
+            file \
+            wget
 
       - name: Build (qmake release)
         run: |
@@ -51,3 +57,53 @@ jobs:
           file build/bin/qtfm
           file build/bin/qtfm | grep -E 'x86-64|Intel 80386'
           test -x build/bin/qtfm
+
+      - name: Download linuxdeploy
+        run: |
+          wget -q -O linuxdeploy.AppImage \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget -q -O linuxdeploy-plugin-qt.AppImage \
+            https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy.AppImage linuxdeploy-plugin-qt.AppImage
+
+      - name: Install into AppDir
+        working-directory: build
+        run: make INSTALL_ROOT="${GITHUB_WORKSPACE}/AppDir" install
+
+      - name: Build AppImage
+        env:
+          VERSION: ${{ env.QTFM_VERSION }}
+          ARCH: x86_64
+          QMAKE: qmake
+        run: |
+          APPDIR="${GITHUB_WORKSPACE}/AppDir"
+          test -x "${APPDIR}/usr/bin/qtfm"
+          test -f "${APPDIR}/usr/share/applications/qtfm.desktop"
+
+          EXTRA_LIBS=()
+          while IFS= read -r lib; do
+            if [ -n "${lib}" ] && [ -f "${lib}" ]; then
+              EXTRA_LIBS+=(--library "${lib}")
+            fi
+          done < <(
+            ldd "${APPDIR}/usr/bin/qtfm" | awk '/=>/ {print $3}' \
+              | grep -E 'lib(Magick|MagickCore|MagickWand|avcodec|avformat|avutil|avdevice|swscale|swresample)' \
+              || true
+          )
+
+          ./linuxdeploy.AppImage --appdir="${APPDIR}" \
+            --executable="${APPDIR}/usr/bin/qtfm" \
+            --desktop-file="${APPDIR}/usr/share/applications/qtfm.desktop" \
+            --icon-file="${APPDIR}/usr/share/icons/hicolor/scalable/apps/qtfm.svg" \
+            --plugin qt \
+            "${EXTRA_LIBS[@]}" \
+            --output appimage
+
+          ls -lah qtfm-*.AppImage
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: qtfm-${{ env.QTFM_VERSION }}-linux-x86_64
+          path: qtfm-*.AppImage
+          if-no-files-found: error

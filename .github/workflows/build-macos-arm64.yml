@@ -14,7 +14,6 @@ on:
 
 env:
   MACOSX_DEPLOYMENT_TARGET: "11.0"
-  QT_VERSION: "5.15.2"
 
 jobs:
   build:
@@ -28,8 +27,11 @@ jobs:
           echo "Runner architecture: ${arch}"
           test "${arch}" = "arm64"
 
-      - name: Install build tools
-        run: brew install autoconf automake libtool librsvg pkg-config
+      - name: Install build tools and Qt 5
+        run: |
+          brew install autoconf automake libtool librsvg pkg-config qt@5
+          echo "$(brew --prefix qt@5)/bin" >> "${GITHUB_PATH}"
+          echo "PKG_CONFIG_PATH=$(brew --prefix qt@5)/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "${GITHUB_ENV}"
 
       - name: Build libinotify-kqueue (arm64)
         run: |
@@ -40,16 +42,6 @@ jobs:
           make -j"$(sysctl -n hw.ncpu)"
           make install
           echo "PKG_CONFIG_PATH=${GITHUB_WORKSPACE}/deps-arm64/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "${GITHUB_ENV}"
-
-      - name: Install Qt 5 (arm64)
-        uses: jurplel/install-qt-action@v4
-        with:
-          version: ${{ env.QT_VERSION }}
-          host: mac
-          target: desktop
-          arch: arm64
-          modules: qtbase
-          cache: true
 
       - name: Prepare app icon (if missing)
         run: |
@@ -84,3 +76,15 @@ jobs:
           test -f "${bin}"
           file "${bin}"
           file "${bin}" | grep arm64
+
+      - name: Package QtFM.app
+        run: |
+          ditto -c -k --sequesterResource --keepParent \
+            build/fm/QtFM.app QtFM-macos-arm64.zip
+
+      - name: Upload QtFM.app
+        uses: actions/upload-artifact@v4
+        with:
+          name: QtFM-macos-arm64
+          path: QtFM-macos-arm64.zip
+          if-no-files-found: error

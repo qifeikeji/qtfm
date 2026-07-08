@@ -14,7 +14,7 @@ on:
 
 env:
   MACOSX_DEPLOYMENT_TARGET: "12.5"
-  QT_VERSION: "5.15.2"
+  QT_VERSION: "5.15.13"
 
 jobs:
   build:
@@ -29,7 +29,6 @@ jobs:
           host: mac
           target: desktop
           arch: x64
-          modules: qtbase
           cache: true
 
       - name: Install build tools
@@ -81,4 +80,15 @@ jobs:
           test -f "${bin}"
           file "${bin}"
           file "${bin}" | grep x86_64
-          otool -l "${bin}" | awk '/LC_BUILD_VERSION/{getline; print} /minos/{print}' | head -20
+
+      - name: Package QtFM.app
+        run: |
+          ditto -c -k --sequesterResource --keepParent \
+            build/fm/QtFM.app QtFM-macos-x86_64.zip
+
+      - name: Upload QtFM.app
+        uses: actions/upload-artifact@v4
+        with:
+          name: QtFM-macos-x86_64
+          path: QtFM-macos-x86_64.zip
+          if-no-files-found: error
