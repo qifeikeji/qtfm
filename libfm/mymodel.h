@@ -95,7 +95,7 @@ private:
 
   bool realMimeTypes;
   bool showThumbs;
-  bool showListDecorations = true;
+  bool m_showListDecorations = true;
 
   QPalette colors;
   QStringList cutItems;

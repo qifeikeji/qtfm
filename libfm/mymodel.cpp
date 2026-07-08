@@ -191,19 +191,21 @@ bool myModel::isRealMimeTypes() const {
 
 void myModel::setShowListDecorations(bool show)
 {
-    if (showListDecorations == show) {
+    if (m_showListDecorations == show) {
         return;
     }
-    showListDecorations = show;
-    if (rowCount() <= 0) {
+    m_showListDecorations = show;
+    const QModelIndex root;
+    const int rows = rowCount(root);
+    if (rows <= 0) {
         return;
     }
-    emit dataChanged(index(0, 0), index(rowCount() - 1, 0));
+    emit dataChanged(index(0, 0, root), index(rows - 1, 0, root));
 }
 
 bool myModel::showListDecorations() const
 {
-    return showListDecorations;
+    return m_showListDecorations;
 }
 //---------------------------------------------------------------------------
 
@@ -971,7 +973,7 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
   }
   // Display file icon
   else if (role == Qt::DecorationRole) {
-    if (!showListDecorations || index.column() != 0) {
+    if (!m_showListDecorations || index.column() != 0) {
       return QVariant();
     }
     return findIcon(item);
