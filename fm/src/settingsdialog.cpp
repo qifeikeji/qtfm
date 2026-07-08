@@ -11,6 +11,7 @@
 #include <QMessageBox>
 #include <QAction>
 #include <QApplication>
+#include <QTimer>
 
 #include "openwithconfig.h"
 #include "common.h"
