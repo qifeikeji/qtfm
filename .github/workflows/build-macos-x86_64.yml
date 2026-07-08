@@ -27,9 +27,11 @@ jobs:
 
       - name: Install Qt 5 (x86_64 / clang_64)
         run: |
-          pip3 install aqtinstall==3.3.*
+          python3 -m venv /tmp/aqt-venv
+          source /tmp/aqt-venv/bin/activate
+          pip install aqtinstall==3.3.*
           QT_DIR="${{ runner.tool_cache }}/Qt/${{ env.QT_VERSION }}/${{ env.QT_ARCH }}"
-          python3 -m aqt install-qt mac desktop "${{ env.QT_VERSION }}" "${{ env.QT_ARCH }}" \
+          aqt install-qt mac desktop "${{ env.QT_VERSION }}" "${{ env.QT_ARCH }}" \
             --outputdir "${{ runner.tool_cache }}/Qt"
           test -x "${QT_DIR}/bin/qmake"
           echo "${QT_DIR}/bin" >> "${GITHUB_PATH}"
