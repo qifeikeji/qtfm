@@ -479,6 +479,26 @@ void MainWindow::createActions() {
   macFileAccessHelpAct->setStatusTip(tr("完全磁盘访问权限与减少授权弹窗"));
   connect(macFileAccessHelpAct, SIGNAL(triggered()), this, SLOT(showMacFileAccessHelp()));
   actionList->append(macFileAccessHelpAct);
+
+  macPasteImageAct = new QAction(tr("Paste image"), this);
+  macPasteImageAct->setStatusTip(tr("Save the image from the clipboard into this folder"));
+  connect(macPasteImageAct, SIGNAL(triggered()), this, SLOT(macPasteImageFromClipboard()));
+
+  macPasteTextAct = new QAction(tr("Paste text"), this);
+  macPasteTextAct->setStatusTip(tr("Save clipboard text as a new .txt file in this folder"));
+  connect(macPasteTextAct, SIGNAL(triggered()), this, SLOT(macPasteTextFromClipboard()));
+
+  macOpenTerminalHereAct = new QAction(tr("Open Terminal here"), this);
+  macOpenTerminalHereAct->setStatusTip(tr("Open Terminal in the current folder"));
+  connect(macOpenTerminalHereAct, SIGNAL(triggered()), this, SLOT(macOpenTerminalHere()));
+
+  macCopyImageToClipboardAct = new QAction(tr("Copy image to clipboard"), this);
+  macCopyImageToClipboardAct->setStatusTip(tr("Copy this image file to the clipboard"));
+  connect(macCopyImageToClipboardAct, SIGNAL(triggered()), this, SLOT(macCopyImageToClipboard()));
+
+  macCopyFilePathAct = new QAction(tr("Copy path"), this);
+  macCopyFilePathAct->setStatusTip(tr("Copy the full path to the clipboard"));
+  connect(macCopyFilePathAct, SIGNAL(triggered()), this, SLOT(macCopyFilePathToClipboard()));
 #endif
 
 #if defined(QTFM_HAVE_SIDEBAR_DISKS)
@@ -726,9 +746,7 @@ void MainWindow::createToolBars() {
   navToolBar->addAction(terminalAct);
 
   addressToolBar = navToolBar;
-#ifdef Q_OS_MAC
-  applyMacNavToolBarLayout();
-#endif
+  applyNavToolBarInsets();
 }
 //---------------------------------------------------------------------------
 

@@ -159,9 +159,7 @@ public slots:
     void updateTabBarPalette();
     void applyThemeFromSettings();
     void applyViewChromeStyles();
-#ifdef Q_OS_MAC
-    void applyMacNavToolBarLayout();
-#endif
+    void applyNavToolBarInsets();
     void applyWidgetPalettes();
     void syncPathComboDecorations();
     int addTab(QString path);
@@ -194,6 +192,11 @@ public slots:
     void showMacOpenWithHelp();
     void showMacFileAccessHelp();
     void maybeShowMacFileAccessHint();
+    void macPasteImageFromClipboard();
+    void macPasteTextFromClipboard();
+    void macOpenTerminalHere();
+    void macCopyImageToClipboard();
+    void macCopyFilePathToClipboard();
 #endif
 
 signals:
@@ -368,6 +371,11 @@ private:
 #ifdef Q_OS_MAC
     QAction *macOpenWithHelpAct;
     QAction *macFileAccessHelpAct;
+    QAction *macPasteImageAct = nullptr;
+    QAction *macPasteTextAct = nullptr;
+    QAction *macOpenTerminalHereAct = nullptr;
+    QAction *macCopyImageToClipboardAct = nullptr;
+    QAction *macCopyFilePathAct = nullptr;
     QFileSystemWatcher *macVolumesWatcher = nullptr;
 #endif
 #if defined(QTFM_HAVE_SIDEBAR_DISKS)

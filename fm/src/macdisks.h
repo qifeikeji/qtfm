@@ -14,6 +14,8 @@ struct MacDiskVolume {
     bool isOptical = false;
     /** Whole disk to eject (disk3); may equal deviceIdentifier. */
     QString wholeDiskIdentifier;
+    /** Top-level AllDisksAndPartitions entry (disk1, disk2) for sidebar grouping. */
+    QString physicalDiskGroup;
 };
 
 namespace MacDisks {

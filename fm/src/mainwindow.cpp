@@ -58,6 +58,20 @@
 namespace {
 constexpr int kPathBarHeight = 28;
 constexpr int kPathBarIconSize = kPathBarHeight - 10;
+#ifdef Q_OS_MAC
+bool macClipboardHasImage()
+{
+    QClipboard *cb = QApplication::clipboard();
+    if (!cb) {
+        return false;
+    }
+    if (!cb->image().isNull()) {
+        return true;
+    }
+    const QMimeData *mime = cb->mimeData();
+    return mime && mime->hasImage();
+}
+#endif
 } // namespace
 
 #include "common.h"
@@ -68,6 +82,8 @@ constexpr int kPathBarIconSize = kPathBarHeight - 10;
 #include "qtfilecopier.h"
 
 #ifdef Q_OS_MAC
+#include <QClipboard>
+#include <QMimeData>
 #include <QStyleFactory>
 #include "macfileaccess.h"
 #include <QFileSystemWatcher>
@@ -621,11 +637,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   // fix style — full chrome applied in applyViewChromeStyles()
   topModuleGapV = settings->value("topModuleGapV", 5).toInt();
   topModuleGapH = settings->value("topModuleGapH", 8).toInt();
-#ifdef Q_OS_MAC
-  applyMacNavToolBarLayout();
-#else
-  navToolBar->setContentsMargins(0, 0, 5, 0);
-#endif
+  applyNavToolBarInsets();
 
   // Restore window state
   if (wState) {
@@ -713,6 +725,9 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
 
   // Load view mode
   modelView->setFoldersAlwaysFirstSetting(settings->value("foldersAlwaysFirst", true).toBool());
+  modelView->setFoldersAlwaysFirstIconSetting(
+      settings->value("foldersAlwaysFirstIcon", true).toBool());
+  modelView->setIconViewSortContext(currentView == 1);
   modelView->resetDirectorySortOverride();
 
   int sortBy = settings->value("sortBy", 2).toInt();
@@ -1457,11 +1472,7 @@ void MainWindow::applyViewChromeStyles()
         .arg(flatBorder.name(), controlBg.name(), flatHover.name(QColor::HexArgb), chromeBtnSize);
     const QString topModuleChromeQss = QStringLiteral(
         "QToolBar#Navigate {"
-        " padding-left: %1px; padding-right: %1px;"
-        " padding-top: %2px; padding-bottom: %2px;"
-        " margin: 0; border: none; background: transparent; }")
-        .arg(topModuleGapH)
-        .arg(topModuleGapV);
+        " margin: 0; border: none; background: transparent; }");
 
     if (navToolBar) {
         navToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
@@ -1473,7 +1484,7 @@ void MainWindow::applyViewChromeStyles()
     QString shellQss = QStringLiteral(
         "QMainWindow { background-color: %1; }"
         "QToolBar { padding: 0; border: none; background: %1; spacing: 4px; }"
-        "QToolBar#Navigate { padding: 0; border: none; background: transparent; }"
+        "QToolBar#Navigate { border: none; background: transparent; }"
         "QMenuBar { background-color: %1; color: palette(windowText); }"
         "QMenuBar::item:selected { background: palette(highlight); color: palette(highlighted-text); }"
         "QStatusBar { background: %1; color: palette(windowText); }"
@@ -1599,24 +1610,25 @@ void MainWindow::applyViewChromeStyles()
         detailTree->setStyleSheet(treeQss);
     }
 
-#ifdef Q_OS_MAC
-    applyMacNavToolBarLayout();
-#endif
+    applyNavToolBarInsets();
 }
 
-#ifdef Q_OS_MAC
-void MainWindow::applyMacNavToolBarLayout()
+void MainWindow::applyNavToolBarInsets()
 {
     if (!navToolBar) {
         return;
     }
+#ifdef Q_OS_MAC
     navToolBar->setFloatable(false);
+#endif
     navToolBar->setContentsMargins(0, 0, 0, 0);
     navToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
     const int barHeight = kPathBarHeight + 2 * topModuleGapV;
+#ifdef Q_OS_MAC
     navToolBar->setMinimumHeight(barHeight);
     navToolBar->setMaximumHeight(barHeight);
     navToolBar->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+#endif
 
     if (QLayout *tbLayout = navToolBar->layout()) {
         tbLayout->setContentsMargins(topModuleGapH, topModuleGapV, topModuleGapH, topModuleGapV);
@@ -1624,12 +1636,13 @@ void MainWindow::applyMacNavToolBarLayout()
         tbLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     }
 
+#ifdef Q_OS_MAC
     if (QLayout *mwLayout = layout()) {
         mwLayout->setSpacing(0);
         mwLayout->setContentsMargins(0, 0, 0, 0);
     }
-}
 #endif
+}
 
 void MainWindow::updateTabBarPalette()
 {
@@ -1990,6 +2003,7 @@ void MainWindow::writeSettings() {
   settings->setValue("fileViewMode",
                      currentView == 1 ? QStringLiteral("icon") : QStringLiteral("list"));
   settings->setValue("foldersAlwaysFirst", modelView->foldersAlwaysFirstSetting());
+  settings->setValue("foldersAlwaysFirstIcon", modelView->foldersAlwaysFirstIconSetting());
   settings->setValue("zoom", zoom);
   settings->setValue("zoomTree", zoomTree);
   settings->setValue("zoomBook", zoomBook);
@@ -2253,6 +2267,12 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
         popup->addAction(cutAct);
         popup->addAction(copyAct);
         popup->addAction(pasteAct);
+#ifdef Q_OS_MAC
+        popup->addAction(macCopyFilePathAct);
+        if (type.startsWith(QLatin1String("image/"))) {
+          popup->addAction(macCopyImageToClipboardAct);
+        }
+#endif
         popup->addSeparator();
         popup->addAction(renameAct);
         popup->addSeparator();
@@ -2288,6 +2308,9 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
         popup->addAction(cutAct);
         popup->addAction(copyAct);
         popup->addAction(pasteAct);
+#ifdef Q_OS_MAC
+        popup->addAction(macCopyFilePathAct);
+#endif
         popup->addSeparator();
         popup->addAction(renameAct);
         popup->addSeparator();
@@ -2328,6 +2351,14 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
       popup->addAction(newFileAct);
       popup->addAction(newMdFileAct);
       popup->addAction(newTxtFileAct);
+#ifdef Q_OS_MAC
+      popup->addSeparator();
+      macPasteImageAct->setEnabled(macClipboardHasImage());
+      macPasteTextAct->setEnabled(!QApplication::clipboard()->text().isEmpty());
+      popup->addAction(macPasteImageAct);
+      popup->addAction(macPasteTextAct);
+      popup->addAction(macOpenTerminalHereAct);
+#endif
       popup->addSeparator();
       if (pasteAct->isEnabled()) {
         popup->addAction(pasteAct);
@@ -2770,9 +2801,11 @@ void MainWindow::populateMedia()
         item.name = diskDisplayNameFromTitle(v.displayTitle);
         item.mountpoint = v.mountPoint;
         item.isOptical = v.isOptical;
-        item.groupKey = v.wholeDiskIdentifier.isEmpty()
-                            ? diskWholeGroupKey(v.deviceIdentifier)
-                            : v.wholeDiskIdentifier;
+        item.groupKey = v.physicalDiskGroup.isEmpty()
+                            ? (v.wholeDiskIdentifier.isEmpty()
+                                   ? diskWholeGroupKey(v.deviceIdentifier)
+                                   : v.wholeDiskIdentifier)
+                            : v.physicalDiskGroup;
         items.append(item);
     }
 #endif

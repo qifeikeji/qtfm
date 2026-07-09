@@ -36,6 +36,21 @@ void viewsSortProxyModel::setFoldersAlwaysFirstSetting(bool foldersFirst)
     invalidate();
 }
 
+void viewsSortProxyModel::setFoldersAlwaysFirstIconSetting(bool foldersFirst)
+{
+    m_foldersAlwaysFirstIconSetting = foldersFirst;
+    invalidate();
+}
+
+void viewsSortProxyModel::setIconViewSortContext(bool iconView)
+{
+    if (m_iconViewSortContext == iconView) {
+        return;
+    }
+    m_iconViewSortContext = iconView;
+    invalidate();
+}
+
 void viewsSortProxyModel::resetDirectorySortOverride()
 {
     m_directorySortOverride = -1;
@@ -44,8 +59,11 @@ void viewsSortProxyModel::resetDirectorySortOverride()
 
 void viewsSortProxyModel::toggleDirectorySortOverride()
 {
+    const bool defaultDirsFirst = m_iconViewSortContext
+                                      ? m_foldersAlwaysFirstIconSetting
+                                      : m_foldersAlwaysFirstSetting;
     if (m_directorySortOverride < 0) {
-        m_directorySortOverride = m_foldersAlwaysFirstSetting ? 0 : 1;
+        m_directorySortOverride = defaultDirsFirst ? 0 : 1;
     } else if (m_directorySortOverride == 1) {
         m_directorySortOverride = 0;
     } else {
@@ -64,7 +82,8 @@ bool viewsSortProxyModel::directoriesFirst() const
     if (m_directorySortOverride >= 0) {
         return m_directorySortOverride == 1;
     }
-    return m_foldersAlwaysFirstSetting;
+    return m_iconViewSortContext ? m_foldersAlwaysFirstIconSetting
+                                 : m_foldersAlwaysFirstSetting;
 }
 
 //---------------------------------------------------------------------------------

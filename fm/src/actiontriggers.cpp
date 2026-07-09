@@ -15,6 +15,15 @@
 #include <QStatusBar>
 #include <QHeaderView>
 #include <QToolBar>
+#ifdef Q_OS_MAC
+#include <QClipboard>
+#include <QImage>
+#include <QMimeData>
+#include <QPixmap>
+#include <QFile>
+#include <QFileInfo>
+#include <QProcess>
+#endif
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
 #else
@@ -698,6 +707,9 @@ void MainWindow::applyIconView() {
 
   if (tabs->count()) { tabs->setType(1); }
   updateGrid();
+  modelView->setIconViewSortContext(true);
+  modelView->resetDirectorySortOverride();
+  modelView->sort(currentSortColumn, currentSortOrder);
   modelView->invalidate();
   list->viewport()->update();
 
@@ -731,6 +743,8 @@ void MainWindow::applyListView() {
   if (tabs->count()) { tabs->setType(2); }
 
   applyListRowHeight();
+  modelView->setIconViewSortContext(false);
+  modelView->resetDirectorySortOverride();
   modelView->sort(currentSortColumn, currentSortOrder);
   settings->setValue(QStringLiteral("fileViewMode"), QStringLiteral("list"));
 }
@@ -1057,4 +1071,142 @@ void MainWindow::showEditDialog() {
   customActManager->readActions();
   delete d;
 }
+//---------------------------------------------------------------------------
+
+#ifdef Q_OS_MAC
+namespace {
+
+QString uniqueFilePathInDir(const QString &dir, const QString &baseName, const QString &suffix)
+{
+    const QChar sep = QLatin1Char('/');
+    QString candidate = dir + sep + baseName + suffix;
+    if (!QFile::exists(candidate)) {
+        return candidate;
+    }
+    for (int n = 1; n < 10000; ++n) {
+        candidate = dir + sep + baseName + QString::number(n) + suffix;
+        if (!QFile::exists(candidate)) {
+            return candidate;
+        }
+    }
+    return QString();
+}
+
+bool clipboardHasUsableImage()
+{
+    QClipboard *cb = QApplication::clipboard();
+    if (!cb) {
+        return false;
+    }
+    if (!cb->image().isNull()) {
+        return true;
+    }
+    const QMimeData *mime = cb->mimeData();
+    return mime && mime->hasImage();
+}
+
+} // namespace
+
+void MainWindow::macPasteImageFromClipboard()
+{
+    const QString dir = pathEdit->itemText(0);
+    if (!QFileInfo(dir).isWritable()) {
+        status->showMessage(tr("The current directory is not writable, unable to create new file."));
+        return;
+    }
+    QClipboard *cb = QApplication::clipboard();
+    QImage image = cb->image();
+    if (image.isNull() && cb->mimeData() && cb->mimeData()->hasImage()) {
+        image = qvariant_cast<QImage>(cb->mimeData()->imageData());
+    }
+    if (image.isNull()) {
+        status->showMessage(tr("No image on the clipboard."));
+        return;
+    }
+    const QString dest = uniqueFilePathInDir(dir, QStringLiteral("pasted_image"),
+                                             QStringLiteral(".png"));
+    if (dest.isEmpty() || !image.save(dest, "PNG")) {
+        status->showMessage(tr("Unable to save image."));
+        return;
+    }
+    modelList->refreshItems();
+    status->showMessage(tr("Image saved."));
+}
+
+void MainWindow::macPasteTextFromClipboard()
+{
+    const QString dir = pathEdit->itemText(0);
+    if (!QFileInfo(dir).isWritable()) {
+        status->showMessage(tr("The current directory is not writable, unable to create new file."));
+        return;
+    }
+    const QString text = QApplication::clipboard()->text();
+    if (text.isEmpty()) {
+        status->showMessage(tr("No text on the clipboard."));
+        return;
+    }
+    const QString dest = uniqueFilePathInDir(dir, QStringLiteral("pasted_text"),
+                                             QStringLiteral(".txt"));
+    if (dest.isEmpty()) {
+        status->showMessage(tr("Unable to create file."));
+        return;
+    }
+    QFile file(dest);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        status->showMessage(tr("Unable to create file."));
+        return;
+    }
+    file.write(text.toUtf8());
+    file.close();
+    modelList->refreshItems();
+    status->showMessage(tr("Text file saved."));
+}
+
+void MainWindow::macOpenTerminalHere()
+{
+    const QString dir = pathEdit->itemText(0);
+    if (dir.isEmpty()) {
+        return;
+    }
+    const bool ok = QProcess::startDetached(
+        QStringLiteral("open"),
+        QStringList{QStringLiteral("-a"), QStringLiteral("Terminal"), dir});
+    if (!ok) {
+        status->showMessage(tr("Unable to open Terminal."));
+    }
+}
+
+void MainWindow::macCopyImageToClipboard()
+{
+    if (!listSelectionModel || !listSelectionModel->hasSelection()) {
+        return;
+    }
+    const QFileInfo fi = modelList->filePath(
+        modelView->mapToSource(listSelectionModel->currentIndex()));
+    const QString path = fi.absoluteFilePath();
+    QImage image(path);
+    if (!image.isNull()) {
+        QApplication::clipboard()->setImage(image);
+    } else {
+        const QPixmap pixmap(path);
+        if (pixmap.isNull()) {
+            status->showMessage(tr("Unable to read image."));
+            return;
+        }
+        QApplication::clipboard()->setPixmap(pixmap);
+    }
+    status->showMessage(tr("Image copied to clipboard."));
+}
+
+void MainWindow::macCopyFilePathToClipboard()
+{
+    if (!listSelectionModel || !listSelectionModel->hasSelection()) {
+        return;
+    }
+    const QFileInfo fi = modelList->filePath(
+        modelView->mapToSource(listSelectionModel->currentIndex()));
+    QApplication::clipboard()->setText(fi.absoluteFilePath());
+    status->showMessage(tr("Path copied to clipboard."));
+}
+#endif
 //---------------------------------------------------------------------------
