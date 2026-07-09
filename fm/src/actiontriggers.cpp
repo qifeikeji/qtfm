@@ -1,3 +1,4 @@
+#include <QtGlobal>
 #ifdef Q_OS_MAC
 #include "macfileaccess.h"
 #endif

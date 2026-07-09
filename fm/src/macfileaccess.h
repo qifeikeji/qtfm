@@ -1,7 +1,7 @@
 #ifndef MACFILEACCESS_H
 #define MACFILEACCESS_H
 
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || (defined(__APPLE__) && !defined(__IOS__))
 
 namespace MacFileAccess {
 
