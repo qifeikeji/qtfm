@@ -13,7 +13,7 @@ QRect IconFileListView::contentRectForVisualRect(const QRect &cellRect) const
     if (!cellRect.isValid()) {
         return QRect();
     }
-    const auto *iv = qobject_cast<const IconViewDelegate *>(itemDelegate());
+    const auto *iv = dynamic_cast<const IconViewDelegate *>(itemDelegate());
     int gapH = 4;
     int gapV = 4;
     if (iv) {
