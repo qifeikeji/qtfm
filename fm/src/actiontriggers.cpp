@@ -55,6 +55,9 @@ void MainWindow::executeFile(QModelIndex index, bool run) {
     QProcess::startDetached(filePath, QStringList());
 #endif
   } else {
+    if (settings) {
+      OpenWithConfig::load(settings);
+    }
     const QString customCmd = OpenWithConfig::defaultCommandFor(QFileInfo(filePath));
     if (!customCmd.isEmpty()) {
       mimeUtils->openInApp(customCmd, QFileInfo(filePath), QString());
@@ -637,7 +640,9 @@ void MainWindow::toggleLockLayout() {
     newTitle->setFrameShape(QFrame::StyledPanel);
     newTitle->setMinimumSize(0,1);
 
-    menuToolBar->setMovable(0);
+    if (menuToolBar) {
+      menuToolBar->setMovable(0);
+    }
     //editToolBar->setMovable(0);
     //viewToolBar->setMovable(0);
     navToolBar->setMovable(0);
@@ -647,7 +652,9 @@ void MainWindow::toggleLockLayout() {
     dockTree->setTitleBarWidget(nullptr);
     dockBookmarks->setTitleBarWidget(nullptr);
 
-    menuToolBar->setMovable(1);
+    if (menuToolBar) {
+      menuToolBar->setMovable(1);
+    }
     //editToolBar->setMovable(1);
     //viewToolBar->setMovable(1);
     navToolBar->setMovable(1);

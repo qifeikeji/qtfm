@@ -562,7 +562,11 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
     }
 
   // fix style — full chrome applied in applyViewChromeStyles()
+#ifdef Q_OS_MAC
+  navToolBar->setContentsMargins(0, 4, 5, 4);
+#else
   navToolBar->setContentsMargins(0, 0, 5, 0);
+#endif
 
   // Restore window state
   if (wState) {
@@ -1385,7 +1389,7 @@ void MainWindow::applyViewChromeStyles()
         menuToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
     }
 
-    const QString shellQss = QStringLiteral(
+    QString shellQss = QStringLiteral(
         "QMainWindow { background-color: %1; }"
         "QToolBar { padding: 0; border: none; background: %1; spacing: 4px; }"
         "QMenuBar { background-color: %1; color: palette(windowText); }"
@@ -1401,6 +1405,9 @@ void MainWindow::applyViewChromeStyles()
         " alternate-background-color: palette(alternateBase); color: palette(text); }"
         "QTabWidget::pane { border: none; background: palette(base); }"
     ).arg(windowBg.name(), chromeLine.name());
+#ifdef Q_OS_MAC
+    shellQss += QStringLiteral("QToolBar#Navigate { margin-bottom: 4px; }");
+#endif
     setStyleSheet(shellQss);
 
     const QString tabQss = QStringLiteral(
@@ -2077,10 +2084,8 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
         }*/
 
         // Add open with menu
-#ifndef Q_OS_MAC
         popup->addSeparator();
         popup->addMenu(createOpenWithMenu());
-#endif
         //if (popup->actions().count() == 0) popup->addAction(openAct);
 
         // Add custom actions that are associated only with this file type
@@ -2257,6 +2262,9 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
 QMenu* MainWindow::createOpenWithMenu() {
 
   qDebug() << "open with";
+  if (settings) {
+    OpenWithConfig::load(settings);
+  }
   QMenu *openMenu = new QMenu(tr("Open with"));
 
   QAction *selectAppAct = new QAction(tr("Select..."), openMenu);
@@ -2301,6 +2309,16 @@ QMenu* MainWindow::createOpenWithMenu() {
       customApps.append(action);
       openMenu->addAction(action);
     }
+#ifdef Q_OS_MAC
+    if (customApps.isEmpty() && curIndex.exists() && !curIndex.isDir()) {
+      QAction *systemDefault = new QAction(tr("Default Application"), openMenu);
+      connect(systemDefault, &QAction::triggered, this, [this]() {
+        mimeUtils->openInApp(curIndex, QString());
+      });
+      openMenu->addAction(systemDefault);
+      customApps.append(systemDefault);
+    }
+#endif
   }
 
   if (!customApps.isEmpty()) {

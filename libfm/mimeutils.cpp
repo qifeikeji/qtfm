@@ -9,6 +9,7 @@
 #include <QDir>
 #include <QApplication>
 #include <QUrl>
+#include <QFileInfo>
 
 #ifdef Q_OS_DARWIN
 #include <CoreFoundation/CoreFoundation.h>
@@ -18,6 +19,43 @@
 #include "common.h"
 
 namespace {
+
+#ifdef Q_OS_DARWIN
+QString resolveMacAppBundlePath(const QString &candidate)
+{
+    if (candidate.isEmpty()) {
+        return QString();
+    }
+    QFileInfo fi(candidate);
+    if (candidate.endsWith(QLatin1String(".app"), Qt::CaseInsensitive) && fi.isBundle()) {
+        return fi.canonicalFilePath();
+    }
+    const int dotApp = candidate.indexOf(QLatin1String(".app"), 0, Qt::CaseInsensitive);
+    if (dotApp >= 0) {
+        const QString bundlePath = candidate.left(dotApp + 4);
+        const QFileInfo bundleInfo(bundlePath);
+        if (bundleInfo.isBundle()) {
+            return bundleInfo.canonicalFilePath();
+        }
+    }
+    return QString();
+}
+
+bool openFileWithLaunchServices(const QFileInfo &file)
+{
+    if (!file.exists()) {
+        return false;
+    }
+    CFURLRef ref = CFURLCreateWithFileSystemPath(
+        nullptr, file.absoluteFilePath().toCFString(), kCFURLPOSIXPathStyle, file.isDir());
+    if (!ref) {
+        return false;
+    }
+    const OSStatus status = LSOpenCFURLRef(ref, nullptr);
+    CFRelease(ref);
+    return status == noErr;
+}
+#endif
 
 QString substituteSingleFileTokens(QString line, const QFileInfo &file)
 {
@@ -61,12 +99,17 @@ bool startDetachedCommand(const QString &commandLine, const QString &termCmd,
                 return QProcess::startDetached(QStringLiteral("/usr/bin/open"), parts.mid(1));
             }
             const QString first = parts.at(0);
-            const QFileInfo firstInfo(first);
-            const bool appBundle = first.endsWith(QLatin1String(".app"), Qt::CaseInsensitive)
-                                   || firstInfo.isBundle();
-            if (appBundle) {
+            QString bundlePath = resolveMacAppBundlePath(first);
+            if (bundlePath.isEmpty()) {
+                const QFileInfo firstInfo(first);
+                if (first.endsWith(QLatin1String(".app"), Qt::CaseInsensitive)
+                    || firstInfo.isBundle()) {
+                    bundlePath = firstInfo.isBundle() ? firstInfo.canonicalFilePath() : first;
+                }
+            }
+            if (!bundlePath.isEmpty()) {
                 QStringList openArgs;
-                openArgs << QStringLiteral("-a") << first;
+                openArgs << QStringLiteral("-a") << bundlePath;
                 const QStringList rest = parts.mid(1);
                 if (!rest.isEmpty()) {
                     openArgs << rest;
@@ -210,7 +253,16 @@ void MimeUtils::openInApp(QString exe, const QFileInfo &file,
 
   const QString commandLine = substituteSingleFileTokens(exe, file);
   qDebug() << "launch" << commandLine;
-  startDetachedCommand(commandLine, termCmd, file);
+  if (startDetachedCommand(commandLine, termCmd, file)) {
+    return;
+  }
+#ifdef Q_OS_DARWIN
+  if (!exe.trimmed().isEmpty() && file.exists() && !file.isDir()) {
+    qWarning() << "openInApp: custom command failed, using system default for"
+               << file.absoluteFilePath();
+    openFileWithLaunchServices(file);
+  }
+#endif
 }
 
 void MimeUtils::openFilesInApp(QString exe, const QStringList &files, QString termCmd)

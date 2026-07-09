@@ -701,11 +701,11 @@ void myModel::cacheInfo()
     }
 
     fileIcons.setFileName(QString("%1/folder.cache").arg(Common::configDir()));
-    if (fileIcons.open(QIODevice::WriteOnly)) {
-        QDataStream out(&fileIcons);
-        out.setDevice(&fileIcons);
+            if (fileIcons.open(QIODevice::WriteOnly)) {
+                QDataStream out(&fileIcons);
+                out.setDevice(&fileIcons);
         out << *folderIcons;
-        fileIcons.close();
+                fileIcons.close();
     }
 }
 
@@ -1044,7 +1044,7 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
     }
     if (m_showListDecorations
         && (index.column() == COLUMN_ICON || index.column() == COLUMN_NAME)) {
-      return findIcon(item);
+    return findIcon(item);
     }
     return QVariant();
   }
@@ -1108,8 +1108,8 @@ QVariant myModel::findIcon(myModelItem *item) const {
             QPixmap pic;
             pic.load(thumbPaths->value(item->absoluteFilePath()));
             if (!pic.isNull()) {
-                icons->insert(item->absoluteFilePath(), new QIcon(pic), 1);
-                return *icons->object(item->absoluteFilePath());
+            icons->insert(item->absoluteFilePath(), new QIcon(pic), 1);
+            return *icons->object(item->absoluteFilePath());
             }
         } else if (!Common::hasThumbnail(item->absoluteFilePath()).isEmpty()) {
             qDebug() << "USING XDG CACHE FOR" << item->absoluteFilePath();
@@ -1128,7 +1128,7 @@ QVariant myModel::findIcon(myModelItem *item) const {
   if (mimeIcons->contains(suffix)) {
       const QIcon cached = mimeIcons->value(suffix);
       if (!cached.isNull()) {
-          qDebug() << "USING SUFFIX ICON FOR" << suffix << item->absoluteFilePath();
+      qDebug() << "USING SUFFIX ICON FOR" << suffix << item->absoluteFilePath();
           return cached;
       }
       mimeIcons->remove(suffix);

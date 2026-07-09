@@ -20,6 +20,7 @@
         <file>icons/toolbar/lock.svg</file>
         <file>icons/toolbar/paste.svg</file>
         <file>icons/toolbar/preferences.svg</file>
+        <file>icons/toolbar/settings.svg</file>
         <file>icons/toolbar/properties.svg</file>
         <file>icons/toolbar/rename.svg</file>
         <file>icons/toolbar/refresh.svg</file>
@@ -63,6 +64,7 @@
         <file>icons/toolbar/white/lock.svg</file>
         <file>icons/toolbar/white/paste.svg</file>
         <file>icons/toolbar/white/preferences.svg</file>
+        <file>icons/toolbar/white/settings.svg</file>
         <file>icons/toolbar/white/properties.svg</file>
         <file>icons/toolbar/white/refresh.svg</file>
         <file>icons/toolbar/white/rename.svg</file>

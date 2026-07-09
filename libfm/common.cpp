@@ -35,6 +35,7 @@
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QJsonValue>
+#include <QCoreApplication>
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
@@ -694,6 +695,32 @@ QImage Common::pdfFirstPageImage(const QString &pdfPath)
 
 namespace {
 
+/** Locate ffmpeg/ffprobe: PATH, Homebrew, or QtFM.app/Contents/Resources. */
+QString findMediaToolExecutable(const QString &toolName)
+{
+    QString path = QStandardPaths::findExecutable(toolName);
+    if (!path.isEmpty() && QFileInfo(path).isExecutable()) {
+        return path;
+    }
+    const QStringList candidates = {
+        QStringLiteral("/opt/homebrew/bin/") + toolName,
+        QStringLiteral("/usr/local/bin/") + toolName,
+        QStringLiteral("/usr/bin/") + toolName,
+    };
+    for (const QString &candidate : candidates) {
+        if (QFileInfo(candidate).isExecutable()) {
+            return candidate;
+        }
+    }
+    const QString bundled = QCoreApplication::applicationDirPath()
+                            + QStringLiteral("/../Resources/") + toolName;
+    const QString canonical = QFileInfo(bundled).canonicalFilePath();
+    if (!canonical.isEmpty() && QFileInfo(canonical).isExecutable()) {
+        return canonical;
+    }
+    return QString();
+}
+
 /** Runs ffmpeg with the given extra args, writing a single frame to outPng.
  *  Returns true on success (process exited 0 and the file was written). */
 bool runFfmpegExtract(const QString &ffmpeg, const QStringList &extraArgs,
@@ -734,7 +761,7 @@ bool runFfmpegExtract(const QString &ffmpeg, const QStringList &extraArgs,
  */
 int findAttachedPicStreamIndex(const QString &mediaPath)
 {
-    const QString ffprobe = QStandardPaths::findExecutable(QStringLiteral("ffprobe"));
+    const QString ffprobe = findMediaToolExecutable(QStringLiteral("ffprobe"));
     if (ffprobe.isEmpty()) {
         return -1;
     }
@@ -784,7 +811,7 @@ QImage Common::videoFirstFrameImage(const QString &mediaPath)
     if (mediaPath.isEmpty() || !QFileInfo::exists(mediaPath)) {
         return QImage();
     }
-    const QString ffmpeg = QStandardPaths::findExecutable(QStringLiteral("ffmpeg"));
+    const QString ffmpeg = findMediaToolExecutable(QStringLiteral("ffmpeg"));
     if (ffmpeg.isEmpty()) {
         return QImage();
     }

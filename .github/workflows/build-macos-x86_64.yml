@@ -46,7 +46,7 @@ jobs:
           echo "PKG_CONFIG_PATH=${QT_DIR}/lib/pkgconfig:${PKG_CONFIG_PATH}" >> "${GITHUB_ENV}"
 
       - name: Install build tools
-        run: brew install autoconf automake libtool librsvg pkg-config
+        run: brew install autoconf automake libtool librsvg pkg-config ffmpeg
 
       - name: Build libinotify-kqueue (x86_64)
         run: |
@@ -93,6 +93,13 @@ jobs:
 
       - name: Deploy Qt libraries (macdeployqt)
         run: macdeployqt build/fm/QtFM.app -always-overwrite
+
+      - name: Bundle ffmpeg for video thumbnails
+        run: |
+          RES="build/fm/QtFM.app/Contents/Resources"
+          mkdir -p "${RES}"
+          install -m 755 "$(command -v ffmpeg)" "${RES}/ffmpeg"
+          install -m 755 "$(command -v ffprobe)" "${RES}/ffprobe"
 
       - name: Build DMG
         run: |

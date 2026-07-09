@@ -285,7 +285,7 @@ private:
     //QToolBar *viewToolBar;
     QToolBar *navToolBar;
     QToolBar *addressToolBar;
-    QToolBar *menuToolBar;
+    QToolBar *menuToolBar = nullptr;
     QStatusBar * status;
     QLabel * statusSize;
     QLabel * statusName;

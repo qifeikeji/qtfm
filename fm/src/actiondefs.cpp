@@ -100,7 +100,7 @@ void MainWindow::applyBundledToolbarIcons()
   editBookmarkAct->setIcon(actionIcons->at(15));
   trashAct->setIcon(actionIcons->at(27));
   deleteAct->setIcon(actionIcons->at(14));
-  settingsAct->setIcon(actionIcons->at(15));
+  settingsAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("settings")));
   renameAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("rename")));
   terminalAct->setIcon(actionIcons->at(17));
   openAct->setIcon(actionIcons->at(18));
@@ -360,7 +360,7 @@ void MainWindow::createActions() {
   settingsAct = new QAction(tr("Settings..."), this);
   settingsAct->setStatusTip(tr("Edit custom actions"));
   connect(settingsAct, SIGNAL(triggered()), this, SLOT(showEditDialog()));
-  settingsAct->setIcon(actionIcons->at(15));
+  settingsAct->setIcon(BundledIcons::toolbarIcon(QStringLiteral("settings")));
   actionList->append(settingsAct);
 
   renameAct = new QAction(tr("Rename"), this);
@@ -676,23 +676,38 @@ void MainWindow::createMenus() {
 
   // Place all menus on menu bar
   // ----------------------------------------------------------------------
+#ifdef Q_OS_MAC
+  QMenuBar *mb = menuBar();
+  mb->addMenu(fileMenu);
+  mb->addMenu(editMenu);
+  mb->addMenu(viewMenu);
+  mb->addMenu(helpMenu);
+#else
   QMenuBar *menuBar = new QMenuBar;
   menuBar->addMenu(fileMenu);
   menuBar->addMenu(editMenu);
   menuBar->addMenu(viewMenu);
   menuBar->addMenu(helpMenu);
   menuToolBar->addWidget(menuBar);
+#endif
 }
 //---------------------------------------------------------------------------
 
 void MainWindow::createToolBars() {
+#ifndef Q_OS_MAC
   menuToolBar = addToolBar(tr("Menu"));
   menuToolBar->setObjectName("Menu");
   addToolBarBreak();
+#endif
 
   navToolBar = addToolBar(tr("Navigate"));
   navToolBar->setObjectName("Navigate");
 
+#ifdef Q_OS_MAC
+  navToolBar->addAction(settingsAct);
+  settingsAct->setText(QString());
+  settingsAct->setToolTip(tr("Settings..."));
+#endif
   navToolBar->addAction(backAct);
   navToolBar->addAction(upAct);
   navToolBar->addAction(refreshAct);
