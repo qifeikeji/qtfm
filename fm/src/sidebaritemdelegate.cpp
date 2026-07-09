@@ -10,6 +10,7 @@
 
 namespace {
 const int kMinItemHeight = 54;
+const int kDiskItemHeight = 36;
 const int kSeparatorHeight = 20;
 const int kIconSize = 24;
 const int kHPad = 8;
@@ -30,6 +31,24 @@ QString bookmarkRenameEditorStyleSheet()
                " selection-color: #ffffff;"
                "}")
         .arg(pal.color(QPalette::Mid).name());
+}
+
+QString formatDiskSizeGbNumber(qint64 bytes)
+{
+    if (bytes <= 0) {
+        return QStringLiteral("--");
+    }
+    const double gb = static_cast<double>(bytes) / 1000000000.0;
+    if (gb >= 100.0) {
+        return QString::number(gb, 'f', 0);
+    }
+    return QString::number(gb, 'f', 1);
+}
+
+QString diskUsageSizeLabel(qint64 usedBytes, qint64 totalBytes)
+{
+    return QStringLiteral("%1/%2G")
+        .arg(formatDiskSizeGbNumber(usedBytes), formatDiskSizeGbNumber(totalBytes));
 }
 } // namespace
 
@@ -211,23 +230,51 @@ DiskItemDelegate::DiskItemDelegate(QObject *parent)
 QSize DiskItemDelegate::sizeHint(const QStyleOptionViewItem &option,
                                  const QModelIndex &index) const
 {
-    Q_UNUSED(index);
+    if (index.data(DISK_IS_SEPARATOR).toBool()) {
+        return QSize(option.rect.width() > 0 ? option.rect.width() : 100, kSeparatorHeight);
+    }
     QSize size = QStyledItemDelegate::sizeHint(option, index);
-    size.setHeight(qMax(size.height(), kMinItemHeight));
+    size.setHeight(qMax(size.height(), kDiskItemHeight));
     return size;
 }
 
 void DiskItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option,
                              const QModelIndex &index) const
 {
+    if (index.data(DISK_IS_SEPARATOR).toBool()) {
+        painter->save();
+        QStyleOptionViewItem opt(option);
+        initStyleOption(&opt, index);
+        QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
+        style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
+
+        const QRect rect = opt.rect;
+        QColor lineColor = opt.palette.text().color();
+        lineColor.setAlpha(90);
+        const int y = rect.center().y();
+        painter->setPen(QPen(lineColor, 1));
+        painter->drawLine(rect.left() + kHPad, y, rect.right() - kHPad, y);
+        painter->restore();
+        return;
+    }
+
     painter->save();
 
     QStyleOptionViewItem opt(option);
     initStyleOption(&opt, index);
     QStyle *style = opt.widget ? opt.widget->style() : QApplication::style();
-    style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
 
     const QRect rect = opt.rect;
+    if (opt.state & QStyle::State_Selected) {
+        style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
+    } else if (opt.state & QStyle::State_MouseOver) {
+        QColor hoverBg = opt.palette.highlight().color();
+        hoverBg.setAlpha(72);
+        painter->fillRect(rect, hoverBg);
+    } else {
+        style->drawPrimitive(QStyle::PE_PanelItemViewItem, &opt, painter, opt.widget);
+    }
+
     const QIcon icon = index.data(Qt::DecorationRole).value<QIcon>();
     QRect iconRect(rect.left() + kHPad, rect.top() + (rect.height() - kIconSize) / 2,
                   kIconSize, kIconSize);
@@ -237,45 +284,26 @@ void DiskItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     }
 
     const int textLeft = iconRect.right() + kIconTextGap;
-    const int textWidth = rect.right() - textLeft - kHPad;
+    const int textRight = rect.right() - kHPad;
 
     const QString name = index.data(Qt::DisplayRole).toString();
-    const QString mountpoint = index.data(DISK_MOUNTPOINT).toString();
     const qint64 used = index.data(DISK_USED_BYTES).toLongLong();
     const qint64 total = index.data(DISK_TOTAL_BYTES).toLongLong();
+    const QString sizeText = diskUsageSizeLabel(used, total);
 
     const QColor textColor = (opt.state & QStyle::State_Selected)
                                  ? opt.palette.highlightedText().color()
                                  : opt.palette.text().color();
 
-    const QFontMetrics nameFm(opt.font);
+    const QFontMetrics fm(opt.font);
+    const int sizeWidth = fm.horizontalAdvance(sizeText) + 4;
+    const int nameWidth = qMax(0, textRight - textLeft - sizeWidth);
+
     painter->setFont(opt.font);
     painter->setPen(textColor);
-    const int nameY = rect.top() + kVPad + nameFm.ascent();
-    painter->drawText(textLeft, nameY,
-                      nameFm.elidedText(name, Qt::ElideRight, textWidth));
-
-    // Second line: usage progress bar, or a muted "not mounted" placeholder.
-    const int barHeight = 8;
-    const int barTop = rect.top() + kVPad + nameFm.height() + 6;
-    const int barWidth = qMax(0, textWidth);
-    const QRect barRect(textLeft, barTop, qMax(0, barWidth), barHeight);
-
-    QColor freeColor = textColor;
-    freeColor.setAlpha(60);
-
-    painter->setPen(Qt::NoPen);
-    painter->setBrush(freeColor);
-    painter->drawRoundedRect(barRect, barHeight / 2, barHeight / 2);
-
-    if (!mountpoint.isEmpty() && total > 0) {
-        const double ratio = qBound(0.0, static_cast<double>(used) / static_cast<double>(total), 1.0);
-        QRect usedRect(barRect);
-        usedRect.setWidth(qMax(barHeight, static_cast<int>(barRect.width() * ratio)));
-        QColor usedColor = opt.palette.highlight().color();
-        painter->setBrush(usedColor);
-        painter->drawRoundedRect(usedRect, barHeight / 2, barHeight / 2);
-    }
+    const int textY = rect.top() + (rect.height() + fm.ascent() - fm.descent()) / 2;
+    painter->drawText(textLeft, textY, fm.elidedText(name, Qt::ElideRight, nameWidth));
+    painter->drawText(textRight - fm.horizontalAdvance(sizeText), textY, sizeText);
 
     painter->restore();
 }

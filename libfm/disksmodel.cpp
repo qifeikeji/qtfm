@@ -9,6 +9,7 @@
 #include "common.h"
 
 #include <QIcon>
+#include <algorithm>
 
 disksModel::disksModel(QObject *parent) : QAbstractListModel(parent)
 {
@@ -26,6 +27,19 @@ QVariant disksModel::data(const QModelIndex &index, int role) const
         return QVariant();
     }
     const DiskEntry &d = disksData.at(index.row());
+    if (d.isSeparator) {
+        switch (role) {
+        case Qt::DisplayRole:
+        case Qt::DecorationRole:
+        case DISK_DEVICE_PATH:
+        case DISK_MOUNTPOINT:
+            return QVariant();
+        case DISK_IS_SEPARATOR:
+            return true;
+        default:
+            return QVariant();
+        }
+    }
     switch (role) {
     case Qt::DisplayRole:
         return d.name;
@@ -45,6 +59,8 @@ QVariant disksModel::data(const QModelIndex &index, int role) const
         return d.usedBytes;
     case DISK_TOTAL_BYTES:
         return d.totalBytes;
+    case DISK_IS_SEPARATOR:
+        return false;
     default:
         return QVariant();
     }
@@ -67,7 +83,9 @@ QStringList disksModel::allDevicePaths() const
 {
     QStringList paths;
     for (const DiskEntry &d : disksData) {
-        paths << d.devicePath;
+        if (!d.isSeparator && !d.devicePath.isEmpty()) {
+            paths << d.devicePath;
+        }
     }
     return paths;
 }
@@ -121,6 +139,9 @@ void disksModel::refreshUsage()
     if (disksData.isEmpty()) { return; }
     for (int i = 0; i < disksData.count(); ++i) {
         DiskEntry &d = disksData[i];
+        if (d.isSeparator) {
+            continue;
+        }
         if (d.mountpoint.isEmpty()) {
             d.usedBytes = 0;
             d.totalBytes = 0;
@@ -134,4 +155,21 @@ void disksModel::refreshUsage()
         }
     }
     emit dataChanged(index(0), index(disksData.count() - 1));
+}
+
+void disksModel::setRows(const QVector<DiskListRow> &rows)
+{
+    beginResetModel();
+    disksData.clear();
+    for (const DiskListRow &r : rows) {
+        DiskEntry d;
+        d.isSeparator = r.separator;
+        d.devicePath = r.devicePath;
+        d.name = r.name;
+        d.mountpoint = r.mountpoint;
+        d.iconName = r.iconName;
+        d.isOptical = r.isOptical;
+        disksData.append(d);
+    }
+    endResetModel();
 }

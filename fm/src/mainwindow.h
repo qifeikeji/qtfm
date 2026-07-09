@@ -92,6 +92,7 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event);
+    void resizeEvent(QResizeEvent *event);
 
 public slots:
     void treeSelectionChanged(QModelIndex,QModelIndex);

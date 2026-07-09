@@ -38,6 +38,8 @@
 #include <QDBusError>
 #endif
 #include <fcntl.h>
+#include <QResizeEvent>
+#include <algorithm>
 
 #include <QtConcurrent/QtConcurrent>
 
@@ -487,6 +489,8 @@ void MainWindow::lateStart() {
 #if defined(QTFM_HAVE_SIDEBAR_DISKS)
   if (disksList) {
     disksList->setMouseTracking(true);
+    disksList->setDragDropMode(QAbstractItemView::NoDragDrop);
+    disksList->setEditTriggers(QAbstractItemView::NoEditTriggers);
   }
 #endif
 
@@ -584,6 +588,11 @@ void MainWindow::lateStart() {
           this, SLOT(thumbUpdate(QString)));
 
   qApp->setKeyboardInputInterval(1000);
+
+  const QByteArray savedGeo = settings->value(QStringLiteral("windowGeo")).toByteArray();
+  if (!savedGeo.isEmpty()) {
+      restoreGeometry(savedGeo);
+  }
 
   // Read custom actions
   QTimer::singleShot(100, customActManager, SLOT(readActions()));
@@ -1025,6 +1034,15 @@ void MainWindow::closeEvent(QCloseEvent *event)
     modelList->cacheInfo();
     event->accept();
 }
+
+void MainWindow::resizeEvent(QResizeEvent *event)
+{
+    QMainWindow::resizeEvent(event);
+    if (!settings || !isVisible()) {
+        return;
+    }
+    settings->setValue(QStringLiteral("windowGeo"), saveGeometry());
+}
 //---------------------------------------------------------------------------
 
 /**
@@ -1455,6 +1473,7 @@ void MainWindow::applyViewChromeStyles()
     QString shellQss = QStringLiteral(
         "QMainWindow { background-color: %1; }"
         "QToolBar { padding: 0; border: none; background: %1; spacing: 4px; }"
+        "QToolBar#Navigate { padding: 0; border: none; background: transparent; }"
         "QMenuBar { background-color: %1; color: palette(windowText); }"
         "QMenuBar::item:selected { background: palette(highlight); color: palette(highlighted-text); }"
         "QStatusBar { background: %1; color: palette(windowText); }"
@@ -1600,7 +1619,7 @@ void MainWindow::applyMacNavToolBarLayout()
     navToolBar->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     if (QLayout *tbLayout = navToolBar->layout()) {
-        tbLayout->setContentsMargins(0, 0, 0, 0);
+        tbLayout->setContentsMargins(topModuleGapH, topModuleGapV, topModuleGapH, topModuleGapV);
         tbLayout->setSpacing(4);
         tbLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     }
@@ -2105,6 +2124,10 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
     listSelectionModel->clearSelection();
     if (disksList->indexAt(disksList->mapFromGlobal(event->globalPos())).isValid()) {
 #if defined(QTFM_HAVE_SIDEBAR_DISKS)
+      if (disksList->currentIndex().data(DISK_IS_SEPARATOR).toBool()) {
+          delete popup;
+          return;
+      }
       isMedia = true;
       const QString mediaPath = disksList->currentIndex().data(DISK_DEVICE_PATH).toString();
       const QString mountpoint = disksList->currentIndex().data(DISK_MOUNTPOINT).toString();
@@ -2657,10 +2680,70 @@ void MainWindow::updateGrid()
  * @brief media support
  */
 #if defined(QTFM_HAVE_SIDEBAR_DISKS)
+namespace {
+
+QString diskDisplayNameFromTitle(const QString &rowTitle)
+{
+    const int sep = rowTitle.indexOf(QStringLiteral(" — "));
+    if (sep >= 0) {
+        return rowTitle.mid(sep + 3).trimmed();
+    }
+    return rowTitle;
+}
+
+QString diskWholeGroupKey(const QString &deviceIdentifier)
+{
+    const int s = deviceIdentifier.indexOf(QLatin1Char('s'));
+    if (s > 0) {
+        return deviceIdentifier.left(s);
+    }
+    return deviceIdentifier;
+}
+
+struct DiskPopulateItem {
+    QString devicePath;
+    QString name;
+    QString mountpoint;
+    bool isOptical = false;
+    QString groupKey;
+};
+
+void applyGroupedDisks(disksModel *model, QVector<DiskPopulateItem> items)
+{
+    std::sort(items.begin(), items.end(),
+              [](const DiskPopulateItem &a, const DiskPopulateItem &b) {
+                  if (a.groupKey != b.groupKey) {
+                      return a.groupKey < b.groupKey;
+                  }
+                  return a.devicePath < b.devicePath;
+              });
+
+    QVector<DiskListRow> rows;
+    QString lastGroup;
+    for (const DiskPopulateItem &item : items) {
+        if (!lastGroup.isEmpty() && item.groupKey != lastGroup) {
+            DiskListRow sep;
+            sep.separator = true;
+            rows.append(sep);
+        }
+        DiskListRow row;
+        row.devicePath = item.devicePath;
+        row.name = item.name;
+        row.mountpoint = item.mountpoint;
+        row.isOptical = item.isOptical;
+        rows.append(row);
+        lastGroup = item.groupKey;
+    }
+    model->setRows(rows);
+    model->refreshUsage();
+}
+
+} // namespace
+
 void MainWindow::populateMedia()
 {
+    QVector<DiskPopulateItem> items;
 #ifndef NO_UDISKS
-    QSet<QString> listed;
     QMapIterator<QString, Device *> it(disks->devices);
     while (it.hasNext()) {
         it.next();
@@ -2671,29 +2754,29 @@ void MainWindow::populateMedia()
         QString subtitle = d->name;
         if (subtitle.isEmpty()) { subtitle = tr("Storage"); }
         const QString rowTitle = QStringLiteral("%1 — %2").arg(d->dev, subtitle);
-        modelDisks->upsertDisk(d->path, rowTitle, mp, QString(), d->isOptical);
-        listed.insert(d->path);
-    }
-    for (const QString &path : modelDisks->allDevicePaths()) {
-        if (!listed.contains(path)) {
-            modelDisks->removeDisk(path);
-        }
+        DiskPopulateItem item;
+        item.devicePath = d->path;
+        item.name = diskDisplayNameFromTitle(rowTitle);
+        item.mountpoint = mp;
+        item.isOptical = d->isOptical;
+        item.groupKey = d->drive.isEmpty() ? diskWholeGroupKey(d->dev) : d->drive;
+        items.append(item);
     }
 #elif defined(Q_OS_MAC)
-    QSet<QString> listed;
     const QVector<MacDiskVolume> volumes = MacDisks::listVolumes();
     for (const MacDiskVolume &v : volumes) {
-        modelDisks->upsertDisk(v.deviceIdentifier, v.displayTitle, v.mountPoint,
-                               QString(), v.isOptical);
-        listed.insert(v.deviceIdentifier);
-    }
-    for (const QString &path : modelDisks->allDevicePaths()) {
-        if (!listed.contains(path)) {
-            modelDisks->removeDisk(path);
-        }
+        DiskPopulateItem item;
+        item.devicePath = v.deviceIdentifier;
+        item.name = diskDisplayNameFromTitle(v.displayTitle);
+        item.mountpoint = v.mountPoint;
+        item.isOptical = v.isOptical;
+        item.groupKey = v.wholeDiskIdentifier.isEmpty()
+                            ? diskWholeGroupKey(v.deviceIdentifier)
+                            : v.wholeDiskIdentifier;
+        items.append(item);
     }
 #endif
-    modelDisks->refreshUsage();
+    applyGroupedDisks(modelDisks, items);
 }
 
 #ifndef NO_UDISKS
@@ -2735,7 +2818,7 @@ void MainWindow::handleMediaError(QString path, QString error)
 void MainWindow::handleMediaUnmount()
 {
     QModelIndex index = disksList->currentIndex();
-    if (!index.isValid()) { return; }
+    if (!index.isValid() || index.data(DISK_IS_SEPARATOR).toBool()) { return; }
     const QString path = index.data(DISK_DEVICE_PATH).toString();
     if (path.isEmpty()) { return; }
 #ifndef NO_UDISKS
@@ -2755,7 +2838,7 @@ void MainWindow::handleMediaUnmount()
 void MainWindow::handleMediaEject()
 {
     QModelIndex index = disksList->currentIndex();
-    if (!index.isValid()) { return; }
+    if (!index.isValid() || index.data(DISK_IS_SEPARATOR).toBool()) { return; }
     const QString path = index.data(DISK_DEVICE_PATH).toString();
     if (path.isEmpty()) { return; }
 #ifndef NO_UDISKS
@@ -2778,6 +2861,7 @@ void MainWindow::handleMediaEject()
 void MainWindow::diskActivated(QModelIndex item)
 {
     if (!item.isValid()) { return; }
+    if (item.data(DISK_IS_SEPARATOR).toBool()) { return; }
     QString mountpoint = item.data(DISK_MOUNTPOINT).toString();
 #ifndef NO_UDISKS
     const QString devicePath = item.data(DISK_DEVICE_PATH).toString();

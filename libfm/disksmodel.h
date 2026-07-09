@@ -18,6 +18,16 @@
 #define DISK_IS_OPTICAL   Qt::UserRole+4
 #define DISK_USED_BYTES   Qt::UserRole+5
 #define DISK_TOTAL_BYTES  Qt::UserRole+6
+#define DISK_IS_SEPARATOR Qt::UserRole+7
+
+struct DiskListRow {
+    bool separator = false;
+    QString devicePath;
+    QString name;
+    QString mountpoint;
+    QString iconName;
+    bool isOptical = false;
+};
 
 /**
  * @class disksModel
@@ -47,9 +57,12 @@ public:
     QStringList allDevicePaths() const;
     /** Recomputes used/total bytes for every mounted disk (statfs). */
     void refreshUsage();
+    /** Replaces all rows (disk volumes and optional group separators). */
+    void setRows(const QVector<DiskListRow> &rows);
 
 private:
     struct DiskEntry {
+        bool isSeparator = false;
         QString devicePath;
         QString name;
         QString mountpoint;
