@@ -206,6 +206,22 @@ QRect IconViewDelegate::textLabelRect(const QRect &itemRect, int zoom, int cellG
                  itemRect.width() - 2 * inset, twoLineTextHeight(fm));
 }
 
+QRect IconViewDelegate::itemHighlightRect(const QRect &itemRect, int zoom, int cellGapH,
+                                          int cellGapV, const QFontMetrics &fm)
+{
+    Q_UNUSED(cellGapV);
+    const int gapH = qBound(0, cellGapH, 64);
+    const int inset = qMax(1, gapH / 2);
+    QRect iconRect(itemRect.left() + (itemRect.width() - zoom) / 2,
+                   itemRect.top() + kIconTop,
+                   zoom, zoom);
+    const QRect txtRect = textLabelRect(itemRect, zoom, cellGapH, fm);
+    const int frameTop = iconRect.top() - kFramePad;
+    const int frameBottom = txtRect.bottom() + kFramePad;
+    return QRect(itemRect.left() + inset, frameTop,
+                 itemRect.width() - 2 * inset, frameBottom - frameTop);
+}
+
 bool IconViewDelegate::eventFilter(QObject *object,
                                    QEvent *event)
 {
@@ -289,7 +305,6 @@ void IconViewDelegate::paint(QPainter *painter,
 
     const int zoom = iconPaintSize(opt);
     QRect item = opt.rect;
-    const int inset = qMax(1, _cellGapH / 2);
     QRect iconRect(item.left() + (item.width() - zoom) / 2,
                    item.top() + kIconTop,
                    zoom, zoom);
@@ -303,20 +318,14 @@ void IconViewDelegate::paint(QPainter *painter,
 
     if (isSelected && !isEditing) {
         QPainterPath path;
-        const int frameTop = iconRect.top() - kFramePad;
-        const int frameBottom = txtRect.bottom() + kFramePad;
-        QRect frame(item.left() + inset, frameTop,
-                    item.width() - 2 * inset, frameBottom - frameTop);
+        const QRect frame = itemHighlightRect(item, zoom, _cellGapH, _cellGapV, fm);
         path.addRoundedRect(frame, 15, 15);
         painter->setOpacity(0.85);
         painter->fillPath(path, opt.palette.highlight());
         painter->setOpacity(1.0);
     } else if ((opt.state & QStyle::State_MouseOver) && !isEditing) {
         QPainterPath path;
-        const int frameTop = iconRect.top() - kFramePad;
-        const int frameBottom = txtRect.bottom() + kFramePad;
-        QRect frame(item.left() + inset, frameTop,
-                    item.width() - 2 * inset, frameBottom - frameTop);
+        const QRect frame = itemHighlightRect(item, zoom, _cellGapH, _cellGapV, fm);
         path.addRoundedRect(frame, 15, 15);
         painter->setOpacity(0.38);
         painter->fillPath(path, opt.palette.highlight());

@@ -53,6 +53,7 @@ protected slots:
   void updateDialogButtonIcons();
 
 protected:
+  bool eventFilter(QObject *watched, QEvent *event) override;
   QWidget* createGeneralSettings();
   QWidget *createAppearanceSettings();
   QWidget* createActionsSettings();
@@ -80,8 +81,7 @@ protected:
   QCheckBox* showNewTabButton;
   QSpinBox* spinIconViewGapH;
   QSpinBox* spinIconViewGapV;
-  QSpinBox* spinTopModuleGapV = nullptr;
-  QSpinBox* spinTopModuleGapH = nullptr;
+    QSpinBox* spinTopModuleGap = nullptr;
   QSpinBox* spinIconViewSize;
   QSpinBox* spinListRowHeight;
   QSpinBox* spinBookmarkGroupTabSize;

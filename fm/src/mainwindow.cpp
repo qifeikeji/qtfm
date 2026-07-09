@@ -334,7 +334,7 @@ MainWindow::MainWindow(const QString &forcedStartPath)
     QHBoxLayout *hl1 = new QHBoxLayout(page);
     hl1->setSpacing(0);
     hl1->setContentsMargins(0,0,0,0);
-    list = new QListView(page);
+    list = new IconFileListView(page);
     hl1->addWidget(list);
     stackWidget->addWidget(page);
 
@@ -635,8 +635,11 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
     }
 
   // fix style — full chrome applied in applyViewChromeStyles()
-  topModuleGapV = settings->value("topModuleGapV", 5).toInt();
-  topModuleGapH = settings->value("topModuleGapH", 8).toInt();
+  const int legacyV = settings->value("topModuleGapV", 5).toInt();
+  const int legacyH = settings->value("topModuleGapH", 8).toInt();
+  const int topGap = settings->value("topModuleGap", qMax(legacyV, legacyH)).toInt();
+  topModuleGapV = topGap;
+  topModuleGapH = topGap;
   applyNavToolBarInsets();
 
   // Restore window state
@@ -723,11 +726,10 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
     thumbsAct->setChecked(settings->value("showThumbs", 1).toBool());
   }
 
-  // Load view mode
+  // Load view mode — folder sort flags applied after view mode is known
   modelView->setFoldersAlwaysFirstSetting(settings->value("foldersAlwaysFirst", true).toBool());
   modelView->setFoldersAlwaysFirstIconSetting(
       settings->value("foldersAlwaysFirstIcon", true).toBool());
-  modelView->setIconViewSortContext(currentView == 1);
   modelView->resetDirectorySortOverride();
 
   int sortBy = settings->value("sortBy", 2).toInt();
@@ -773,13 +775,22 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
       applyIconView();
   }
 
+  modelView->setIconViewSortContext(currentView == 1);
+  const int sortColumnForView = (currentView == 1 && currentSortColumn == COLUMN_FOLDER)
+                                    ? COLUMN_NAME
+                                    : currentSortColumn;
+  detailTree->setSortingEnabled(true);
+  list->setSortingEnabled(currentView == 1);
+  modelView->sort(sortColumnForView, currentSortOrder);
+  if (currentView == 1) {
+      list->viewport()->update();
+  }
+
   if (settings->value("header").toByteArray().isEmpty()) {
       applyListColumnWidths();
   } else {
       applyListColumnWidths();
   }
-  detailTree->setSortingEnabled(true);
-  modelView->sort(currentSortColumn, currentSortOrder);
 
   // Load terminal command
   term = settings->value("term", "xterm").toString();
@@ -1161,14 +1172,11 @@ void MainWindow::dirLoaded(bool thumbs)
     bool includeHidden = hiddenAct->isChecked();
 
     for (int x = 0; x < modelList->rowCount(modelList->index(pathEdit->currentText())); ++x) {
-        items.append(modelList->index(x,0,modelList->index(pathEdit->currentText())));
-    }
-
-
-    foreach (QModelIndex theItem,items) {
-        if (includeHidden || !modelList->fileInfo(theItem).isHidden()) {
-            bytes = bytes + modelList->size(theItem);
-        } else { items.removeOne(theItem); }
+        const QModelIndex idx = modelList->index(x, 0, modelList->index(pathEdit->currentText()));
+        if (includeHidden || !modelList->fileInfo(idx).isHidden()) {
+            items.append(idx);
+            bytes += modelList->size(idx);
+        }
     }
 
     QString total;
@@ -1202,6 +1210,11 @@ void MainWindow::dirLoaded(bool thumbs)
         }
     }
     updateGrid();
+    if (modelView && currentView == 1) {
+        const int sortCol = currentSortColumn == COLUMN_FOLDER ? COLUMN_NAME : currentSortColumn;
+        modelView->sort(sortCol, currentSortOrder);
+        list->viewport()->update();
+    }
 }
 
 void MainWindow::updateDir()
@@ -2014,6 +2027,7 @@ void MainWindow::writeSettings() {
   settings->setValue("iconViewGapH", iconViewGapH);
   settings->setValue("iconViewGapV", iconViewGapV);
   settings->setValue("iconViewGap", iconViewGapH);
+  settings->setValue("topModuleGap", topModuleGapV);
   settings->setValue("topModuleGapV", topModuleGapV);
   settings->setValue("topModuleGapH", topModuleGapH);
   settings->setValue("sortBy", currentSortColumn);
@@ -2737,6 +2751,7 @@ struct DiskPopulateItem {
     QString mountpoint;
     bool isOptical = false;
     QString groupKey;
+    qint64 groupTotalBytes = 0;
 };
 
 void applyGroupedDisks(disksModel *model, QVector<DiskPopulateItem> items)
@@ -2744,6 +2759,9 @@ void applyGroupedDisks(disksModel *model, QVector<DiskPopulateItem> items)
     std::sort(items.begin(), items.end(),
               [](const DiskPopulateItem &a, const DiskPopulateItem &b) {
                   if (a.groupKey != b.groupKey) {
+                      if (a.groupTotalBytes != b.groupTotalBytes) {
+                          return a.groupTotalBytes > b.groupTotalBytes;
+                      }
                       return a.groupKey < b.groupKey;
                   }
                   return a.devicePath < b.devicePath;
@@ -2806,6 +2824,7 @@ void MainWindow::populateMedia()
                                    ? diskWholeGroupKey(v.deviceIdentifier)
                                    : v.wholeDiskIdentifier)
                             : v.physicalDiskGroup;
+        item.groupTotalBytes = v.physicalDiskSizeBytes;
         items.append(item);
     }
 #endif

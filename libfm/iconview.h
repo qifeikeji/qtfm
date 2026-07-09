@@ -20,9 +20,14 @@ public:
     static QSize iconGridSize(int zoom, int cellGapH, int cellGapV, const QFontMetrics &fm);
     static QRect textLabelRect(const QRect &itemRect, int zoom, int cellGapH,
                                const QFontMetrics &fm);
+    /** Icon + label bounds used for hover, hit-testing, and selection chrome. */
+    static QRect itemHighlightRect(const QRect &itemRect, int zoom, int cellGapH, int cellGapV,
+                                   const QFontMetrics &fm);
 
     void setCellGap(int gap);
     void setCellGaps(int horizontal, int vertical);
+    int cellGapH() const { return _cellGapH; }
+    int cellGapV() const { return _cellGapV; }
 
     QSize sizeHint(const QStyleOptionViewItem &option,
                    const QModelIndex &index) const override;

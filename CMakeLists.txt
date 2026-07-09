@@ -84,6 +84,7 @@ add_library(
     libfm/icondlg.cpp
     libfm/iconlist.cpp
     libfm/iconview.cpp
+    libfm/iconfilelistview.cpp
     libfm/openwithconfig.cpp
     libfm/mimeutils.cpp
     libfm/mymodel.cpp

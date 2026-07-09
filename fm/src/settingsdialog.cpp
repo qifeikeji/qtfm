@@ -14,6 +14,8 @@
 #include <QApplication>
 #include <QTimer>
 #include <QLabel>
+#include <QAbstractSpinBox>
+#include <QWheelEvent>
 
 #include "openwithconfig.h"
 #include "common.h"
@@ -133,6 +135,11 @@ SettingsDialog::SettingsDialog(QList<QAction *> *actionList,
 
   // Read settings
   QTimer::singleShot(100, this, SLOT(readSettings()));
+
+  for (QAbstractSpinBox *spin : findChildren<QAbstractSpinBox *>()) {
+      spin->setFocusPolicy(Qt::StrongFocus);
+      spin->installEventFilter(this);
+  }
 }
 //---------------------------------------------------------------------------
 
@@ -248,19 +255,15 @@ QWidget *SettingsDialog::createAppearanceSettings()
 
     QGroupBox *grpTopModule = new QGroupBox(tr("Top navigation bar"), widget);
     QFormLayout *layoutTopModule = new QFormLayout(grpTopModule);
-    spinTopModuleGapV = new QSpinBox(grpTopModule);
-    spinTopModuleGapV->setRange(0, 32);
-    spinTopModuleGapV->setSuffix(tr(" px"));
-    spinTopModuleGapH = new QSpinBox(grpTopModule);
-    spinTopModuleGapH->setRange(0, 32);
-    spinTopModuleGapH->setSuffix(tr(" px"));
+    spinTopModuleGap = new QSpinBox(grpTopModule);
+    spinTopModuleGap->setRange(0, 32);
+    spinTopModuleGap->setSuffix(tr(" px"));
     auto *topModuleHint = new QLabel(
         tr("Padding around the toolbar row (settings, navigation, path field, terminal, etc.)."),
         grpTopModule);
     topModuleHint->setWordWrap(true);
     layoutTopModule->addRow(topModuleHint);
-    layoutTopModule->addRow(tr("Vertical padding (top and bottom)"), spinTopModuleGapV);
-    layoutTopModule->addRow(tr("Horizontal padding (left and right)"), spinTopModuleGapH);
+    layoutTopModule->addRow(tr("Toolbar padding (all sides)"), spinTopModuleGap);
     layoutWidget->addWidget(grpTopModule);
 
     // Appearance
@@ -754,9 +757,11 @@ void SettingsDialog::readSettings() {
   const int legacyGap = settingsPtr->value("iconViewGap", 4).toInt();
   spinIconViewGapH->setValue(settingsPtr->value("iconViewGapH", legacyGap).toInt());
   spinIconViewGapV->setValue(settingsPtr->value("iconViewGapV", legacyGap).toInt());
-  if (spinTopModuleGapV && spinTopModuleGapH) {
-      spinTopModuleGapV->setValue(settingsPtr->value("topModuleGapV", 5).toInt());
-      spinTopModuleGapH->setValue(settingsPtr->value("topModuleGapH", 8).toInt());
+  if (spinTopModuleGap) {
+      const int legacyV = settingsPtr->value("topModuleGapV", 5).toInt();
+      const int legacyH = settingsPtr->value("topModuleGapH", 8).toInt();
+      const int gap = settingsPtr->value("topModuleGap", qMax(legacyV, legacyH)).toInt();
+      spinTopModuleGap->setValue(gap);
   }
   spinIconViewSize->setValue(settingsPtr->value("zoom", 48).toInt());
   spinListRowHeight->setValue(settingsPtr->value("zoomDetail", 24).toInt());
@@ -1006,9 +1011,11 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("iconViewGapH", spinIconViewGapH->value());
   settingsPtr->setValue("iconViewGapV", spinIconViewGapV->value());
   settingsPtr->setValue("iconViewGap", spinIconViewGapH->value());
-  if (spinTopModuleGapV && spinTopModuleGapH) {
-      settingsPtr->setValue("topModuleGapV", spinTopModuleGapV->value());
-      settingsPtr->setValue("topModuleGapH", spinTopModuleGapH->value());
+  if (spinTopModuleGap) {
+      const int gap = spinTopModuleGap->value();
+      settingsPtr->setValue("topModuleGap", gap);
+      settingsPtr->setValue("topModuleGapV", gap);
+      settingsPtr->setValue("topModuleGapH", gap);
   }
   settingsPtr->setValue("zoom", spinIconViewSize->value());
   settingsPtr->setValue("zoomDetail", spinListRowHeight->value());
@@ -1093,6 +1100,21 @@ bool SettingsDialog::saveSettings() {
 
   // Save succeeded
   return true;
+}
+//---------------------------------------------------------------------------
+
+//---------------------------------------------------------------------------
+bool SettingsDialog::eventFilter(QObject *watched, QEvent *event)
+{
+    if (event->type() == QEvent::Wheel) {
+        if (auto *spin = qobject_cast<QAbstractSpinBox *>(watched)) {
+            if (!spin->hasFocus()) {
+                event->ignore();
+                return false;
+            }
+        }
+    }
+    return QDialog::eventFilter(watched, event);
 }
 //---------------------------------------------------------------------------
 

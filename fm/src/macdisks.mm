@@ -97,6 +97,7 @@ static void appendVolume(const NSDictionary *dict,
                          const QString &parentMediaName,
                          bool parentRemovable,
                          const QString &physicalDiskGroup,
+                         qint64 physicalDiskSizeBytes,
                          QVector<MacDiskVolume> *out)
 {
     if (!dict || !out) {
@@ -145,6 +146,7 @@ static void appendVolume(const NSDictionary *dict,
         row.physicalDiskGroup = physicalDiskGroup.isEmpty()
                                     ? wholeDiskFromIdentifier(ident)
                                     : physicalDiskGroup;
+        row.physicalDiskSizeBytes = physicalDiskSizeBytes;
 
         bool duplicate = false;
         for (const MacDiskVolume &existing : *out) {
@@ -167,6 +169,7 @@ static void walkNode(const NSDictionary *dict,
                      const QString &parentMediaName,
                      bool parentRemovable,
                      const QString &physicalDiskGroup,
+                     qint64 physicalDiskSizeBytes,
                      QVector<MacDiskVolume> *out)
 {
     if (!dict || !out) {
@@ -182,19 +185,22 @@ static void walkNode(const NSDictionary *dict,
     if (NSArray *parts = dict[@"Partitions"]) {
         for (NSDictionary *child in parts) {
             if ([child isKindOfClass:[NSDictionary class]]) {
-                walkNode(child, effectiveMedia, removable, physicalDiskGroup, out);
+                walkNode(child, effectiveMedia, removable, physicalDiskGroup,
+                         physicalDiskSizeBytes, out);
             }
         }
     }
     if (NSArray *apfs = dict[@"APFSVolumes"]) {
         for (NSDictionary *child in apfs) {
             if ([child isKindOfClass:[NSDictionary class]]) {
-                walkNode(child, effectiveMedia, removable, physicalDiskGroup, out);
+                walkNode(child, effectiveMedia, removable, physicalDiskGroup,
+                         physicalDiskSizeBytes, out);
             }
         }
     }
 
-    appendVolume(dict, effectiveMedia, removable, physicalDiskGroup, out);
+    appendVolume(dict, effectiveMedia, removable, physicalDiskGroup,
+                 physicalDiskSizeBytes, out);
 }
 
 QVector<MacDiskVolume> listVolumes()
@@ -246,7 +252,8 @@ QVector<MacDiskVolume> listVolumes()
     for (NSDictionary *disk in all) {
         if ([disk isKindOfClass:[NSDictionary class]]) {
             const QString topDisk = fromNSString(disk[@"DeviceIdentifier"]);
-            walkNode(disk, QString(), false, topDisk, &result);
+            const qint64 diskBytes = static_cast<qint64>([disk[@"Size"] unsignedLongLongValue]);
+            walkNode(disk, QString(), false, topDisk, diskBytes, &result);
         }
     }
 

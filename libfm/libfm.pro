@@ -25,6 +25,7 @@ SOURCES += \
     completer.cpp \
     sortmodel.cpp \
     iconview.cpp \
+    iconfilelistview.cpp \
     iconlist.cpp \
     fm.cpp \
     bookmarkmodel.cpp \
@@ -49,6 +50,7 @@ HEADERS += \
     mymodelitem.h \
     propertiesdlg.h \
     iconview.h \
+    iconfilelistview.h \
     iconlist.h \
     completer.h \
     sortmodel.h \

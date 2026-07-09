@@ -139,8 +139,14 @@ bool viewsSortProxyModel::lessThan(const QModelIndex &left, const QModelIndex &r
         return QSortFilterProxyModel::lessThan(left, right);
     }
 
-    const bool leftDir = fsModel->isDir(left);
-    const bool rightDir = fsModel->isDir(right);
+    const QModelIndex l = left.sibling(left.row(), 0);
+    const QModelIndex r = right.sibling(right.row(), 0);
+    if (!l.isValid() || !r.isValid()) {
+        return QSortFilterProxyModel::lessThan(left, right);
+    }
+
+    const bool leftDir = fsModel->isDir(l);
+    const bool rightDir = fsModel->isDir(r);
     const int dirCmp = compareDirEntries(leftDir, rightDir, directoriesFirst());
     if (dirCmp != 0) {
         return dirCmp < 0;
@@ -148,20 +154,20 @@ bool viewsSortProxyModel::lessThan(const QModelIndex &left, const QModelIndex &r
 
     const int column = sortColumn();
     if (column == COLUMN_SIZE) {
-        const qint64 ls = fsModel->size(left);
-        const qint64 rs = fsModel->size(right);
+        const qint64 ls = fsModel->size(l);
+        const qint64 rs = fsModel->size(r);
         if (ls != rs) {
             return ls < rs;
         }
     } else if (column == COLUMN_DATE) {
-        const QDateTime ld = fsModel->fileInfo(left).lastModified();
-        const QDateTime rd = fsModel->fileInfo(right).lastModified();
+        const QDateTime ld = fsModel->fileInfo(l).lastModified();
+        const QDateTime rd = fsModel->fileInfo(r).lastModified();
         if (ld != rd) {
             return ld < rd;
         }
     } else if (column == COLUMN_FORMAT) {
-        const QString lf = fsModel->getMimeType(left);
-        const QString rf = fsModel->getMimeType(right);
+        const QString lf = fsModel->getMimeType(l);
+        const QString rf = fsModel->getMimeType(r);
         static QCollator collator;
         collator.setNumericMode(true);
         const int cmp = collator.compare(lf, rf);
@@ -169,14 +175,14 @@ bool viewsSortProxyModel::lessThan(const QModelIndex &left, const QModelIndex &r
             return cmp < 0;
         }
     } else if (column == COLUMN_FOLDER) {
-        const int l = leftDir ? 1 : 0;
-        const int r = rightDir ? 1 : 0;
-        if (l != r) {
-            return l < r;
+        const int lc = leftDir ? 1 : 0;
+        const int rc = rightDir ? 1 : 0;
+        if (lc != rc) {
+            return lc < rc;
         }
     }
 
     static QCollator nameCollator;
     nameCollator.setNumericMode(true);
-    return nameCollator.compare(fsModel->fileName(left), fsModel->fileName(right)) < 0;
+    return nameCollator.compare(fsModel->fileName(l), fsModel->fileName(r)) < 0;
 }

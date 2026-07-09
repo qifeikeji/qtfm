@@ -51,6 +51,7 @@
 #include "fileutils.h"
 #include "mimeutils.h"
 #include "customactionsmanager.h"
+#include "iconfilelistview.h"
 #include "iconview.h"
 #include "iconlist.h"
 #include "completer.h"
@@ -269,7 +270,7 @@ private:
     QStackedWidget *stackWidget;
     QTreeView *tree;
     DfmQTreeView *detailTree;
-    QListView *list;
+    IconFileListView *list;
     QListView *bookmarksList;
     QListView *disksList = nullptr;
     QWidget *bookmarkPage = nullptr;

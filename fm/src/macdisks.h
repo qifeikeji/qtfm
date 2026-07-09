@@ -5,6 +5,7 @@
 
 #include <QString>
 #include <QVector>
+#include <QtGlobal>
 
 struct MacDiskVolume {
     /** diskutil DeviceIdentifier, e.g. disk3s1 — unique row key. */
@@ -16,6 +17,8 @@ struct MacDiskVolume {
     QString wholeDiskIdentifier;
     /** Top-level AllDisksAndPartitions entry (disk1, disk2) for sidebar grouping. */
     QString physicalDiskGroup;
+    /** Whole-disk capacity in bytes from diskutil (for group sort order). */
+    qint64 physicalDiskSizeBytes = 0;
 };
 
 namespace MacDisks {
