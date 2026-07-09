@@ -10,6 +10,8 @@
 #include <QApplication>
 #include <QUrl>
 #include <QFileInfo>
+#include <QStandardPaths>
+#include <QProcessEnvironment>
 
 #ifdef Q_OS_DARWIN
 #include <CoreFoundation/CoreFoundation.h>
@@ -55,6 +57,144 @@ bool openFileWithLaunchServices(const QFileInfo &file)
     CFRelease(ref);
     return status == noErr;
 }
+
+/** Finder-launched apps often lack Homebrew on PATH; match terminal for CLI tools (mpv, etc.). */
+QProcessEnvironment macGuiProcessEnvironment()
+{
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    QString path = env.value(QStringLiteral("PATH"));
+    const QString prepend = QStringLiteral("/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin");
+    if (!path.contains(QStringLiteral("/opt/homebrew/bin"))
+        && !path.contains(QStringLiteral("/usr/local/bin"))) {
+        env.insert(QStringLiteral("PATH"),
+                   path.isEmpty() ? prepend : prepend + QLatin1Char(':') + path);
+    }
+    return env;
+}
+
+QString resolveMacCommandExecutable(const QString &program)
+{
+    if (program.isEmpty()) {
+        return QString();
+    }
+    const QFileInfo direct(program);
+    if (direct.isAbsolute() && direct.isExecutable()) {
+        return direct.canonicalFilePath();
+    }
+    QString fromPath = QStandardPaths::findExecutable(program);
+    if (!fromPath.isEmpty()) {
+        return fromPath;
+    }
+    const QStringList prefixes = {
+        QStringLiteral("/opt/homebrew/bin/"),
+        QStringLiteral("/usr/local/bin/"),
+        QStringLiteral("/usr/bin/"),
+    };
+    for (const QString &prefix : prefixes) {
+        const QString candidate = prefix + program;
+        if (QFileInfo(candidate).isExecutable()) {
+            return candidate;
+        }
+    }
+    return program;
+}
+
+bool startDetachedMac(const QString &program, const QStringList &arguments)
+{
+    QProcess proc;
+    proc.setProgram(program);
+    proc.setArguments(arguments);
+    proc.setProcessEnvironment(macGuiProcessEnvironment());
+    return proc.startDetached();
+}
+
+/** Parse Open-with template + file like Terminal: file path is never split on spaces. */
+bool launchMacFromOpenWithTemplate(const QString &exeTemplate, const QFileInfo &file)
+{
+    if (!file.exists() || file.isDir()) {
+        return false;
+    }
+    QString t = exeTemplate.trimmed();
+    if (t.isEmpty()) {
+        return false;
+    }
+    const QString fpath = file.absoluteFilePath();
+
+    auto stripFilePlaceholders = [](QString &s) {
+        s.replace(QStringLiteral("%F"), QString(), Qt::CaseInsensitive);
+        s.replace(QStringLiteral("%f"), QString(), Qt::CaseInsensitive);
+        s.replace(QStringLiteral("%U"), QString(), Qt::CaseInsensitive);
+        s.replace(QStringLiteral("%u"), QString(), Qt::CaseInsensitive);
+        while (s.contains(QStringLiteral("  "))) {
+            s.replace(QStringLiteral("  "), QStringLiteral(" "));
+        }
+        s = s.trimmed();
+    };
+    stripFilePlaceholders(t);
+
+    QString bundle = resolveMacAppBundlePath(t);
+    if (!bundle.isEmpty()) {
+        return startDetachedMac(QStringLiteral("/usr/bin/open"),
+                                {QStringLiteral("-a"), bundle, fpath});
+    }
+
+    const int dotApp = t.indexOf(QLatin1String(".app"), 0, Qt::CaseInsensitive);
+    if (dotApp >= 0) {
+        const QString prefix = t.left(dotApp + 4);
+        const QString suffix = t.mid(dotApp + 4).trimmed();
+        bundle = resolveMacAppBundlePath(prefix);
+        if (!bundle.isEmpty()) {
+            QStringList openArgs;
+            openArgs << QStringLiteral("-a") << bundle;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+            if (!suffix.isEmpty()) {
+                openArgs += QProcess::splitCommand(suffix);
+            }
+#else
+            if (!suffix.isEmpty()) {
+                openArgs += suffix.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+            }
+#endif
+            openArgs << fpath;
+            return startDetachedMac(QStringLiteral("/usr/bin/open"), openArgs);
+        }
+    }
+
+    if (t.startsWith(QLatin1String("open"))) {
+        QString rest = t.length() > 4 ? t.mid(4).trimmed() : QString();
+        QStringList openArgs;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+        if (!rest.isEmpty()) {
+            openArgs = QProcess::splitCommand(rest);
+        }
+#else
+        if (!rest.isEmpty()) {
+            openArgs = rest.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+        }
+#endif
+        if (openArgs.size() == 1) {
+            const QString only = resolveMacAppBundlePath(openArgs.at(0));
+            if (!only.isEmpty()) {
+                openArgs = QStringList{QStringLiteral("-a"), only};
+            }
+        }
+        openArgs << fpath;
+        return startDetachedMac(QStringLiteral("/usr/bin/open"), openArgs);
+    }
+
+    QStringList parts;
+#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+    parts = QProcess::splitCommand(t);
+#else
+    parts = t.split(QLatin1Char(' '), Qt::SkipEmptyParts);
+#endif
+    if (parts.isEmpty()) {
+        return false;
+    }
+    const QString program = resolveMacCommandExecutable(parts.takeFirst());
+    parts << fpath;
+    return startDetachedMac(program, parts);
+}
 #endif
 
 QString substituteSingleFileTokens(QString line, const QFileInfo &file)
@@ -96,7 +236,7 @@ bool startDetachedCommand(const QString &commandLine, const QString &termCmd,
 #endif
         if (!parts.isEmpty()) {
             if (parts.at(0) == QLatin1String("open")) {
-                return QProcess::startDetached(QStringLiteral("/usr/bin/open"), parts.mid(1));
+                return startDetachedMac(QStringLiteral("/usr/bin/open"), parts.mid(1));
             }
             const QString first = parts.at(0);
             QString bundlePath = resolveMacAppBundlePath(first);
@@ -116,7 +256,7 @@ bool startDetachedCommand(const QString &commandLine, const QString &termCmd,
                 } else if (contextFile.exists()) {
                     openArgs << contextFile.absoluteFilePath();
                 }
-                return QProcess::startDetached(QStringLiteral("/usr/bin/open"), openArgs);
+                return startDetachedMac(QStringLiteral("/usr/bin/open"), openArgs);
             }
         }
     }
@@ -137,7 +277,32 @@ bool startDetachedCommand(const QString &commandLine, const QString &termCmd,
     if (!termCmd.isEmpty()) {
         return QProcess::startDetached(termCmd, QStringList() << QStringLiteral("-e") << line);
     }
+#ifdef Q_OS_DARWIN
+    {
+        QString bundlePath = resolveMacAppBundlePath(program);
+        if (bundlePath.isEmpty()) {
+            const QFileInfo programInfo(program);
+            if (program.endsWith(QLatin1String(".app"), Qt::CaseInsensitive)
+                && programInfo.isBundle()) {
+                bundlePath = programInfo.canonicalFilePath();
+            }
+        }
+        if (!bundlePath.isEmpty()) {
+            QStringList openArgs;
+            openArgs << QStringLiteral("-a") << bundlePath;
+            if (!parts.isEmpty()) {
+                openArgs << parts;
+            } else if (contextFile.exists()) {
+                openArgs << contextFile.absoluteFilePath();
+            }
+            return startDetachedMac(QStringLiteral("/usr/bin/open"), openArgs);
+        }
+    }
+    const QString resolved = resolveMacCommandExecutable(program);
+    return startDetachedMac(resolved, parts);
+#else
     return QProcess::startDetached(program, parts);
+#endif
 }
 
 } // namespace
@@ -250,6 +415,12 @@ void MimeUtils::openInApp(QString exe, const QFileInfo &file,
   if (exe.contains(QStringLiteral("qpdfview"))) {
     exe = QStringLiteral("qpdfview");
   }
+
+#ifdef Q_OS_DARWIN
+  if (termCmd.isEmpty() && launchMacFromOpenWithTemplate(exe, file)) {
+    return;
+  }
+#endif
 
   const QString commandLine = substituteSingleFileTokens(exe, file);
   qDebug() << "launch" << commandLine;

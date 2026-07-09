@@ -720,6 +720,9 @@ void MainWindow::createToolBars() {
   navToolBar->addAction(terminalAct);
 
   addressToolBar = navToolBar;
+#ifdef Q_OS_MAC
+  applyMacNavToolBarLayout();
+#endif
 }
 //---------------------------------------------------------------------------
 

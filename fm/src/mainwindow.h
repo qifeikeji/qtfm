@@ -155,6 +155,9 @@ public slots:
     void updateTabBarPalette();
     void applyThemeFromSettings();
     void applyViewChromeStyles();
+#ifdef Q_OS_MAC
+    void applyMacNavToolBarLayout();
+#endif
     void applyWidgetPalettes();
     void syncPathComboDecorations();
     int addTab(QString path);

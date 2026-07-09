@@ -95,9 +95,11 @@ OpenWithSettingsWidget::OpenWithSettingsWidget(QWidget *parent) : QWidget(parent
     auto *outer = new QVBoxLayout(this);
 #ifdef Q_OS_MAC
     auto *hint = new QLabel(tr("These handlers override system defaults when set. "
-                               "Use %f or %F for the file path (QtFM placeholder, same on macOS). "
-                               "On macOS use: /Applications/App.app %f , or open -a \"App Name\" %f . "
-                               "A .app path alone also works; the file is added automatically."));
+                               "Use %f or %F for the file path. "
+                               "On macOS, command-line tools installed with Homebrew (e.g. mpv %f, "
+                               "/opt/homebrew/bin/mpv %f) are often more reliable than open -a for apps "
+                               "that are not a .app bundle. "
+                               "For real .app bundles use /Applications/App.app %f or open -a \"Exact App Name\" %f ."));
 #else
     auto *hint = new QLabel(tr("These handlers override the \"Mime Types\" tab. "
                                "Use %f or %F for file path in commands."));
