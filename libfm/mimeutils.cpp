@@ -30,7 +30,9 @@ QString quoteArgForCommandLine(const QString &arg)
         && !arg.contains(QLatin1Char('\\'))) {
         return arg;
     }
-    QString out = QLatin1Char('"');
+    QString out;
+    out.reserve(arg.size() + 4);
+    out += QLatin1Char('"');
     for (const QChar ch : arg) {
         if (ch == QLatin1Char('"') || ch == QLatin1Char('\\')) {
             out += QLatin1Char('\\');
@@ -246,6 +248,9 @@ bool startDetachedCommand(const QString &commandLine, const QString &termCmd,
     if (line.isEmpty()) {
         return false;
     }
+#ifndef Q_OS_DARWIN
+    Q_UNUSED(contextFile);
+#endif
 
 #ifdef Q_OS_DARWIN
     if (termCmd.isEmpty()) {
