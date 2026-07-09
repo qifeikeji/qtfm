@@ -780,7 +780,6 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
                                     ? COLUMN_NAME
                                     : currentSortColumn;
   detailTree->setSortingEnabled(true);
-  list->setSortingEnabled(currentView == 1);
   modelView->sort(sortColumnForView, currentSortOrder);
   if (currentView == 1) {
       list->viewport()->update();

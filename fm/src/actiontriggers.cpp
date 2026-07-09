@@ -707,7 +707,6 @@ void MainWindow::applyIconView() {
 
   if (tabs->count()) { tabs->setType(1); }
   updateGrid();
-  list->setSortingEnabled(true);
   modelView->setIconViewSortContext(true);
   modelView->resetDirectorySortOverride();
   const int sortCol = currentSortColumn == COLUMN_FOLDER ? COLUMN_NAME : currentSortColumn;
@@ -745,7 +744,6 @@ void MainWindow::applyListView() {
   if (tabs->count()) { tabs->setType(2); }
 
   applyListRowHeight();
-  list->setSortingEnabled(false);
   modelView->setIconViewSortContext(false);
   modelView->resetDirectorySortOverride();
   modelView->sort(currentSortColumn, currentSortOrder);
