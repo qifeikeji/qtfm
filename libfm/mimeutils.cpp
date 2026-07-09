@@ -22,6 +22,25 @@
 
 namespace {
 
+/** Escape a path for QProcess::splitCommand / shell -e (spaces stay one argument). */
+QString quoteArgForCommandLine(const QString &arg)
+{
+    if (!arg.contains(QLatin1Char(' ')) && !arg.contains(QLatin1Char('\t'))
+        && !arg.contains(QLatin1Char('"')) && !arg.contains(QLatin1Char('\''))
+        && !arg.contains(QLatin1Char('\\'))) {
+        return arg;
+    }
+    QString out = QLatin1Char('"');
+    for (const QChar ch : arg) {
+        if (ch == QLatin1Char('"') || ch == QLatin1Char('\\')) {
+            out += QLatin1Char('\\');
+        }
+        out += ch;
+    }
+    out += QLatin1Char('"');
+    return out;
+}
+
 #ifdef Q_OS_DARWIN
 QString resolveMacAppBundlePath(const QString &candidate)
 {
@@ -199,8 +218,9 @@ bool launchMacFromOpenWithTemplate(const QString &exeTemplate, const QFileInfo &
 
 QString substituteSingleFileTokens(QString line, const QFileInfo &file)
 {
-    const QString path = file.filePath();
-    const QString url = QUrl::fromLocalFile(path).toString(QUrl::FullyEncoded);
+    const QString path = quoteArgForCommandLine(file.absoluteFilePath());
+    const QString url = QUrl::fromLocalFile(file.absoluteFilePath())
+                            .toString(QUrl::FullyEncoded);
     if (line.contains(QStringLiteral("%F"), Qt::CaseInsensitive)) {
         line.replace(QStringLiteral("%F"), path, Qt::CaseInsensitive);
     } else if (line.contains(QStringLiteral("%U"), Qt::CaseInsensitive)) {
@@ -441,8 +461,8 @@ void MimeUtils::openFilesInApp(QString exe, const QStringList &files, QString te
     QString line = exe;
     if (line.contains(QStringLiteral("%F"), Qt::CaseInsensitive)) {
         QStringList quoted;
-        for (const QString &path : files) {
-            quoted << path;
+        for (const QString &p : files) {
+            quoted << quoteArgForCommandLine(p);
         }
         line.replace(QStringLiteral("%F"), quoted.join(QLatin1Char(' ')), Qt::CaseInsensitive);
     } else if (line.contains(QStringLiteral("%U"), Qt::CaseInsensitive)) {
@@ -452,7 +472,11 @@ void MimeUtils::openFilesInApp(QString exe, const QStringList &files, QString te
         }
         line.replace(QStringLiteral("%U"), urls.join(QLatin1Char(' ')), Qt::CaseInsensitive);
     } else if (line.contains(QStringLiteral("%f"), Qt::CaseInsensitive)) {
-        line.replace(QStringLiteral("%f"), files.join(QLatin1Char(' ')), Qt::CaseInsensitive);
+        QStringList quoted;
+        for (const QString &p : files) {
+            quoted << quoteArgForCommandLine(p);
+        }
+        line.replace(QStringLiteral("%f"), quoted.join(QLatin1Char(' ')), Qt::CaseInsensitive);
     } else if (line.contains(QStringLiteral("%u"), Qt::CaseInsensitive)) {
         QStringList urls;
         for (const QString &path : files) {
@@ -461,11 +485,11 @@ void MimeUtils::openFilesInApp(QString exe, const QStringList &files, QString te
         line.replace(QStringLiteral("%u"), urls.join(QLatin1Char(' ')), Qt::CaseInsensitive);
     } else {
         line = line.trimmed();
-        for (const QString &path : files) {
+        for (const QString &p : files) {
             if (!line.isEmpty()) {
                 line += QLatin1Char(' ');
             }
-            line += path;
+            line += quoteArgForCommandLine(p);
         }
     }
 

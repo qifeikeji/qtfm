@@ -34,6 +34,7 @@
 #include <QPainter>
 #include <QSet>
 #include <QtConcurrent/QtConcurrent>
+#include <QThread>
 #include "fileutils.h"
 
 /**
@@ -110,6 +111,10 @@ myModel::myModel(bool realMime, MimeUtils *mimeUtils, QObject *parent)
   notifier = new QSocketNotifier(inotifyFD, QSocketNotifier::Read, this);
   connect(notifier, SIGNAL(activated(int)), this, SLOT(notifyChange()));
   connect(&eventTimer,SIGNAL(timeout()),this,SLOT(eventTimeout()));
+  m_thumbDecorationCoalesce.setSingleShot(true);
+  m_thumbDecorationCoalesce.setInterval(150);
+  connect(&m_thumbDecorationCoalesce, &QTimer::timeout, this,
+          &myModel::flushPendingThumbDecorations);
 
   realMimeTypes = realMime;
 }
@@ -320,6 +325,12 @@ QString myModel::getMimeType(const QModelIndex &index)
     return item->mMimeType;
 }
 
+namespace {
+
+constexpr int kFsNotifyDebounceMs = 400;
+
+} // namespace
+
 //---------------------------------------------------------------------------------------
 void myModel::notifyChange()
 {
@@ -340,16 +351,16 @@ void myModel::notifyChange()
         lastEventFilename = event->name;
         if (eventTimer.isActive()) {
             if (w == lastEventID) {
-                eventTimer.start(40);
+                eventTimer.start(kFsNotifyDebounceMs);
             } else {
                 eventTimer.stop();
                 notifyProcess(lastEventID, lastEventFilename);
                 lastEventID = w;
-                eventTimer.start(40);
+                eventTimer.start(kFsNotifyDebounceMs);
             }
         } else {
             lastEventID = w;
-            eventTimer.start(40);
+            eventTimer.start(kFsNotifyDebounceMs);
         }
         at += sizeof(inotify_event) + event->len;
     }
@@ -370,6 +381,7 @@ void myModel::notifyProcess(int eventID, QString fileName)
 {
     qDebug() << "notifyProcess" << eventID << fileName;
     QString folderChanged;
+    QStringList newFilePaths;
     if (watchers.contains(eventID)) {
         myModelItem *parent = rootItem->matchPath(watchers.value(eventID).split(SEPARATOR));
         if (parent) {
@@ -397,6 +409,9 @@ void myModel::notifyProcess(int eventID, QString fileName)
                 beginInsertRows(index(parent->absoluteFilePath()),parent->childCount(),parent->childCount());
                 new myModelItem(one,parent);
                 endInsertRows();
+                if (!one.isDir()) {
+                    newFilePaths.append(one.absoluteFilePath());
+                }
             }
         }
     } else {
@@ -409,6 +424,9 @@ void myModel::notifyProcess(int eventID, QString fileName)
     if (!folderChanged.isEmpty()) {
         qDebug() << "folder modified" << folderChanged;
         emit reloadDir(folderChanged);
+    }
+    if (!newFilePaths.isEmpty() && showThumbs) {
+        enqueueThumbnailPaths(newFilePaths);
     }
 }
 
@@ -744,32 +762,40 @@ void myModel::loadMimeTypes() const {
 void myModel::loadThumbs(QModelIndexList indexes) {
 
   QStringList files;
-  QString listDir;
 
   for (const QModelIndex &item : indexes) {
     const QString filename = filePath(item);
     if (filename.isEmpty()) {
       continue;
     }
-    if (listDir.isEmpty()) {
-      listDir = QFileInfo(filename).absolutePath();
-    }
     if (fileWantsThumbnail(filename, mimeUtilsPtr)) {
       files.append(filename);
     }
   }
 
+  enqueueThumbnailPaths(files);
+}
+
+void myModel::enqueueThumbnailPaths(const QStringList &files)
+{
   if (files.isEmpty()) {
     return;
   }
 
   bool scheduled = false;
+  QStringList decorationUpdates;
   {
     QMutexLocker lock(&thumbMutex);
     for (const QString &path : files) {
       const QString cache = Common::thumbnailCacheFile(path);
       if (Common::isThumbnailCacheValid(path, cache)) {
-        thumbPaths->insert(path, cache);
+        if (!thumbPaths->contains(path)) {
+          thumbPaths->insert(path, cache);
+          decorationUpdates.append(path);
+        }
+        continue;
+      }
+      if (Common::isThumbnailFailureMarkerValid(path)) {
         continue;
       }
       if (!thumbQueue.contains(path)) {
@@ -782,22 +808,72 @@ void myModel::loadThumbs(QModelIndexList indexes) {
     }
   }
 
-  emit thumbUpdate(listDir);
+  for (const QString &path : decorationUpdates) {
+    queueThumbnailDecorationUpdate(path);
+  }
 
   if (scheduled) {
     QMetaObject::invokeMethod(this, "pumpThumbnailQueue", Qt::QueuedConnection);
   }
 }
 
+void myModel::queueThumbnailDecorationUpdate(const QString &absolutePath)
+{
+  if (absolutePath.isEmpty()) {
+    return;
+  }
+  {
+    QMutexLocker lock(&thumbMutex);
+    m_pendingThumbDecorationPaths.insert(absolutePath);
+  }
+  m_thumbDecorationCoalesce.start();
+}
+
+void myModel::flushPendingThumbDecorations()
+{
+  QStringList paths;
+  {
+    QMutexLocker lock(&thumbMutex);
+    paths = QStringList(m_pendingThumbDecorationPaths.cbegin(),
+                        m_pendingThumbDecorationPaths.cend());
+    m_pendingThumbDecorationPaths.clear();
+  }
+  for (const QString &path : paths) {
+    icons->remove(path);
+    const QModelIndex idx = index(path);
+    if (idx.isValid()) {
+      emit dataChanged(idx, idx, {Qt::DecorationRole});
+    }
+  }
+  if (!paths.isEmpty()) {
+    const QString dir = QFileInfo(paths.constFirst()).absolutePath();
+    emit thumbUpdate(dir);
+  }
+}
+
 namespace {
 
-QMutex g_thumbnailGeneratorMutex;
+#if defined(Q_OS_LINUX)
+int thumbnailMaxConcurrentJobs()
+{
+    const int ideal = QThread::idealThreadCount();
+    if (ideal <= 1) {
+        return 2;
+    }
+    return qMin(4, ideal);
+}
+#else
+int thumbnailMaxConcurrentJobs()
+{
+    return 2;
+}
+#endif
 
 } // namespace
 
 void myModel::pumpThumbnailQueue()
 {
-  constexpr int kMaxConcurrent = 1;
+  const int kMaxConcurrent = thumbnailMaxConcurrentJobs();
   while (thumbActiveJobs.loadRelaxed() < kMaxConcurrent) {
     QString path;
     QString itemMime;
@@ -812,19 +888,20 @@ void myModel::pumpThumbnailQueue()
 
     thumbActiveJobs.ref();
     QtConcurrent::run([this, path, itemMime]() {
-      QString cache;
-      {
-        QMutexLocker genLock(&g_thumbnailGeneratorMutex);
-        cache = generateThumbnailToCache(path, itemMime);
-      }
+      const QString cache = generateThumbnailToCache(path, itemMime);
       if (!cache.isEmpty()) {
         QMutexLocker lock(&thumbMutex);
         thumbPaths->insert(path, cache);
+      } else {
+        Common::recordThumbnailFailure(path);
       }
       thumbActiveJobs.deref();
       const QString dir = QFileInfo(path).absolutePath();
-      QMetaObject::invokeMethod(this, [this, dir]() {
-        emit thumbUpdate(dir);
+      QMetaObject::invokeMethod(this, [this, path, dir, cache]() {
+        if (!cache.isEmpty()) {
+          queueThumbnailDecorationUpdate(path);
+        }
+        Q_UNUSED(dir);
         pumpThumbnailQueue();
       }, Qt::QueuedConnection);
     });

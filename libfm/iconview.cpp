@@ -5,7 +5,6 @@
 #include <QFrame>
 #include <QPainterPath>
 #include <QPlainTextEdit>
-#include <QScrollBar>
 #include <QShowEvent>
 #include <QResizeEvent>
 #include <QTimer>
@@ -62,8 +61,6 @@ public:
         pal.setColor(QPalette::HighlightedText, QColor::fromRgb(kRenameSelectionForeground));
         setPalette(pal);
         setStyleSheet(renameEditorStyleSheet());
-
-        connect(this, &QPlainTextEdit::textChanged, this, [this]() { scrollToTail(); });
     }
 
     void applyRenameLayout()
@@ -74,21 +71,10 @@ public:
         blockFormat.setAlignment(Qt::AlignRight);
         cursor.mergeBlockFormat(blockFormat);
         cursor.clearSelection();
-        cursor.movePosition(QTextCursor::End);
-        setTextCursor(cursor);
-        scrollToTail();
     }
 
-    void scrollToTail()
+    void keepCursorVisible()
     {
-        if (QScrollBar *bar = verticalScrollBar()) {
-            bar->setValue(bar->maximum());
-        }
-        QTextCursor cursor = textCursor();
-        if (!cursor.hasSelection()) {
-            cursor.movePosition(QTextCursor::End);
-            setTextCursor(cursor);
-        }
         ensureCursorVisible();
     }
 
@@ -96,13 +82,13 @@ protected:
     void showEvent(QShowEvent *event) override
     {
         QPlainTextEdit::showEvent(event);
-        QTimer::singleShot(0, this, [this]() { scrollToTail(); });
+        QTimer::singleShot(0, this, [this]() { keepCursorVisible(); });
     }
 
     void resizeEvent(QResizeEvent *event) override
     {
         QPlainTextEdit::resizeEvent(event);
-        scrollToTail();
+        keepCursorVisible();
     }
 };
 
@@ -267,9 +253,6 @@ void IconViewDelegate::setEditorData(QWidget *editor,
     plain->setPlainText(index.data(Qt::EditRole).toString());
     plain->applyRenameLayout();
     plain->selectAll();
-    if (QScrollBar *bar = plain->verticalScrollBar()) {
-        bar->setValue(bar->maximum());
-    }
 }
 
 void IconViewDelegate::setModelData(QWidget *editor,

@@ -48,23 +48,16 @@ void MainWindow::executeFile(QModelIndex index, bool run) {
   // Run or open
   if (run) {
 #ifdef Q_OS_MAC
-    QProcess::startDetached(QString("open \"%1\"").arg(filePath));
+    QProcess::startDetached(QStringLiteral("/usr/bin/open"),
+                            QStringList() << filePath);
 #else
-    if (filePath.endsWith(".desktop")) {
+    if (filePath.endsWith(QLatin1String(".desktop"))) {
         DesktopFile df(filePath);
         if (!df.getExec().isEmpty()) {
-            filePath = df.getExec();
-            if (filePath.toLower().contains("%f")) {
-              filePath.replace("%f", "", Qt::CaseInsensitive);
-            } else if (filePath.toLower().contains("%u")) {
-              filePath.replace("%u", "", Qt::CaseInsensitive);
-            }
-            filePath = filePath.trimmed();
-        } else { return; }
-    }
-    if (filePath.contains(" ")) {
-        filePath.prepend("\"");
-        filePath.append("\"");
+            mimeUtils->openInApp(df.getExec(), QFileInfo(filePath), QString());
+            return;
+        }
+        return;
     }
     qDebug() << "RUN" << filePath;
     QProcess::startDetached(filePath, QStringList());

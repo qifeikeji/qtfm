@@ -9,6 +9,8 @@
 
 #include <QAtomicInt>
 #include <QMutex>
+#include <QSet>
+#include <QTimer>
 
 /**
  * @class myModel
@@ -77,6 +79,7 @@ public slots:
   void forceRefresh();
   void refreshForegroundRoles();
   void pumpThumbnailQueue();
+  void flushPendingThumbDecorations();
 signals:
   void dragDropPaste(const QMimeData *data, QString newPath,
                      Common::DragMode mode = Common::DM_UNKNOWN);
@@ -95,6 +98,8 @@ private:
   static bool fileWantsThumbnail(const QString &path, MimeUtils *mimeUtils);
   static QString generateThumbnailToCache(const QString &absolutePath,
                                           const QString &itemMime);
+  void enqueueThumbnailPaths(const QStringList &files);
+  void queueThumbnailDecorationUpdate(const QString &absolutePath);
 
   bool realMimeTypes;
   bool showThumbs;
@@ -109,6 +114,9 @@ private:
   mutable QMutex thumbMutex;
   QStringList thumbQueue;
   QAtomicInt thumbActiveJobs;
+
+  QTimer m_thumbDecorationCoalesce;
+  QSet<QString> m_pendingThumbDecorationPaths;
 
   myModelItem* rootItem;
   MimeUtils* mimeUtilsPtr;

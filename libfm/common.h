@@ -112,6 +112,11 @@ public:
     static QString thumbnailCacheFile(const QString &absoluteFilePath);
     static bool isThumbnailCacheValid(const QString &absoluteFilePath,
                                       const QString &cacheFile = QString());
+    /** Marker on disk: skip re-generation until the source file mtime changes. */
+    static QString thumbnailFailureMarkerFile(const QString &absoluteFilePath);
+    static bool isThumbnailFailureMarkerValid(const QString &absoluteFilePath);
+    static void recordThumbnailFailure(const QString &absoluteFilePath);
+    static void clearThumbnailFailure(const QString &absoluteFilePath);
     static QImage scaleToSquareThumbnail(const QImage &source);
     /** Write 200px PNG thumb; returns cache path or empty. */
     static QString writeThumbnailForFile(const QString &absoluteFilePath,

@@ -25,6 +25,7 @@
 
 #include <QMainWindow>
 #include <QSettings>
+class QTimer;
 #include <QSplitter>
 #include <QTreeView>
 #include <QListView>
@@ -407,6 +408,9 @@ private:
     QString copyXofTS;
 
     bool ignoreReload;
+
+    QTimer *m_reloadDirCoalesceTimer = nullptr;
+    QTimer *m_thumbViewportCoalesceTimer = nullptr;
 
     QVector<QString> progressQueue;
 

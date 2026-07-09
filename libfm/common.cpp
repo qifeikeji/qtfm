@@ -700,6 +700,63 @@ bool Common::isThumbnailCacheValid(const QString &absoluteFilePath,
     return QFileInfo(path).lastModified() >= src.lastModified();
 }
 
+QString Common::thumbnailFailureMarkerFile(const QString &absoluteFilePath)
+{
+    const QString hash = getThumbnailHash(absoluteFilePath);
+    return QStringLiteral("%1/fail/%2/%3.marker")
+        .arg(qtfmThumbnailCacheDir())
+        .arg(hash.left(2))
+        .arg(hash);
+}
+
+bool Common::isThumbnailFailureMarkerValid(const QString &absoluteFilePath)
+{
+    if (absoluteFilePath.isEmpty()) {
+        return false;
+    }
+    const QFileInfo src(absoluteFilePath);
+    if (!src.exists() || !src.isFile()) {
+        return false;
+    }
+    const QString markerPath = thumbnailFailureMarkerFile(absoluteFilePath);
+    QFile marker(markerPath);
+    if (!marker.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    bool ok = false;
+    const qint64 stored = QString::fromUtf8(marker.readAll().trimmed())
+                                .toLongLong(&ok);
+    if (!ok) {
+        return false;
+    }
+    return stored == src.lastModified().toMSecsSinceEpoch();
+}
+
+void Common::recordThumbnailFailure(const QString &absoluteFilePath)
+{
+    if (absoluteFilePath.isEmpty()) {
+        return;
+    }
+    const QFileInfo src(absoluteFilePath);
+    if (!src.exists() || !src.isFile()) {
+        return;
+    }
+    const QString markerPath = thumbnailFailureMarkerFile(absoluteFilePath);
+    QDir().mkpath(QFileInfo(markerPath).absolutePath());
+    QFile marker(markerPath);
+    if (marker.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        marker.write(QByteArray::number(src.lastModified().toMSecsSinceEpoch()));
+    }
+}
+
+void Common::clearThumbnailFailure(const QString &absoluteFilePath)
+{
+    if (absoluteFilePath.isEmpty()) {
+        return;
+    }
+    QFile::remove(thumbnailFailureMarkerFile(absoluteFilePath));
+}
+
 QImage Common::scaleToSquareThumbnail(const QImage &source)
 {
     if (source.isNull()) {
@@ -733,6 +790,7 @@ QString Common::writeThumbnailForFile(const QString &absoluteFilePath,
     if (!canvas.save(outPath, "PNG")) {
         return QString();
     }
+    clearThumbnailFailure(absoluteFilePath);
     return outPath;
 }
 
@@ -930,24 +988,22 @@ QImage Common::videoFirstFrameImage(const QString &mediaPath)
                               mediaPath, outPng);
     }
 
-    // 2) Heuristic fallback: many audio files only have a single video
-    //    stream (the cover), so `-an` alone picks it up even without ffprobe.
+    // 2) One decode attempt: embedded cover heuristic, then a single frame.
     if (!ok) {
         ok = runFfmpegExtract(ffmpeg,
                               { QStringLiteral("-an") },
                               mediaPath, outPng);
     }
-
-    // 3) Otherwise decode a real frame a little bit into the stream (avoids
-    //    all-black leading frames); fall back to the very first frame.
     if (!ok) {
         ok = runFfmpegExtract(ffmpeg,
                               { QStringLiteral("-ss"), QStringLiteral("1") },
                               mediaPath, outPng);
     }
+#ifndef Q_OS_MAC
     if (!ok) {
         ok = runFfmpegExtract(ffmpeg, QStringList(), mediaPath, outPng);
     }
+#endif
 
     if (!ok) {
         QFile::remove(outPng);

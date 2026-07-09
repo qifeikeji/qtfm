@@ -277,6 +277,24 @@ MainWindow::MainWindow(const QString &forcedStartPath)
     modelList = new myModel(realMime, mimeUtils, this);
     connect(modelList, SIGNAL(reloadDir(QString)), this, SLOT(handleReloadDir(QString)));
 
+    m_reloadDirCoalesceTimer = new QTimer(this);
+    m_reloadDirCoalesceTimer->setSingleShot(true);
+    m_reloadDirCoalesceTimer->setInterval(900);
+    connect(m_reloadDirCoalesceTimer, &QTimer::timeout, this, [this]() {
+        dirLoaded(false);
+    });
+
+    m_thumbViewportCoalesceTimer = new QTimer(this);
+    m_thumbViewportCoalesceTimer->setSingleShot(true);
+    m_thumbViewportCoalesceTimer->setInterval(120);
+    connect(m_thumbViewportCoalesceTimer, &QTimer::timeout, this, [this]() {
+        if (currentView == 2) {
+            detailTree->viewport()->update();
+        } else {
+            list->viewport()->update();
+        }
+    });
+
     dockTree = new QDockWidget(tr("Tree"),this,Qt::SubWindow);
     dockTree->setObjectName("treeDock");
 
@@ -1223,22 +1241,23 @@ void MainWindow::updateDir()
 
 void MainWindow::handleReloadDir(const QString &path)
 {
-    if (ignoreReload) {
-        qDebug() << "ignore reload";
+    qDebug() << "handle reload dir" << path << modelList->getRootPath();
+    if (path != modelList->getRootPath()) {
         return;
     }
-    ignoreReload = true;
-    qDebug() << "handle reload dir" << path << modelList->getRootPath();
-    if (path != modelList->getRootPath()) { return; }
-    dirLoaded();
-    QTimer::singleShot(500, this, SLOT(enableReload()));
+    if (m_reloadDirCoalesceTimer) {
+        m_reloadDirCoalesceTimer->start();
+    }
 }
 
 void MainWindow::thumbUpdate(const QString &path)
 {
-    qDebug() << "thumbupdate" << path << modelList->getRootPath();
-    if (path != modelList->getRootPath()) { return; }
-    refresh(false, false);
+    if (path != modelList->getRootPath()) {
+        return;
+    }
+    if (m_thumbViewportCoalesceTimer) {
+        m_thumbViewportCoalesceTimer->start();
+    }
 }
 
 //---------------------------------------------------------------------------
@@ -2942,8 +2961,18 @@ void MainWindow::diskActivated(QModelIndex item)
 
 void MainWindow::clearCache()
 {
+    const QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        tr("Clear cache"),
+        tr("Clear icon and thumbnail caches? You must restart QtFM for this to take effect."),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::No);
+    if (reply != QMessageBox::Yes) {
+        return;
+    }
     settings->setValue("clearCache", true);
-    QMessageBox::information(this, tr("Close window"), tr("Please close window to apply action."));
+    QMessageBox::information(this, tr("Close window"),
+                             tr("Please close window to apply action."));
 }
 
 void MainWindow::handlePathRequested(QString path)

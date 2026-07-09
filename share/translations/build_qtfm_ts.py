@@ -104,6 +104,7 @@ EXACT = {
     "Edit": "编辑",
     "View": "视图",
     "Clear cache": "清除缓存",
+    "Clear icon and thumbnail caches? You must restart QtFM for this to take effect.": "清除图标与缩略图缓存？需重启 QtFM 后才会生效。",
     "Tabs on top": "标签栏在顶部",
     "Show thumbs": "显示缩略图",
     "Remove bookmark": "移除书签",
