@@ -59,9 +59,12 @@
 #include "bookmarkgroupbar.h"
 #include "bookmarkgroupproxy.h"
 
-// libdisks
+// libdisks (Linux) / diskutil (macOS)
 #ifndef NO_UDISKS
 #include "disks.h"
+#endif
+#if !defined(NO_UDISKS) || defined(Q_OS_MAC)
+#define QTFM_HAVE_SIDEBAR_DISKS 1
 #endif
 
 // service
@@ -206,16 +209,18 @@ private slots:
     void setupFileListHeader();
     void applyListRowHeight();
     void applyListColumnWidths();
-    // libdisks
-#ifndef NO_UDISKS
+    // Sidebar disks (UDisks on Linux, diskutil on macOS)
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
     void populateMedia();
+#ifndef NO_UDISKS
     void handleMediaMountpointChanged(QString path, QString mountpoint);
     void handleMediaAdded(QString path);
     void handleMediaRemoved(QString path);
     void handleMediaChanged(QString path, bool present);
+    void handleMediaError(QString path, QString error);
+#endif
     void handleMediaUnmount();
     void handleMediaEject();
-    void handleMediaError(QString path, QString error);
 #endif
     void clearCache();
     void handlePathRequested(QString path);
@@ -262,7 +267,7 @@ private:
     DfmQTreeView *detailTree;
     QListView *list;
     QListView *bookmarksList;
-    QListView *disksList;
+    QListView *disksList = nullptr;
     QWidget *bookmarkPage = nullptr;
     BookmarkGroupBar *bookmarkGroupBar = nullptr;
     BookmarkGroupProxy *bookmarkListProxy = nullptr;
@@ -278,7 +283,7 @@ private:
     viewsSortProxyModel *modelView;
 
     bookmarkmodel *modelBookmarks;
-    disksModel *modelDisks;
+    disksModel *modelDisks = nullptr;
     QItemSelectionModel *treeSelectionModel;
     QItemSelectionModel *listSelectionModel;
     QStringList mounts;
@@ -362,8 +367,9 @@ private:
 #ifdef Q_OS_MAC
     QAction *macOpenWithHelpAct;
     QAction *macFileAccessHelpAct;
+    QFileSystemWatcher *macVolumesWatcher = nullptr;
 #endif
-#ifndef NO_UDISKS
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
     QAction *mediaUnmountAct;
     QAction *mediaEjectAct;
 #endif

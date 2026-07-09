@@ -68,6 +68,9 @@ constexpr int kPathBarIconSize = kPathBarHeight - 10;
 #ifdef Q_OS_MAC
 #include <QStyleFactory>
 #include "macfileaccess.h"
+#include <QFileSystemWatcher>
+#include <QTimer>
+#include "macdisks.h"
 #endif
 
 #ifndef NO_UDISKS
@@ -148,6 +151,20 @@ MainWindow::MainWindow(const QString &forcedStartPath)
     connect(disks, SIGNAL(removedDevice(QString)), this, SLOT(handleMediaRemoved(QString)));
     connect(disks, SIGNAL(mediaChanged(QString,bool)), this, SLOT(handleMediaChanged(QString,bool)));
     connect(disks, SIGNAL(deviceErrorMessage(QString,QString)), this, SLOT(handleMediaError(QString,QString)));
+#endif
+#ifdef Q_OS_MAC
+    {
+        auto *macDiskTimer = new QTimer(this);
+        connect(macDiskTimer, &QTimer::timeout, this, &MainWindow::populateMedia);
+        macDiskTimer->start(5000);
+        macVolumesWatcher = new QFileSystemWatcher(this);
+        const QString volumesRoot = QStringLiteral("/Volumes");
+        if (QDir(volumesRoot).exists()) {
+            macVolumesWatcher->addPath(volumesRoot);
+        }
+        connect(macVolumesWatcher, &QFileSystemWatcher::directoryChanged,
+                this, &MainWindow::populateMedia);
+    }
 #endif
 
     // dbus service
@@ -277,7 +294,7 @@ MainWindow::MainWindow(const QString &forcedStartPath)
 
     sidebarTabs->addTab(bookmarkPage, tr("Bookmarks"));
 
-#ifndef NO_UDISKS
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
     disksList = new QListView(sidebarTabs);
     disksList->setMinimumHeight(24);
     disksList->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -407,7 +424,7 @@ MainWindow::MainWindow(const QString &forcedStartPath)
             this, &MainWindow::removeBookmarkGroup);
 
     // Create disks model
-#ifndef NO_UDISKS
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
     modelDisks = new disksModel(this);
     disksList->setModel(modelDisks);
     connect(disksList, SIGNAL(activated(QModelIndex)), this, SLOT(diskActivated(QModelIndex)));
@@ -467,7 +484,7 @@ void MainWindow::lateStart() {
   list->setEditTriggers(QAbstractItemView::NoEditTriggers);
   list->setMouseTracking(true);
   bookmarksList->setMouseTracking(true);
-#ifndef NO_UDISKS
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
   if (disksList) {
     disksList->setMouseTracking(true);
   }
@@ -636,7 +653,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   // Set bookmarks
   firstRunBookmarks(isFirstRun);
   refreshBookmarkGroupBar();
-#ifndef NO_UDISKS
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
   populateMedia();
 #endif
   bookmarksList->setModel(bookmarkListProxy);
@@ -645,7 +662,7 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
   bookmarksList->setIconSize(QSize(24,24));
   bookmarksList->setItemDelegate(new BookmarkItemDelegate(bookmarksList));
 
-#ifndef NO_UDISKS
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
   disksList->setResizeMode(QListView::Adjust);
   disksList->setFlow(QListView::TopToBottom);
   disksList->setIconSize(QSize(24,24));
@@ -764,7 +781,14 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
 
   // path in window title
   showPathInWindowTitle = settings->value("windowTitlePath", true).toBool();
-  if (!showPathInWindowTitle) { setWindowTitle(APP_NAME); }
+  if (!showPathInWindowTitle) {
+    setWindowTitle(APP_NAME);
+  } else if (!curIndex.filePath().isEmpty()) {
+    const QString folderPart = curIndex.fileName().isEmpty()
+                                   ? curIndex.absolutePath()
+                                   : curIndex.fileName();
+    setWindowTitle(QStringLiteral("%1 — %2").arg(QLatin1String(APP_NAME), folderPart));
+  }
 
   // 'copy of' filename
   copyXof = settings->value("copyXof", COPY_X_OF).toString();
@@ -1028,8 +1052,10 @@ void MainWindow::treeSelectionChanged(QModelIndex current, QModelIndex previous)
 
     curIndex = name;
     if (showPathInWindowTitle) {
-        if (curIndex.fileName().isEmpty()) { setWindowTitle(curIndex.absolutePath()); }
-        else { setWindowTitle(curIndex.fileName()); }
+        const QString folderPart = curIndex.fileName().isEmpty()
+                                       ? curIndex.absolutePath()
+                                       : curIndex.fileName();
+        setWindowTitle(QStringLiteral("%1 — %2").arg(QLatin1String(APP_NAME), folderPart));
     } else {
         setWindowTitle(APP_NAME);
     }
@@ -1347,7 +1373,7 @@ void MainWindow::applyWidgetPalettes()
     syncPalette(detailTree);
     syncPalette(tree);
     syncPalette(bookmarksList);
-#ifndef NO_UDISKS
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
     syncPalette(disksList);
 #endif
     syncPalette(bookmarkPage);
@@ -2075,12 +2101,15 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
     return;
   }
 
-  if (isUnder(disksList)) {
+  if (disksList && isUnder(disksList)) {
     listSelectionModel->clearSelection();
     if (disksList->indexAt(disksList->mapFromGlobal(event->globalPos())).isValid()) {
-#ifndef NO_UDISKS
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
       isMedia = true;
-      QString mediaPath = disksList->currentIndex().data(DISK_DEVICE_PATH).toString();
+      const QString mediaPath = disksList->currentIndex().data(DISK_DEVICE_PATH).toString();
+      const QString mountpoint = disksList->currentIndex().data(DISK_MOUNTPOINT).toString();
+      const bool optical = disksList->currentIndex().data(DISK_IS_OPTICAL).toBool();
+#ifndef NO_UDISKS
       const QString opPath = diskOperationBlockPath(mediaPath, disks->devices);
       if (!mediaPath.isEmpty() && disks->devices.contains(opPath)) {
           const QString mp = effectiveMountpointForWholeDisk(disks->devices[mediaPath], disks->devices);
@@ -2090,6 +2119,15 @@ void MainWindow::contextMenuEvent(QContextMenuEvent * event) {
               popup->addAction(mediaEjectAct);
           }
       }
+#elif defined(Q_OS_MAC)
+      if (!mediaPath.isEmpty()) {
+          if (!mountpoint.isEmpty()) {
+              popup->addAction(mediaUnmountAct);
+          } else if (optical) {
+              popup->addAction(mediaEjectAct);
+          }
+      }
+#endif
 #endif
     } else {
       disksList->clearSelection();
@@ -2618,9 +2656,10 @@ void MainWindow::updateGrid()
 /**
  * @brief media support
  */
-#ifndef NO_UDISKS
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
 void MainWindow::populateMedia()
 {
+#ifndef NO_UDISKS
     QSet<QString> listed;
     QMapIterator<QString, Device *> it(disks->devices);
     while (it.hasNext()) {
@@ -2640,9 +2679,24 @@ void MainWindow::populateMedia()
             modelDisks->removeDisk(path);
         }
     }
+#elif defined(Q_OS_MAC)
+    QSet<QString> listed;
+    const QVector<MacDiskVolume> volumes = MacDisks::listVolumes();
+    for (const MacDiskVolume &v : volumes) {
+        modelDisks->upsertDisk(v.deviceIdentifier, v.displayTitle, v.mountPoint,
+                               QString(), v.isOptical);
+        listed.insert(v.deviceIdentifier);
+    }
+    for (const QString &path : modelDisks->allDevicePaths()) {
+        if (!listed.contains(path)) {
+            modelDisks->removeDisk(path);
+        }
+    }
+#endif
     modelDisks->refreshUsage();
 }
 
+#ifndef NO_UDISKS
 void MainWindow::handleMediaMountpointChanged(QString path, QString mountpoint)
 {
     Q_UNUSED(path)
@@ -2664,7 +2718,6 @@ void MainWindow::handleMediaRemoved(QString path)
 
 void MainWindow::handleMediaChanged(QString path, bool present)
 {
-    //qDebug() << "changed" << path << present;
     if (path.isEmpty()) { return; }
     if (disks->devices[path]->isOptical && !present && modelDisks->contains(path)) {
         handleMediaRemoved(path);
@@ -2673,34 +2726,51 @@ void MainWindow::handleMediaChanged(QString path, bool present)
     }
 }
 
+void MainWindow::handleMediaError(QString path, QString error)
+{
+    QMessageBox::warning(this, path, error);
+}
+#endif
+
 void MainWindow::handleMediaUnmount()
 {
-    //qDebug() << "handle media unmount";
     QModelIndex index = disksList->currentIndex();
     if (!index.isValid()) { return; }
-    QString path = index.data(DISK_DEVICE_PATH).toString();
+    const QString path = index.data(DISK_DEVICE_PATH).toString();
     if (path.isEmpty()) { return; }
+#ifndef NO_UDISKS
     const QString opPath = diskOperationBlockPath(path, disks->devices);
     if (disks->devices.contains(opPath)) {
         disks->devices[opPath]->unmount();
     }
+#elif defined(Q_OS_MAC)
+    if (!MacDisks::unmountVolume(path)) {
+        QMessageBox::warning(this, tr("Disks"), MacDisks::lastErrorMessage());
+    } else {
+        populateMedia();
+    }
+#endif
 }
 
 void MainWindow::handleMediaEject()
 {
-    //qDebug() << "handle media eject";
     QModelIndex index = disksList->currentIndex();
     if (!index.isValid()) { return; }
-    QString path = index.data(DISK_DEVICE_PATH).toString();
+    const QString path = index.data(DISK_DEVICE_PATH).toString();
     if (path.isEmpty()) { return; }
+#ifndef NO_UDISKS
     if (disks->devices.contains(path)) {
         disks->devices[path]->eject();
     }
-}
-
-void MainWindow::handleMediaError(QString path, QString error)
-{
-    QMessageBox::warning(this, path, error);
+#elif defined(Q_OS_MAC)
+    const int s = path.indexOf(QLatin1Char('s'));
+    const QString whole = s > 0 ? path.left(s) : path;
+    if (!MacDisks::ejectWholeDisk(whole)) {
+        QMessageBox::warning(this, tr("Disks"), MacDisks::lastErrorMessage());
+    } else {
+        populateMedia();
+    }
+#endif
 }
 
 #endif
@@ -2716,9 +2786,18 @@ void MainWindow::diskActivated(QModelIndex item)
         if (disks->devices.contains(mountPath)) {
             disks->devices[mountPath]->mount();
         }
-        // Mounting is async; handleMediaMountpointChanged() will update the
-        // model once done. Re-read here in case it was already mounted.
         mountpoint = modelDisks->index(item.row()).data(DISK_MOUNTPOINT).toString();
+    }
+#elif defined(Q_OS_MAC)
+    const QString devicePath = item.data(DISK_DEVICE_PATH).toString();
+    if (mountpoint.isEmpty() && !devicePath.isEmpty()) {
+        if (MacDisks::mountVolume(devicePath)) {
+            populateMedia();
+            mountpoint = modelDisks->index(item.row()).data(DISK_MOUNTPOINT).toString();
+        } else {
+            QMessageBox::warning(this, tr("Disks"), MacDisks::lastErrorMessage());
+            return;
+        }
     }
 #endif
     if (mountpoint.isEmpty()) { return; }

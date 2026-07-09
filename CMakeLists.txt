@@ -171,7 +171,7 @@ if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
     target_link_libraries(${PROJECT_NAME} ${NOTIFY_LIBRARIES})
 endif()
 if(APPLE)
-    target_sources(${PROJECT_NAME} PRIVATE fm/src/macfileaccess.mm)
+    target_sources(${PROJECT_NAME} PRIVATE fm/src/macfileaccess.mm fm/src/macdisks.mm)
     target_link_libraries(${PROJECT_NAME} -framework AppKit -framework CoreFoundation -framework CoreServices)
 endif()
 

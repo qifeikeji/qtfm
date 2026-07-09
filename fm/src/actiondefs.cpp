@@ -481,7 +481,7 @@ void MainWindow::createActions() {
   actionList->append(macFileAccessHelpAct);
 #endif
 
-#ifndef NO_UDISKS
+#if defined(QTFM_HAVE_SIDEBAR_DISKS)
   mediaUnmountAct = new QAction(tr("Safely Remove"), this);
   mediaUnmountAct->setIcon(QIcon::fromTheme("media-eject"));
   connect(mediaUnmountAct, SIGNAL(triggered(bool)), this, SLOT(handleMediaUnmount()));
