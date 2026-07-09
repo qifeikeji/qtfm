@@ -8,6 +8,11 @@ IconFileListView::IconFileListView(QWidget *parent)
 {
 }
 
+void IconFileListView::setSortingEnabled(bool enable)
+{
+    QAbstractItemView::setSortingEnabled(enable);
+}
+
 QRect IconFileListView::contentRectForVisualRect(const QRect &cellRect) const
 {
     if (!cellRect.isValid()) {

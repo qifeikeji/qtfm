@@ -2,6 +2,7 @@
 #define ICONFILELISTVIEW_H
 
 #include <QListView>
+#include <QAbstractItemView>
 
 class IconViewDelegate;
 
@@ -16,7 +17,7 @@ public:
 
     QModelIndex indexAt(const QPoint &point) const override;
 
-    void setSortingEnabled(bool enable) { QListView::setSortingEnabled(enable); }
+    void setSortingEnabled(bool enable);
 
 private:
     QRect contentRectForVisualRect(const QRect &cellRect) const;
