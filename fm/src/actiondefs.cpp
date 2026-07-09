@@ -474,6 +474,11 @@ void MainWindow::createActions() {
   macOpenWithHelpAct->setStatusTip(tr("如何在设置里配置 Open with"));
   connect(macOpenWithHelpAct, SIGNAL(triggered()), this, SLOT(showMacOpenWithHelp()));
   actionList->append(macOpenWithHelpAct);
+
+  macFileAccessHelpAct = new QAction(tr("macOS 文件访问权限…"), this);
+  macFileAccessHelpAct->setStatusTip(tr("完全磁盘访问权限与减少授权弹窗"));
+  connect(macFileAccessHelpAct, SIGNAL(triggered()), this, SLOT(showMacFileAccessHelp()));
+  actionList->append(macFileAccessHelpAct);
 #endif
 
 #ifndef NO_UDISKS
@@ -668,6 +673,7 @@ void MainWindow::createMenus() {
   // ----------------------------------------------------------------------
   QMenu* helpMenu = new QMenu(tr("Help"));
 #ifdef Q_OS_MAC
+  helpMenu->addAction(macFileAccessHelpAct);
   helpMenu->addAction(macOpenWithHelpAct);
   helpMenu->addSeparator();
 #endif

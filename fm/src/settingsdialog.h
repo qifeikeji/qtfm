@@ -80,6 +80,8 @@ protected:
   QCheckBox* showNewTabButton;
   QSpinBox* spinIconViewGapH;
   QSpinBox* spinIconViewGapV;
+  QSpinBox* spinTopModuleGapV = nullptr;
+  QSpinBox* spinTopModuleGapH = nullptr;
   QSpinBox* spinIconViewSize;
   QSpinBox* spinListRowHeight;
   QSpinBox* spinBookmarkGroupTabSize;

@@ -95,6 +95,7 @@ public:
     static DragMode getDADshiftMod();
     static DragMode getDefaultDragAndDrop();
     static QString getDeviceForDir(QString dir);
+    static QPalette lightTheme();
     static QPalette darkTheme();
     static QStringList iconPaths(QString appPath);
     static QVector<QStringList> getDefaultActions();

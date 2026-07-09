@@ -16,6 +16,16 @@
         <string>QtFM</string>
 	<key>CFBundleIdentifier</key>
         <string>eu.qtfm</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>QtFM needs access to browse files on your Desktop.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>QtFM needs access to browse files in your Documents folder.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>QtFM needs access to browse files in your Downloads folder.</string>
+	<key>NSNetworkVolumesUsageDescription</key>
+	<string>QtFM needs access to browse network volumes.</string>
+	<key>NSRemovableVolumesUsageDescription</key>
+	<string>QtFM needs access to browse removable drives.</string>
 	<key>NOTE</key>
 	<string>https://qtfm.eu</string>
 </dict>

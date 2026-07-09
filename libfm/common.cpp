@@ -448,29 +448,95 @@ QString Common::getDeviceForDir(QString dir)
     return QString();
 }
 
+namespace {
+
+void setPaletteColorAllGroups(QPalette &palette, QPalette::ColorRole role, const QColor &color)
+{
+    const QList<QPalette::ColorGroup> groups = {
+        QPalette::Active, QPalette::Inactive, QPalette::Disabled};
+    for (QPalette::ColorGroup group : groups) {
+        palette.setColor(group, role, color);
+    }
+}
+
+void applyMacLikePalette(QPalette &palette,
+                         const QColor &window,
+                         const QColor &base,
+                         const QColor &alternateBase,
+                         const QColor &button,
+                         const QColor &mid,
+                         const QColor &dark,
+                         const QColor &shadow,
+                         const QColor &text,
+                         const QColor &highlight,
+                         const QColor &highlightedText,
+                         const QColor &link,
+                         const QColor &toolTipBase,
+                         const QColor &toolTipText)
+{
+    setPaletteColorAllGroups(palette, QPalette::Window, window);
+    setPaletteColorAllGroups(palette, QPalette::WindowText, text);
+    setPaletteColorAllGroups(palette, QPalette::Base, base);
+    setPaletteColorAllGroups(palette, QPalette::AlternateBase, alternateBase);
+    setPaletteColorAllGroups(palette, QPalette::Button, button);
+    setPaletteColorAllGroups(palette, QPalette::Mid, mid);
+    setPaletteColorAllGroups(palette, QPalette::Dark, dark);
+    setPaletteColorAllGroups(palette, QPalette::Shadow, shadow);
+    setPaletteColorAllGroups(palette, QPalette::Text, text);
+    setPaletteColorAllGroups(palette, QPalette::ButtonText, text);
+    setPaletteColorAllGroups(palette, QPalette::BrightText, Qt::red);
+    setPaletteColorAllGroups(palette, QPalette::Highlight, highlight);
+    setPaletteColorAllGroups(palette, QPalette::HighlightedText, highlightedText);
+    setPaletteColorAllGroups(palette, QPalette::Link, link);
+    setPaletteColorAllGroups(palette, QPalette::LinkVisited, link.darker(115));
+    setPaletteColorAllGroups(palette, QPalette::ToolTipBase, toolTipBase);
+    setPaletteColorAllGroups(palette, QPalette::ToolTipText, toolTipText);
+    palette.setColor(QPalette::Disabled, QPalette::Text, text.darker(150));
+    palette.setColor(QPalette::Disabled, QPalette::ButtonText, text.darker(150));
+    palette.setColor(QPalette::Disabled, QPalette::WindowText, text.darker(150));
+}
+
+} // namespace
+
+QPalette Common::lightTheme()
+{
+    QPalette palette;
+    // macOS light: chrome slightly warmer than content; controls sit on chrome.
+    applyMacLikePalette(palette,
+                        QColor(0xEC, 0xEC, 0xEE), // Window — toolbar, dock, sidebar chrome
+                        QColor(0xFF, 0xFF, 0xFF), // Base — file lists
+                        QColor(0xF7, 0xF7, 0xF9), // AlternateBase — zebra rows
+                        QColor(0xFF, 0xFF, 0xFF), // Button — path bar / icon buttons
+                        QColor(0xD1, 0xD1, 0xD6), // Mid — separators
+                        QColor(0xC6, 0xC6, 0xC8), // Dark — pressed edges
+                        QColor(0xAE, 0xAE, 0xB2), // Shadow
+                        QColor(0x1D, 0x1D, 0x1F), // Text
+                        QColor(0x00, 0x7A, 0xFF), // Highlight — system blue
+                        Qt::white,
+                        QColor(0x00, 0x7A, 0xFF),
+                        QColor(0xFF, 0xFF, 0xFF),
+                        QColor(0x1D, 0x1D, 0x1F));
+    return palette;
+}
+
 QPalette Common::darkTheme()
 {
     QPalette palette;
-    palette.setColor(QPalette::Window, QColor(64,66,68));
-    palette.setColor(QPalette::WindowText, Qt::white);
-    palette.setColor(QPalette::Base, QColor(46,47,48));
-    palette.setColor(QPalette::AlternateBase, QColor(64,66,68));
-    //palette.setColor(QPalette::ToolTipBase, Qt::white);
-    //palette.setColor(QPalette::ToolTipText, Qt::white);
-    palette.setColor(QPalette::Link, Qt::white);
-    palette.setColor(QPalette::LinkVisited, Qt::white);
-    palette.setColor(QPalette::ToolTipText, Qt::black);
-    palette.setColor(QPalette::Text, Qt::white);
-    palette.setColor(QPalette::Button, QColor(64,66,68));
-    palette.setColor(QPalette::Mid, QColor(64,66,68));
-    palette.setColor(QPalette::Dark, QColor(46,47,48));
-    palette.setColor(QPalette::Shadow, QColor(28,28,29));
-    palette.setColor(QPalette::ButtonText, Qt::white);
-    palette.setColor(QPalette::BrightText, Qt::red);
-    palette.setColor(QPalette::Highlight, QColor(72, 120, 180));
-    palette.setColor(QPalette::HighlightedText, Qt::white);
-    palette.setColor(QPalette::Disabled, QPalette::Text, Qt::darkGray);
-    palette.setColor(QPalette::Disabled, QPalette::ButtonText, Qt::darkGray);
+    // macOS dark: layered neutrals (chrome / content / controls), not light-gray vs dark-gray jumps.
+    applyMacLikePalette(palette,
+                        QColor(0x2C, 0x2C, 0x2E), // Window — shell chrome
+                        QColor(0x1C, 0x1C, 0x1E), // Base — main content
+                        QColor(0x24, 0x24, 0x26), // AlternateBase — subtle row shift
+                        QColor(0x3A, 0x3A, 0x3C), // Button — elevated controls
+                        QColor(0x48, 0x48, 0x4A), // Mid — hairline borders
+                        QColor(0x38, 0x38, 0x3A), // Dark
+                        QColor(0x10, 0x10, 0x12), // Shadow
+                        QColor(0xF5, 0xF5, 0xF7), // Text
+                        QColor(0x0A, 0x84, 0xFF), // Highlight — system accent
+                        Qt::white,
+                        QColor(0x64, 0xD2, 0xFF),
+                        QColor(0x3A, 0x3A, 0x3C),
+                        QColor(0xF5, 0xF5, 0xF7));
     return palette;
 }
 

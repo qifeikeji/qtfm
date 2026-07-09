@@ -25,6 +25,9 @@
 #include "common.h"
 #include "apptranslator.h"
 #include <QSettings>
+#ifdef Q_OS_MAC
+#include <QStyleFactory>
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -68,6 +71,11 @@ int main(int argc, char *argv[]) {
   qInstallMessageHandler(msgHandler);
 
   QApplication app(argc, argv);
+#ifdef Q_OS_MAC
+  if (QStyle *fusion = QStyleFactory::create(QStringLiteral("Fusion"))) {
+    QApplication::setStyle(fusion);
+  }
+#endif
   QApplication::setOrganizationName(APP);
   QApplication::setApplicationName(APP);
   QApplication::setOrganizationDomain("eu");

@@ -13,6 +13,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QTimer>
+#include <QLabel>
 
 #include "openwithconfig.h"
 #include "common.h"
@@ -244,6 +245,23 @@ QWidget *SettingsDialog::createAppearanceSettings()
     // Main widget and layout
     QWidget* widget = new QWidget();
     QVBoxLayout* layoutWidget = new QVBoxLayout(widget);
+
+    QGroupBox *grpTopModule = new QGroupBox(tr("Top navigation bar"), widget);
+    QFormLayout *layoutTopModule = new QFormLayout(grpTopModule);
+    spinTopModuleGapV = new QSpinBox(grpTopModule);
+    spinTopModuleGapV->setRange(0, 32);
+    spinTopModuleGapV->setSuffix(tr(" px"));
+    spinTopModuleGapH = new QSpinBox(grpTopModule);
+    spinTopModuleGapH->setRange(0, 32);
+    spinTopModuleGapH->setSuffix(tr(" px"));
+    auto *topModuleHint = new QLabel(
+        tr("Padding around the toolbar row (settings, navigation, path field, terminal, etc.)."),
+        grpTopModule);
+    topModuleHint->setWordWrap(true);
+    layoutTopModule->addRow(topModuleHint);
+    layoutTopModule->addRow(tr("Vertical padding (top and bottom)"), spinTopModuleGapV);
+    layoutTopModule->addRow(tr("Horizontal padding (left and right)"), spinTopModuleGapH);
+    layoutWidget->addWidget(grpTopModule);
 
     // Appearance
     QGroupBox* grpAppear = new QGroupBox(tr("Appearance"), widget);
@@ -734,6 +752,10 @@ void SettingsDialog::readSettings() {
   const int legacyGap = settingsPtr->value("iconViewGap", 4).toInt();
   spinIconViewGapH->setValue(settingsPtr->value("iconViewGapH", legacyGap).toInt());
   spinIconViewGapV->setValue(settingsPtr->value("iconViewGapV", legacyGap).toInt());
+  if (spinTopModuleGapV && spinTopModuleGapH) {
+      spinTopModuleGapV->setValue(settingsPtr->value("topModuleGapV", 5).toInt());
+      spinTopModuleGapH->setValue(settingsPtr->value("topModuleGapH", 8).toInt());
+  }
   spinIconViewSize->setValue(settingsPtr->value("zoom", 48).toInt());
   spinListRowHeight->setValue(settingsPtr->value("zoomDetail", 24).toInt());
   spinBookmarkGroupTabSize->setValue(settingsPtr->value("bookmarkGroupTabSize", 40).toInt());
@@ -980,6 +1002,10 @@ bool SettingsDialog::saveSettings() {
   settingsPtr->setValue("iconViewGapH", spinIconViewGapH->value());
   settingsPtr->setValue("iconViewGapV", spinIconViewGapV->value());
   settingsPtr->setValue("iconViewGap", spinIconViewGapH->value());
+  if (spinTopModuleGapV && spinTopModuleGapH) {
+      settingsPtr->setValue("topModuleGapV", spinTopModuleGapV->value());
+      settingsPtr->setValue("topModuleGapH", spinTopModuleGapH->value());
+  }
   settingsPtr->setValue("zoom", spinIconViewSize->value());
   settingsPtr->setValue("zoomDetail", spinListRowHeight->value());
   settingsPtr->setValue("bookmarkGroupTabSize", spinBookmarkGroupTabSize->value());

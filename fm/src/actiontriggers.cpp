@@ -1,3 +1,6 @@
+#ifdef Q_OS_MAC
+#include "macfileaccess.h"
+#endif
 #include "mainwindow.h"
 #include "settingsdialog.h"
 #include "openwithconfig.h"
@@ -5,6 +8,8 @@
 #include <QApplication>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QCheckBox>
+#include <QPushButton>
 #include <QDockWidget>
 #include <QStatusBar>
 #include <QHeaderView>
@@ -957,6 +962,61 @@ void MainWindow::showMacOpenWithHelp()
            "<p>改完后在设置窗口点 <b>Save</b> 保存。</p>"));
     box.setStandardButtons(QMessageBox::Ok);
     box.exec();
+}
+
+void MainWindow::showMacFileAccessHelp()
+{
+    QMessageBox box(this);
+    box.setWindowTitle(tr("macOS 文件访问权限"));
+    box.setIcon(QMessageBox::Information);
+    box.setText(tr("减少「允许访问文件夹」弹窗"));
+    box.setInformativeText(
+        tr("<p>macOS 会限制应用访问桌面、文稿、下载等位置。浏览这些目录时系统可能反复询问。</p>"
+           "<p><b>推荐</b>：打开「系统设置 → 隐私与安全性 → 完全磁盘访问权限」，"
+           "将 <b>QtFM</b> 加入并开启。授权一次后，本应用内浏览文件会顺畅很多。</p>"
+           "<p>「新窗口」与主窗口现在在<b>同一进程</b>中打开，不会因为是新窗口而重复要一遍权限。</p>"
+           "<p>若仅需部分目录，也可在「文件和文件夹」中为 QtFM 勾选对应类别。</p>"));
+    QPushButton *fdaBtn = box.addButton(tr("打开「完全磁盘访问权限」设置"),
+                                        QMessageBox::ActionRole);
+    QPushButton *fafBtn = box.addButton(tr("打开「文件和文件夹」设置"),
+                                        QMessageBox::ActionRole);
+    box.addButton(QMessageBox::Ok);
+    box.exec();
+    if (box.clickedButton() == fdaBtn) {
+        MacFileAccess::openFullDiskAccessSettings();
+    } else if (box.clickedButton() == fafBtn) {
+        MacFileAccess::openFilesAndFoldersSettings();
+    }
+}
+
+void MainWindow::maybeShowMacFileAccessHint()
+{
+    static bool checkedThisSession = false;
+    if (checkedThisSession) {
+        return;
+    }
+    checkedThisSession = true;
+    if (!settings || settings->value(QStringLiteral("macFileAccessHintShown")).toBool()) {
+        return;
+    }
+    QMessageBox box(this);
+    box.setWindowTitle(tr("macOS 文件访问权限"));
+    box.setIcon(QMessageBox::Information);
+    box.setText(tr("是否配置 QtFM 的文件访问权限？"));
+    box.setInformativeText(
+        tr("建议在系统设置中为 QtFM 开启「完全磁盘访问权限」，以减少浏览文件夹时的授权弹窗。"
+           "也可稍后在「帮助」菜单中打开说明。"));
+    QPushButton *openBtn = box.addButton(tr("打开系统设置"), QMessageBox::AcceptRole);
+    box.addButton(tr("稍后"), QMessageBox::RejectRole);
+    box.setCheckBox(new QCheckBox(tr("不再提示")));
+    box.exec();
+    if (box.checkBox() && box.checkBox()->isChecked()) {
+        settings->setValue(QStringLiteral("macFileAccessHintShown"), true);
+    }
+    if (box.clickedButton() == openBtn) {
+        MacFileAccess::openFullDiskAccessSettings();
+        showMacFileAccessHelp();
+    }
 }
 #endif
 

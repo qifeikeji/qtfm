@@ -60,6 +60,9 @@ macx {
     LIBS += -L$${top_builddir}/libfm -lQtFM
     DEFINES += NO_DBUS NO_UDISKS
     RESOURCES += bundle/adwaita.qrc
+    SOURCES += src/macfileaccess.mm
+    HEADERS += src/macfileaccess.h
+    LIBS += -framework AppKit
     mimes_bundle.files = $$files($${top_srcdir}/share/icons/mimes/*.*)
     mimes_bundle.path = Contents/Resources/mimes
     QMAKE_BUNDLE_DATA += mimes_bundle

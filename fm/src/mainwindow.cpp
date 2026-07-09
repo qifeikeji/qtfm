@@ -67,10 +67,7 @@ constexpr int kPathBarIconSize = kPathBarHeight - 10;
 
 #ifdef Q_OS_MAC
 #include <QStyleFactory>
-namespace {
-constexpr int kMacNavLeftGap = 8;
-constexpr int kMacNavVGap = 5;
-} // namespace
+#include "macfileaccess.h"
 #endif
 
 #ifndef NO_UDISKS
@@ -141,7 +138,7 @@ bool shouldListWholeDisk(Device *whole, const QMap<QString, Device *> &devices)
 } // namespace
 #endif
 
-MainWindow::MainWindow()
+MainWindow::MainWindow(const QString &forcedStartPath)
 {
 #ifndef NO_UDISKS
     disks = new Disks(this);
@@ -168,6 +165,23 @@ MainWindow::MainWindow()
 
     // get path from cmd
     startPath = QDir::currentPath();
+    if (!forcedStartPath.isEmpty()) {
+        startPath = forcedStartPath;
+        if (startPath == QLatin1String(".")) {
+            startPath = qEnvironmentVariable("PWD");
+        } else if (QUrl(startPath).isLocalFile()) {
+            startPath = QUrl(forcedStartPath).toLocalFile();
+        }
+        const QFileInfo argInfo(startPath);
+        if (argInfo.exists()) {
+            if (argInfo.isFile()) {
+                pendingSingleFileTarget = argInfo.canonicalFilePath();
+                startPath = argInfo.absolutePath();
+            } else {
+                startPath = argInfo.canonicalFilePath();
+            }
+        }
+    } else {
     QStringList args = QApplication::arguments();
 
     if(args.count() > 1) {
@@ -187,6 +201,7 @@ MainWindow::MainWindow()
             }
         }
     }
+    }
 
     settings = new QSettings(Common::configFile(), QSettings::IniFormat);
     if (settings->value("clearCache").toBool()) {
@@ -197,15 +212,21 @@ MainWindow::MainWindow()
         settings->setValue("clearCache", false);
     }
 
-    // Dark theme?
+    // Application theme (independent of OS appearance on macOS).
 #if QT_VERSION >= 0x050000
-    BundledIcons::setUiDarkMode(settings->value("darkTheme").toBool());
-    if (settings->value("darkTheme").toBool()) {
-        qApp->setPalette(Common::darkTheme());
+    {
+        const bool darkUi = settings->value(QStringLiteral("darkTheme")).toBool();
+        BundledIcons::setUiDarkMode(darkUi);
+        qApp->setPalette(darkUi ? Common::darkTheme() : Common::lightTheme());
+#ifdef Q_OS_MAC
+        MacFileAccess::setApplicationAppearance(darkUi);
+#endif
     }
 #else
     if (settings->value("darkTheme").toBool()) {
         qApp->setPalette(Common::darkTheme());
+    } else {
+        qApp->setPalette(Common::lightTheme());
     }
 #endif
 
@@ -552,6 +573,10 @@ void MainWindow::lateStart() {
 
   // Read defaults
   QTimer::singleShot(100, mimeUtils, SLOT(generateDefaults()));
+
+#ifdef Q_OS_MAC
+  QTimer::singleShot(500, this, SLOT(maybeShowMacFileAccessHint()));
+#endif
 }
 //---------------------------------------------------------------------------
 
@@ -568,6 +593,8 @@ void MainWindow::loadSettings(bool wState, bool hState, bool tabState, bool thum
     }
 
   // fix style — full chrome applied in applyViewChromeStyles()
+  topModuleGapV = settings->value("topModuleGapV", 5).toInt();
+  topModuleGapH = settings->value("topModuleGapH", 8).toInt();
 #ifdef Q_OS_MAC
   applyMacNavToolBarLayout();
 #else
@@ -980,7 +1007,7 @@ void MainWindow::closeEvent(QCloseEvent *event)
  * @brief Closes main window
  */
 void MainWindow::exitAction() {
-  close();
+  qApp->quit();
 }
 //---------------------------------------------------------------------------
 
@@ -1281,11 +1308,10 @@ void MainWindow::applyThemeFromSettings()
     }
     const bool darkUi = settings->value(QStringLiteral("darkTheme")).toBool();
     BundledIcons::setUiDarkMode(darkUi);
-    if (darkUi) {
-        qApp->setPalette(Common::darkTheme());
-    } else {
-        qApp->setPalette(qApp->style()->standardPalette());
-    }
+    qApp->setPalette(darkUi ? Common::darkTheme() : Common::lightTheme());
+#ifdef Q_OS_MAC
+    MacFileAccess::setApplicationAppearance(darkUi);
+#endif
     refreshBundledUiIcons();
     applyWidgetPalettes();
     applyViewChromeStyles();
@@ -1361,15 +1387,14 @@ void MainWindow::applyViewChromeStyles()
     }
 
     const QColor chromeLine = pal.color(QPalette::Mid);
-    const QColor flatBg = pal.color(QPalette::Base);
+    const QColor contentBg = pal.color(QPalette::Base);
+    const QColor controlBg = pal.color(QPalette::Button);
     const QColor windowBg = pal.color(QPalette::Window);
-    const QColor flatBorder = pal.color(QPalette::Dark).lightness() < 128
-                                  ? pal.color(QPalette::Window)
-                                  : pal.color(QPalette::Mid);
+    const QColor flatBorder = pal.color(QPalette::Mid);
     QColor flatHover = highlight;
     flatHover.setAlpha(72);
 
-    const QColor sidebarTabSelected = flatBg;
+    const QColor sidebarTabSelected = contentBg;
     QColor sidebarTabHover = highlight;
     sidebarTabHover.setAlpha(72);
 
@@ -1385,15 +1410,14 @@ void MainWindow::applyViewChromeStyles()
         " background: %3; }"
         "QToolBar#Navigate QToolButton:checked {"
         " background: %2; border: 1px solid %1; }")
-        .arg(flatBorder.name(), flatBg.name(), flatHover.name(QColor::HexArgb), chromeBtnSize);
-#ifdef Q_OS_MAC
-    const QString macNavChromeQss = QStringLiteral(
+        .arg(flatBorder.name(), controlBg.name(), flatHover.name(QColor::HexArgb), chromeBtnSize);
+    const QString topModuleChromeQss = QStringLiteral(
         "QToolBar#Navigate {"
-        " padding-left: %1px; padding-top: %2px; padding-bottom: %2px;"
-        " padding-right: 0px; margin: 0; border: none; background: transparent; }")
-        .arg(kMacNavLeftGap)
-        .arg(kMacNavVGap);
-#endif
+        " padding-left: %1px; padding-right: %1px;"
+        " padding-top: %2px; padding-bottom: %2px;"
+        " margin: 0; border: none; background: transparent; }")
+        .arg(topModuleGapH)
+        .arg(topModuleGapV);
 
     if (navToolBar) {
         navToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
@@ -1425,11 +1449,7 @@ void MainWindow::applyViewChromeStyles()
     setStyleSheet(shellQss);
 
     if (navToolBar) {
-#ifdef Q_OS_MAC
-        navToolBar->setStyleSheet(flatToolBtnQss + macNavChromeQss);
-#else
-        navToolBar->setStyleSheet(flatToolBtnQss);
-#endif
+        navToolBar->setStyleSheet(flatToolBtnQss + topModuleChromeQss);
     }
 
     const QString tabQss = QStringLiteral(
@@ -1463,7 +1483,7 @@ void MainWindow::applyViewChromeStyles()
             "QTabWidget#sidebarPlacesTabs QTabBar::tab:hover:!selected { background: %3; }"
             "QTabWidget#sidebarPlacesTabs QTabBar::tab:selected:!hover {"
             " min-height: 30px; max-height: 30px; }"
-        ).arg(flatBg.name(), sidebarTabSelected.name(), sidebarTabHover.name(QColor::HexArgb),
+        ).arg(contentBg.name(), sidebarTabSelected.name(), sidebarTabHover.name(QColor::HexArgb),
               windowBg.name());
         sidebarTabs->setStyleSheet(sidebarTabQss);
     }
@@ -1491,7 +1511,7 @@ void MainWindow::applyViewChromeStyles()
             " selection-color: palette(text); }"
             "QComboBox#pathAddressCombo QAbstractItemView::item {"
             " min-height: 32px; border-radius: 4px; }"
-        ).arg(flatBg.name(), flatBorder.name(), flatHover.name(QColor::HexArgb),
+        ).arg(controlBg.name(), flatBorder.name(), flatHover.name(QColor::HexArgb),
               pathBarH, dropW, comboArrowUrl);
         pathEdit->setStyleSheet(pathComboQss);
         pathEdit->setFixedHeight(kPathBarHeight);
@@ -1506,7 +1526,7 @@ void MainWindow::applyViewChromeStyles()
             "QAbstractItemView::item { min-height: 32px; border-radius: 4px; }"
             "QAbstractItemView::item:hover { background: %3; }"
             "QAbstractItemView::item:selected { background: %4; }"
-        ).arg(flatBg.name(), flatBorder.name(), flatHover.name(QColor::HexArgb),
+        ).arg(contentBg.name(), flatBorder.name(), flatHover.name(QColor::HexArgb),
               sidebarTabSelected.name());
         pop->setStyleSheet(completerQss);
         if (auto *tree = qobject_cast<QTreeView *>(pop)) {
@@ -1548,7 +1568,7 @@ void MainWindow::applyMacNavToolBarLayout()
     navToolBar->setFloatable(false);
     navToolBar->setContentsMargins(0, 0, 0, 0);
     navToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
-    const int barHeight = kPathBarHeight + 2 * kMacNavVGap;
+    const int barHeight = kPathBarHeight + 2 * topModuleGapV;
     navToolBar->setMinimumHeight(barHeight);
     navToolBar->setMaximumHeight(barHeight);
     navToolBar->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -1608,12 +1628,21 @@ void MainWindow::tabChanged(int index)
 void MainWindow::newWindow(const QString &path)
 {
     if (settings->value("clearCache").toBool()) {
-        settings->setValue("clearCache", false); // we don't want the new window to clear our existing cache
+        settings->setValue("clearCache", false);
     }
+#ifdef Q_OS_MAC
+    writeSettings();
+    auto *w = new MainWindow(path);
+    w->setAttribute(Qt::WA_DeleteOnClose);
+    w->show();
+    w->raise();
+    w->activateWindow();
+#else
     writeSettings();
     QStringList args;
     if (!path.isEmpty()) { args << path; }
     QProcess::startDetached(qApp->applicationFilePath(), args);
+#endif
 }
 
 void MainWindow::openTabInNewWindow(int index)
@@ -1926,6 +1955,8 @@ void MainWindow::writeSettings() {
   settings->setValue("iconViewGapH", iconViewGapH);
   settings->setValue("iconViewGapV", iconViewGapV);
   settings->setValue("iconViewGap", iconViewGapH);
+  settings->setValue("topModuleGapV", topModuleGapV);
+  settings->setValue("topModuleGapH", topModuleGapH);
   settings->setValue("sortBy", currentSortColumn);
   settings->setValue("sortOrder", currentSortOrder);
   settings->setValue("showThumbs", thumbsAct->isChecked());

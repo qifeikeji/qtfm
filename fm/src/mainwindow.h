@@ -84,7 +84,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    MainWindow();
+    MainWindow(const QString &forcedStartPath = QString());
     myModel *modelList;
 
 protected:
@@ -188,6 +188,8 @@ public slots:
     void showAboutBox();
 #ifdef Q_OS_MAC
     void showMacOpenWithHelp();
+    void showMacFileAccessHelp();
+    void maybeShowMacFileAccessHint();
 #endif
 
 signals:
@@ -239,6 +241,8 @@ private:
     int bookmarkGroupTabSize;
     int iconViewGapH = 4;
     int iconViewGapV = 4;
+    int topModuleGapV = 5;
+    int topModuleGapH = 8;
     int currentView;        // 0=list, 1=icons, 2=details
     int currentSortColumn;  // COLUMN_NAME, COLUMN_SIZE, COLUMN_DATE, ...
     Qt::SortOrder currentSortOrder;
@@ -357,6 +361,7 @@ private:
     QAction *aboutQtAct;
 #ifdef Q_OS_MAC
     QAction *macOpenWithHelpAct;
+    QAction *macFileAccessHelpAct;
 #endif
 #ifndef NO_UDISKS
     QAction *mediaUnmountAct;
