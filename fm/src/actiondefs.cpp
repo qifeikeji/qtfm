@@ -704,6 +704,11 @@ void MainWindow::createToolBars() {
   navToolBar->setObjectName("Navigate");
 
 #ifdef Q_OS_MAC
+  macNavLeftInset = new QWidget(navToolBar);
+  macNavLeftInset->setFixedWidth(8);
+  macNavLeftInset->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Ignored);
+  macNavLeftInset->setAttribute(Qt::WA_TransparentForMouseEvents);
+  navToolBar->addWidget(macNavLeftInset);
   navToolBar->addAction(settingsAct);
   settingsAct->setText(QString());
   settingsAct->setToolTip(tr("Settings..."));

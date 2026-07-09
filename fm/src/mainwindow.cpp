@@ -67,7 +67,7 @@ constexpr int kPathBarIconSize = kPathBarHeight - 10;
 #include <QStyleFactory>
 namespace {
 constexpr int kMacNavLeftGap = 8;
-constexpr int kMacNavTopGap = 4;
+constexpr int kMacNavVGap = 5;
 } // namespace
 #endif
 
@@ -1384,10 +1384,20 @@ void MainWindow::applyViewChromeStyles()
         "QToolBar#Navigate QToolButton:checked {"
         " background: %2; border: 1px solid %1; }")
         .arg(flatBorder.name(), flatBg.name(), flatHover.name(QColor::HexArgb), chromeBtnSize);
+#ifdef Q_OS_MAC
+    const QString macNavPadQss = QStringLiteral(
+        "QToolBar#Navigate { padding-top: %1px; padding-bottom: %1px;"
+        " margin: 0; border: none; }")
+        .arg(kMacNavVGap);
+#endif
 
     if (navToolBar) {
         navToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
+#ifdef Q_OS_MAC
+        navToolBar->setStyleSheet(flatToolBtnQss + macNavPadQss);
+#else
         navToolBar->setStyleSheet(flatToolBtnQss);
+#endif
     }
     if (menuToolBar) {
         menuToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
@@ -1530,12 +1540,16 @@ void MainWindow::applyMacNavToolBarLayout()
         return;
     }
     navToolBar->setFloatable(false);
-    navToolBar->setContentsMargins(kMacNavLeftGap, kMacNavTopGap, 5, 0);
+    navToolBar->setContentsMargins(0, 0, 0, 0);
     navToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
-    const int barHeight = kPathBarHeight + kMacNavTopGap;
+    const int barHeight = kPathBarHeight + 2 * kMacNavVGap;
     navToolBar->setMinimumHeight(barHeight);
     navToolBar->setMaximumHeight(barHeight);
     navToolBar->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
+
+    if (macNavLeftInset) {
+        macNavLeftInset->setFixedWidth(kMacNavLeftGap);
+    }
 
     if (QLayout *mwLayout = layout()) {
         mwLayout->setSpacing(0);

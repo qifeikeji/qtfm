@@ -357,6 +357,7 @@ private:
     QAction *aboutQtAct;
 #ifdef Q_OS_MAC
     QAction *macOpenWithHelpAct;
+    QWidget *macNavLeftInset = nullptr;
 #endif
 #ifndef NO_UDISKS
     QAction *mediaUnmountAct;
