@@ -28,6 +28,10 @@ public:
     void setMinimizedNameColumnSelection(bool minimized);
     bool hasMinimizedNameColumnSelection() const;
 
+    /** Vertical rules between columns (details view, macOS). */
+    void setDrawColumnSeparators(bool draw);
+    bool drawColumnSeparators() const;
+
     virtual void paint(QPainter* painter,
                        const QStyleOptionViewItem& option,
                        const QModelIndex& index) const;
@@ -39,7 +43,18 @@ public:
 
 private:
     bool m_hasMinimizedNameColumnSelection;
+    bool m_drawColumnSeparators = false;
 };
+
+inline void DfmQStyledItemDelegate::setDrawColumnSeparators(bool draw)
+{
+    m_drawColumnSeparators = draw;
+}
+
+inline bool DfmQStyledItemDelegate::drawColumnSeparators() const
+{
+    return m_drawColumnSeparators;
+}
 
 inline void DfmQStyledItemDelegate::setMinimizedNameColumnSelection(bool minimized)
 {

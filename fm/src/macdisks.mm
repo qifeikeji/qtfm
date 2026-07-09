@@ -4,6 +4,8 @@
 
 #import <Foundation/Foundation.h>
 
+#include <QStringList>
+
 namespace MacDisks {
 
 static QString gLastError;

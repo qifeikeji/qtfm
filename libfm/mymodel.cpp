@@ -1002,8 +1002,7 @@ QVariant myModel::data(const QModelIndex & index, int role) const {
                item->fileInfo().size());
         break;
       case COLUMN_DATE :
-        data = QLocale::system().toString(item->fileInfo().lastModified(),
-                                          QLocale::FormatType::ShortFormat);
+        data = Common::formatListModifiedDate(item->fileInfo().lastModified());
         break;
       case COLUMN_FORMAT :
         if (item->mMimeType.isNull()) {

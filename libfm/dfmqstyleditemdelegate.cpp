@@ -3,6 +3,7 @@
 #include <QAbstractItemModel>
 #include <QAbstractProxyModel>
 #include <QFontMetrics>
+#include <QPainter>
 
 DfmQStyledItemDelegate::DfmQStyledItemDelegate(QObject* parent) :
     QStyledItemDelegate(parent),
@@ -29,6 +30,15 @@ void DfmQStyledItemDelegate::paint(QPainter* painter,
         QStyledItemDelegate::paint(painter, opt, index);
     } else {
         QStyledItemDelegate::paint(painter, option, index);
+    }
+
+    if (m_drawColumnSeparators && index.isValid() && index.column() < COLUMN_FOLDER) {
+        const QColor line = option.palette.color(QPalette::Mid);
+        painter->save();
+        painter->setPen(line);
+        const int x = option.rect.right();
+        painter->drawLine(x, option.rect.top(), x, option.rect.bottom());
+        painter->restore();
     }
 }
 

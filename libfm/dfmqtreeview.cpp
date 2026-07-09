@@ -7,6 +7,10 @@
 #include <QPainter>
 #include <QScrollBar>
 
+#if defined(Q_OS_MAC)
+#include <QtGlobal>
+#endif
+
 #include "dfmqstyleditemdelegate.h"
 
 DfmQTreeView::DfmQTreeView(QWidget *parent) :
@@ -20,6 +24,9 @@ DfmQTreeView::DfmQTreeView(QWidget *parent) :
     setUniformRowHeights(true);
     m_fileItemDelegate = new DfmQStyledItemDelegate(this);
     m_fileItemDelegate->setMinimizedNameColumnSelection(false); // if true long filenames will overflow the column!
+#if defined(Q_OS_MAC)
+    m_fileItemDelegate->setDrawColumnSeparators(true);
+#endif
     this->setItemDelegate(m_fileItemDelegate);
 }
 

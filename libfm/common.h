@@ -100,6 +100,8 @@ public:
     static QStringList iconPaths(QString appPath);
     static QVector<QStringList> getDefaultActions();
     static QString formatSize(qint64 num);
+    /** Details/list view “Date Modified” cell (macOS: yy-M-d 上午/下午h:mm). */
+    static QString formatListModifiedDate(const QDateTime &dateTime);
     static QString getDriveInfo(QString path);
     /** Raw statfs usage for the filesystem containing `path`; returns false
      *  if the query fails (e.g. path not mounted / doesn't exist). */

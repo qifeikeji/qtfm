@@ -792,7 +792,11 @@ void MainWindow::applyListRowHeight()
 void MainWindow::applyListColumnWidths()
 {
     QHeaderView *header = detailTree->header();
+#if defined(Q_OS_MAC)
+    const int defaults[] = {0, 190, 90, 130, 90, 80};
+#else
     const int defaults[] = {0, 220, 90, 130, 120, 80};
+#endif
     for (int col = 0; col < LIST_COLUMN_COUNT; ++col) {
         const QString key = QStringLiteral("listColumnWidth%1").arg(col);
         const int w = settings->value(key, defaults[col]).toInt();

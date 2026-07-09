@@ -36,6 +36,8 @@
 #include <QJsonArray>
 #include <QJsonValue>
 #include <QCoreApplication>
+#include <QDateTime>
+#include <QLocale>
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) || defined(__APPLE__)
 #include <sys/mount.h>
@@ -577,6 +579,31 @@ QString Common::formatSize(qint64 num)
     else { total = QString("%1 bytes").arg(num); }
 
     return total;
+}
+
+QString Common::formatListModifiedDate(const QDateTime &dateTime)
+{
+    if (!dateTime.isValid()) {
+        return QString();
+    }
+#if defined(Q_OS_MAC)
+    const QDate d = dateTime.date();
+    const QTime t = dateTime.time();
+    const QString ampm = t.hour() < 12 ? QStringLiteral("上午") : QStringLiteral("下午");
+    int hour12 = t.hour() % 12;
+    if (hour12 == 0) {
+        hour12 = 12;
+    }
+    return QStringLiteral("%1-%2-%3 %4%5:%6")
+        .arg(d.year() % 100)
+        .arg(d.month())
+        .arg(d.day())
+        .arg(ampm)
+        .arg(hour12)
+        .arg(t.minute(), 2, 10, QLatin1Char('0'));
+#else
+    return QLocale::system().toString(dateTime, QLocale::ShortFormat);
+#endif
 }
 
 QString Common::getDriveInfo(QString path)
