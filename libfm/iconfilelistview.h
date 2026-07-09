@@ -16,6 +16,8 @@ public:
 
     QModelIndex indexAt(const QPoint &point) const override;
 
+    void setSortingEnabled(bool enable) { QListView::setSortingEnabled(enable); }
+
 private:
     QRect contentRectForVisualRect(const QRect &cellRect) const;
 };
