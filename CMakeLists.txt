@@ -172,7 +172,7 @@ if(NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
 endif()
 if(APPLE)
     target_sources(${PROJECT_NAME} PRIVATE fm/src/macfileaccess.mm fm/src/macdisks.mm)
-    target_link_libraries(${PROJECT_NAME} -framework AppKit -framework CoreFoundation -framework CoreServices)
+    target_link_libraries(${PROJECT_NAME} -framework AppKit -framework Foundation -framework CoreFoundation -framework CoreServices)
 endif()
 
 # qtfm-tray

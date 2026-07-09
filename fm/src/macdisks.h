@@ -1,7 +1,7 @@
 #ifndef MACDISKS_H
 #define MACDISKS_H
 
-#ifdef Q_OS_MAC
+#if defined(Q_OS_MAC) || (defined(__APPLE__) && !defined(__IOS__))
 
 #include <QString>
 #include <QVector>

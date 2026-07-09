@@ -1,6 +1,6 @@
 #include "macfileaccess.h"
 
-#ifdef Q_OS_MAC
+#if defined(__APPLE__) && !defined(__IOS__)
 
 #import <AppKit/AppKit.h>
 
