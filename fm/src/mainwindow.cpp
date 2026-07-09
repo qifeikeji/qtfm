@@ -51,6 +51,8 @@
 #include "sidebaritemdelegate.h"
 #include "pathcombodelegate.h"
 
+#include <QLayout>
+
 namespace {
 constexpr int kPathBarHeight = 28;
 constexpr int kPathBarIconSize = kPathBarHeight - 10;
@@ -1385,19 +1387,16 @@ void MainWindow::applyViewChromeStyles()
         " background: %2; border: 1px solid %1; }")
         .arg(flatBorder.name(), flatBg.name(), flatHover.name(QColor::HexArgb), chromeBtnSize);
 #ifdef Q_OS_MAC
-    const QString macNavPadQss = QStringLiteral(
-        "QToolBar#Navigate { padding-top: %1px; padding-bottom: %1px;"
-        " margin: 0; border: none; }")
+    const QString macNavChromeQss = QStringLiteral(
+        "QToolBar#Navigate {"
+        " padding-left: %1px; padding-top: %2px; padding-bottom: %2px;"
+        " padding-right: 0px; margin: 0; border: none; background: transparent; }")
+        .arg(kMacNavLeftGap)
         .arg(kMacNavVGap);
 #endif
 
     if (navToolBar) {
         navToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
-#ifdef Q_OS_MAC
-        navToolBar->setStyleSheet(flatToolBtnQss + macNavPadQss);
-#else
-        navToolBar->setStyleSheet(flatToolBtnQss);
-#endif
     }
     if (menuToolBar) {
         menuToolBar->setIconSize(QSize(kPathBarIconSize, kPathBarIconSize));
@@ -1421,10 +1420,17 @@ void MainWindow::applyViewChromeStyles()
     ).arg(windowBg.name(), chromeLine.name());
 #ifdef Q_OS_MAC
     shellQss += QStringLiteral(
-        "QMainWindow::separator { height: 0px; width: 0px; margin: 0; padding: 0; border: none; }"
-        "QToolBar#Navigate { margin: 0; padding: 0; border: none; }");
+        "QMainWindow::separator { height: 0px; width: 0px; margin: 0; padding: 0; border: none; }");
 #endif
     setStyleSheet(shellQss);
+
+    if (navToolBar) {
+#ifdef Q_OS_MAC
+        navToolBar->setStyleSheet(flatToolBtnQss + macNavChromeQss);
+#else
+        navToolBar->setStyleSheet(flatToolBtnQss);
+#endif
+    }
 
     const QString tabQss = QStringLiteral(
         "QTabBar::tab { min-height: 32px; max-height: 32px; padding: 6px 14px;"
@@ -1547,8 +1553,10 @@ void MainWindow::applyMacNavToolBarLayout()
     navToolBar->setMaximumHeight(barHeight);
     navToolBar->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-    if (macNavLeftInset) {
-        macNavLeftInset->setFixedWidth(kMacNavLeftGap);
+    if (QLayout *tbLayout = navToolBar->layout()) {
+        tbLayout->setContentsMargins(0, 0, 0, 0);
+        tbLayout->setSpacing(4);
+        tbLayout->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     }
 
     if (QLayout *mwLayout = layout()) {
